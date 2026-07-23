@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import '@xyflow/react/dist/style.css';
+
+:root {
+  --bg-page: #ffffff;
+  --bg-surface: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9fafb;
+  --bg-sidebar: #ffffff;
+  --bg-input: #ffffff;
+  --bg-muted: #f3f4f6;
+
+  --border-color: #e5e7eb;
+  --border-hover: #d1d5db;
+  --border-focus: #111827;
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --text-inverse: #ffffff;
+
+  --accent-primary: #111827;
+  --accent-primary-hover: #1f2937;
+  --accent-secondary: #6366f1;
+
+  --status-pending: #9ca3af;
+  --status-running: #3b82f6;
+  --status-completed: #10b981;
+  --status-failed: #ef4444;
+
+  --sarvam-coral: #f87171;
+  --sarvam-green: #34d399;
+  --sarvam-blue: #60a5fa;
+  --sarvam-pink: #f472b6;
+  --sarvam-orange: #fb923c;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Node Execution Glow Animations */
+@keyframes pulse-glow-running {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    border-color: #3b82f6;
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.5);
+    border-color: #60a5fa;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    border-color: #3b82f6;
+  }
+}
+
+@keyframes pulse-glow-completed {
+  0% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    border-color: #10b981;
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+  }
+}
+
+@keyframes pulse-glow-failed {
+  0% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+    border-color: #ef4444;
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+  }
+}
+
+.node-status-running {
+  animation: pulse-glow-running 1.5s infinite ease-in-out;
+}
+
+.node-status-completed {
+  animation: pulse-glow-completed 1s forwards ease-in-out;
+}
+
+.node-status-failed {
+  animation: pulse-glow-failed 1s forwards ease-in-out;
+}
+
+/* XYFlow Light Theme Overrides */
+.react-flow__background {
+  background-color: #fafafa !important;
+}
+
+.react-flow__controls {
+  background: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: #6b7280 !important;
+  fill: #6b7280 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  fill: #111827 !important;
+}
+
+.react-flow__minimap {
+  background: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: #111827 !important;
+  border: 2px solid #ffffff !important;
+  transition: transform 0.2s;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+  background: #6366f1 !important;
+}
+
+.react-flow__edge-path {
+  stroke: #d1d5db !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Disable bold fonts across the entire application */
+.font-bold, 
+.font-semibold, 
+.font-extrabold, 
+strong, 
+b,
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500 !important;
+}
+
+/* Noisy film grain texture overlay */
+.noisy-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.055;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Tooltip animation */
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tooltip-fade {
+  animation: tooltipFadeIn 0.15s ease-out forwards;
+}
+
+/* Custom Audio Range Slider */
+.custom-audio-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  outline: none;
+}
+.custom-audio-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+}
+.custom-audio-slider:hover::-webkit-slider-runnable-track {
+  background: #d1d5db;
+}
+.custom-audio-slider::-webkit-slider-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 9999px;
+  background: #111827;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -4px;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+.custom-audio-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #2563eb;
+}
+.custom-audio-slider::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: #e5e7eb;
+  border-radius: 9999px;
+}
+.custom-audio-slider::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 9999px;
+  background: #111827;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+.custom-audio-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: #2563eb;
+}
