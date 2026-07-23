@@ -34,7 +34,7 @@ const REFILL_INTERVAL_MS = 60_000; // 1 minute
  */
 export async function rateLimit(req: NextRequest): Promise<boolean> {
   const ip =
-    (req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.ip) || 'unknown';
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
   const now = Date.now();
   let bucket = buckets.get(ip);
