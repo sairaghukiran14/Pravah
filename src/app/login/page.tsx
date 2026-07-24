@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { signIn, useSession } from 'next-auth/react';
-import { ArrowRight, Mic, Languages, Volume2, Sparkles, HeartHandshake, Zap } from 'lucide-react';
+import { ArrowRight, Mic, Languages, Volume2, Sparkles, HeartHandshake, Zap, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +10,14 @@ export default function LoginPage() {
   const router = useRouter();
   const [isExistingUser, setIsExistingUser] = useState(false);
   const { data: session, status } = useSession();
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+
+  const triggerToast = (message: string) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 3000);
+  };
 
   /* Auth hook */
   useEffect(() => {
@@ -38,7 +46,17 @@ export default function LoginPage() {
   };
 
   const handleDirectContinue = () => {
-    router.push(isExistingUser ? '/dashboard' : '/onboarding');
+    if (status !== 'authenticated') {
+      triggerToast('Sign in required');
+      return;
+    }
+    
+    // @ts-expect-error - custom field
+    if (session?.user?.onboardingCompleted) {
+      router.push('/dashboard');
+    } else {
+      router.push('/onboarding');
+    }
   };
 
   return (
@@ -184,7 +202,7 @@ export default function LoginPage() {
               onClick={handleDirectContinue}
               className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-normal py-3 px-4 rounded-xl transition-all duration-200 text-sm group cursor-pointer shadow-sm hover:shadow-md"
             >
-              <span className="font-normal">{isExistingUser ? 'Go to Dashboard' : 'Continue to Setup Wizard'}</span>
+              <span className="font-normal">Go to Dashboard</span>
               <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
@@ -207,6 +225,14 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg border border-gray-800 animate-slide-up text-xs font-medium">
+          <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0" />
+          <span>{toast.message}</span>
+        </div>
+      )}
 
     </div>
   );
