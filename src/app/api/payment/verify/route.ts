@@ -32,6 +32,19 @@ export async function POST(req: NextRequest) {
     if (isServerMockMode && isMockOrder) {
       // Direct credits addition for mock flow
       const updatedUser = await prisma.$transaction(async (tx) => {
+        // Update payment order status to paid
+        try {
+          await tx.paymentOrder.update({
+            where: { id: razorpay_order_id },
+            data: {
+              status: 'paid',
+              razorpayPaymentId: razorpay_payment_id || 'mock_payment',
+            }
+          });
+        } catch (e) {
+          console.warn('Prisma paymentOrder update warning:', e);
+        }
+
         const user = await tx.user.update({
           where: { id: userId },
           data: {
@@ -67,11 +80,29 @@ export async function POST(req: NextRequest) {
       .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
+      // Mark the order as failed in the database
+      try {
+        await prisma.paymentOrder.update({
+          where: { id: razorpay_order_id },
+          data: { status: 'failed' }
+        });
+      } catch (e) {
+        console.warn('Failed to mark order as failed:', e);
+      }
       return NextResponse.json({ error: 'Invalid payment signature verification failed' }, { status: 400 });
     }
 
-    // Add credits to user wallet
+    // Add credits to user wallet & update order status to paid
     const updatedUser = await prisma.$transaction(async (tx) => {
+      await tx.paymentOrder.update({
+        where: { id: razorpay_order_id },
+        data: {
+          status: 'paid',
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+        }
+      });
+
       const user = await tx.user.update({
         where: { id: userId },
         data: {

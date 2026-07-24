@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import Razorpay from 'razorpay';
+import prisma from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,6 +28,18 @@ export async function POST(req: NextRequest) {
         status: 'created',
         notes: { mock: true, userId: session.user.id, amount }
       };
+
+      // Save mock order to DB
+      await prisma.paymentOrder.create({
+        data: {
+          id: mockOrder.id,
+          userId: session.user.id,
+          amount: amount,
+          currency: 'INR',
+          status: 'created',
+        }
+      });
+
       return NextResponse.json({ success: true, isMock: true, order: mockOrder, keyId: 'mock_key_id' });
     }
 
@@ -45,6 +58,17 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         amount: String(amount),
       },
+    });
+
+    // Save real Razorpay order to DB
+    await prisma.paymentOrder.create({
+      data: {
+        id: order.id,
+        userId: session.user.id,
+        amount: amount,
+        currency: 'INR',
+        status: 'created',
+      }
     });
 
     return NextResponse.json({ success: true, isMock: false, order, keyId });
