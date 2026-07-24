@@ -44,3 +44,4 @@ scratch/
 *.tsbuildinfo
 next-env.d.ts
 test-script.ts
+src/scripts/test-apis.ts
