@@ -138,9 +138,6 @@ export default function LandingPage() {
             <a href="#platform" className="hover:text-gray-900 transition-colors">
               Platform
             </a>
-            <a href="#nodes" className="hover:text-gray-900 transition-colors">
-              AI Nodes
-            </a>
             <a href="#playground" className="hover:text-gray-900 transition-colors">
               Playground
             </a>
