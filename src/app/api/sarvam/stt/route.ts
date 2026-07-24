@@ -10,9 +10,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (await rateLimit(req)) {
-  return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-}
-try {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
+  try {
     const formData = await req.formData();
     const result = await executeSarvamSTT({
       text_input: formData.get('text_input') as string | undefined,

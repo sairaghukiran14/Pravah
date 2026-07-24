@@ -10,9 +10,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (await rateLimit(req)) {
-  return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-}
-try {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
+  try {
     const body = await req.json();
     const result = await executeSarvamTTS(body);
     return NextResponse.json(result);

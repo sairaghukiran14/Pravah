@@ -122,7 +122,25 @@ export async function executeSingleNode(
   try {
     let output: any = null;
 
-    if (node.type === 'stt') {
+    if (node.type === 'text_input') {
+      output = node.config?.text || upstreamInputText;
+    } else if (node.type === 'text_output') {
+      output = { text: upstreamInputText };
+    } else if (node.type === 'url_input') {
+      output = node.config?.url || upstreamInputText;
+    } else if (node.type === 'audio_input') {
+      output = {
+        url: node.config?.url || null,
+        file: node.config?.file || null,
+        text: upstreamInputText
+      };
+    } else if (node.type === 'audio_output') {
+      output = {
+        audio_r2_key: dynamicInputPayload?.audio_r2_key || null,
+        url: dynamicInputPayload?.url || null,
+        text: upstreamInputText
+      };
+    } else if (node.type === 'stt') {
       const actualPayload = dynamicInputPayload?.passed_input || dynamicInputPayload;
       output = await executeSarvamSTT({
         file: actualPayload?.data || actualPayload?.url, 

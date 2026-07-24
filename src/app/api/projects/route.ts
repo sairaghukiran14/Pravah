@@ -25,19 +25,12 @@ export async function GET() {
     });
 
     return NextResponse.json(projects);
-  } catch (error) {
-    console.warn('Prisma project fetch warning (falling back to mock data):', error);
-    // Mock response if DB connection is unavailable
-    return NextResponse.json([
-      {
-        id: 'proj_default',
-        name: 'Demo Sarvam AI Project',
-        description: 'Sample project for Speech, Translation, and TTS workflows',
-        _count: { pipelines: 2 },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]);
+  } catch (error: any) {
+    console.error('Prisma project fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch projects' },
+      { status: 500 }
+    );
   }
 }
 
@@ -66,19 +59,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(project, { status: 201 });
-  } catch (error) {
-    console.warn('Fallback creating project on DB fail:', error);
-    const body = await req.json().catch(() => ({}));
+  } catch (error: any) {
+    console.error('Prisma project creation error:', error);
     return NextResponse.json(
-      {
-        id: `proj_${Math.random().toString(36).substring(7)}`,
-        name: body.name || 'New Project',
-        description: body.description || '',
-        _count: { pipelines: 0 },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      { status: 201 }
+      { error: 'Failed to create project' },
+      { status: 500 }
     );
   }
 }

@@ -90,28 +90,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(pipeline, { status: 201 });
-  } catch (error) {
-    console.warn('Prisma create pipeline fallback:', error);
-    const body = await req.json().catch(() => ({}));
-    const newId = `pipe_${Math.random().toString(36).substring(7)}`;
-
+  } catch (error: any) {
+    console.error('Prisma create pipeline error:', error);
     return NextResponse.json(
-      {
-        id: newId,
-        name: body.name || 'New Pipeline',
-        description: body.description || '',
-        projectId: body.projectId || 'proj_default',
-        nodes: [
-          { id: 'n1', type: 'stt', label: 'Hindi STT', positionX: 100, positionY: 200, config: { language_code: 'hi-IN' } },
-          { id: 'n2', type: 'translate', label: 'Translate to Telugu', positionX: 450, positionY: 200, config: { target_language_code: 'te-IN' } },
-          { id: 'n3', type: 'tts', label: 'Telugu Audio', positionX: 800, positionY: 200, config: { target_language_code: 'te-IN', speaker: 'ritu' } },
-        ],
-        edges: [
-          { id: 'e1', source: 'n1', target: 'n2' },
-          { id: 'e2', source: 'n2', target: 'n3' },
-        ],
-      },
-      { status: 201 }
+      { error: 'Failed to create pipeline' },
+      { status: 500 }
     );
   }
 }

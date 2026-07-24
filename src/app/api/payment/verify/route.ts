@@ -14,8 +14,7 @@ export async function POST(req: NextRequest) {
       razorpay_payment_id, 
       razorpay_order_id, 
       razorpay_signature, 
-      amount,
-      isMock
+      amount
     } = await req.json();
 
     if (!amount || amount <= 0) {
@@ -23,10 +22,14 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = session.user.id;
+    const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-    // Handle mock payment verification (for development when keys are not configured)
-    if (isMock || !keySecret || keySecret === 'mock_key_secret') {
+    const isServerMockMode = !keyId || !keySecret || keyId === 'mock_key_id' || keySecret === 'mock_key_secret';
+    const isMockOrder = razorpay_order_id?.startsWith('order_mock_');
+
+    // Handle mock payment verification (only when server keys are not configured AND order is indeed mock)
+    if (isServerMockMode && isMockOrder) {
       // Direct credits addition for mock flow
       const updatedUser = await prisma.$transaction(async (tx) => {
         const user = await tx.user.update({
@@ -49,6 +52,11 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ success: true, isMock: true, credits: updatedUser.credits });
+    }
+
+    // If keySecret is not configured but a non-mock order is requested, fail
+    if (!keySecret) {
+      return NextResponse.json({ error: 'Razorpay integration is not configured' }, { status: 500 });
     }
 
     // Real Signature Verification
