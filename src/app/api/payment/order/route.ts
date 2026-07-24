@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, isMock: true, order: mockOrder, keyId: 'mock_key_id' });
     }
 
+    console.log(`[Razorpay] Creating order: ₹${amount}, key prefix: ${keyId.substring(0, 12)}...`);
+
     const razorpay = new Razorpay({
       key_id: keyId,
       key_secret: keySecret,
@@ -47,10 +49,32 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, isMock: false, order, keyId });
   } catch (error: any) {
-    console.error('Error creating Razorpay order:', error);
+    // Razorpay SDK wraps errors with statusCode and error fields
+    const razorpayError = error?.error || error;
+    const statusCode = razorpayError?.statusCode || error?.statusCode || 500;
+    const description =
+      razorpayError?.description ||
+      razorpayError?.message ||
+      error?.message ||
+      'Failed to create payment order';
+
+    console.error('[Razorpay] Order creation failed:', {
+      statusCode,
+      description,
+      code: razorpayError?.code,
+      reason: razorpayError?.reason,
+      source: razorpayError?.source,
+      field: razorpayError?.field,
+      raw: JSON.stringify(error).substring(0, 500),
+    });
+
     return NextResponse.json(
-      { error: error.message || 'Failed to create payment order' },
-      { status: 500 }
+      {
+        error: description,
+        code: razorpayError?.code,
+        reason: razorpayError?.reason,
+      },
+      { status: typeof statusCode === 'number' ? statusCode : 500 }
     );
   }
 }
