@@ -64,13 +64,18 @@ export default function LandingPage() {
   const [activeStep, setActiveStep] = useState<number>(0);
   const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
   const [isDemoPaused, setIsDemoPaused] = useState(false);
+  const [isTransitioningOut, setIsTransitioningOut] = useState(false);
 
   const currentStep = PLAYGROUND_STEPS[loopIndex];
 
   useEffect(() => {
-    if (isDemoPaused) return;
+    if (isDemoPaused) {
+      setIsTransitioningOut(false);
+      return;
+    }
 
     let timer: NodeJS.Timeout;
+    let fadeOutTimer: NodeJS.Timeout;
 
     if (activeStep === 0) {
       // Initial delay before starting the flow (STT)
@@ -98,15 +103,21 @@ export default function LandingPage() {
       }, 1000);
     } else if (activeStep === 4) {
       // Display output for 4 seconds, then reset state to start the next language cycle
+      fadeOutTimer = setTimeout(() => {
+        setIsTransitioningOut(true);
+      }, 3500);
+
       timer = setTimeout(() => {
         setLoopIndex((prev) => (prev + 1) % PLAYGROUND_STEPS.length);
         setPlaygroundResult(null);
+        setIsTransitioningOut(false);
         setActiveStep(0);
       }, 4000);
     }
 
     return () => {
       clearTimeout(timer);
+      clearTimeout(fadeOutTimer);
     };
   }, [activeStep, isDemoPaused, loopIndex, currentStep.output]);
 
@@ -429,76 +440,147 @@ export default function LandingPage() {
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-6">
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Source Input Text ({currentStep.sourceLabel})
-              </label>
-              <textarea
-                rows={3}
-                value={currentStep.input}
-                readOnly
-                disabled
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-sm text-gray-500 focus:outline-none select-none resize-none cursor-not-allowed"
-              />
-            </div>
+            {/* Top Row: Left Column (Inputs) & Right Column (Output) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              {/* Left Column: Inputs & Controls */}
+              <div className="space-y-6 w-full">
+                <div className={`space-y-2 transition-all duration-500 ease-in-out ${
+                  isTransitioningOut
+                    ? 'opacity-0 -translate-y-2'
+                    : 'opacity-100 translate-y-0'
+                }`}>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Source Input Text ({currentStep.sourceLabel})
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={currentStep.input}
+                    readOnly
+                    disabled
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-sm text-gray-500 focus:outline-none select-none resize-none cursor-not-allowed"
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Target Language
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-500 ease-in-out ${
+                  isTransitioningOut
+                    ? 'opacity-0 -translate-y-2'
+                    : 'opacity-100 translate-y-0'
+                }`}>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Target Language
+                    </label>
+                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3.5 py-2 text-sm text-gray-500 select-none cursor-not-allowed flex items-center min-h-[38px]">
+                      {currentStep.targetLabel} ({currentStep.targetLang})
+                    </div>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => setIsDemoPaused(!isDemoPaused)}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
+                    >
+                      {isDemoPaused ? (
+                        <>
+                          <Play className="h-4 w-4 fill-current" />
+                          <span>Resume Live Loop</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pause className="h-4 w-4 text-white" />
+                          <span>Pause Live Loop</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Output Box (Always Visible) */}
+              <div className={`space-y-2 w-full transition-all duration-500 ease-in-out ${
+                isTransitioningOut
+                  ? 'opacity-0 translate-y-2'
+                  : 'opacity-100 translate-y-0'
+              }`}>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Live Output Result ({currentStep.targetLabel})
                 </label>
-                <div className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3.5 py-2 text-sm text-gray-500 select-none cursor-not-allowed flex items-center min-h-[38px]">
-                  {currentStep.targetLabel} ({currentStep.targetLang})
-                </div>
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  onClick={() => setIsDemoPaused(!isDemoPaused)}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
-                >
-                  {isDemoPaused ? (
-                    <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Resume Live Demo Loop</span>
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="h-4 w-4 text-white" />
-                      <span>Pause Live Demo Loop</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Pipeline Execution Flow Progress Steps */}
-            {(isPlayinggroundRunning || playgroundResult) && (
-              <div className="pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 1 ? 'text-emerald-600 font-bold' : ''}`}>
-                    1. Speech Audio {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 2 ? 'text-blue-600 font-bold' : ''}`}>
-                    2. Indic Translation {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 3 ? 'text-orange-600 font-bold' : ''}`}>
-                    3. TTS Output {activeStep === 3 && isPlayinggroundRunning && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </span>
-                </div>
-
-                {playgroundResult && (
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1 animate-slide-up">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                      Live Output Result ({currentStep.targetLabel})
-                    </span>
-                    <p className="font-medium text-emerald-950">{playgroundResult}</p>
+                
+                {playgroundResult ? (
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1.5 min-h-[148px] flex flex-col justify-between animate-slide-up">
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 mt-0.5 animate-pulse">
+                        <Volume2 className="h-4 w-4" />
+                      </div>
+                      <p className="font-medium text-emerald-950 leading-relaxed flex-grow pt-0.5">
+                        {playgroundResult}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-semibold uppercase tracking-wider pt-2 border-t border-emerald-100">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      TTS Generation Complete
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-sm min-h-[148px] flex flex-col justify-between items-center text-center text-gray-400">
+                    <div className="flex-grow flex flex-col items-center justify-center space-y-2">
+                      {isPlayinggroundRunning ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                          <p className="text-xs font-medium text-gray-500">
+                            {activeStep === 1 && "Capturing Speech Audio..."}
+                            {activeStep === 2 && "Translating to Target Language..."}
+                            {activeStep === 3 && "Synthesizing Speech Output..."}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-5 w-5 text-gray-300" />
+                          <p className="text-xs">Waiting to start pipeline...</p>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider pt-2 border-t border-gray-100 w-full">
+                      Pipeline Status: {isPlayinggroundRunning ? "Running" : "Idle"}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
+            </div>
+
+            {/* Bottom Row: Pipeline Execution Flow Progress Steps (Always Visible) */}
+            <div className={`pt-4 border-t border-gray-150 transition-all duration-500 ease-in-out ${
+              isTransitioningOut
+                ? 'opacity-0 translate-y-2'
+                : 'opacity-100 translate-y-0'
+            }`}>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
+                  activeStep >= 1 ? 'text-emerald-600 font-bold' : 'text-gray-400'
+                }`}>
+                  <Mic className={`h-3.5 w-3.5 ${activeStep >= 1 ? 'text-emerald-600' : 'text-gray-300'}`} />
+                  1. Speech Audio {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />}
+                </span>
+                
+                <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+                
+                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
+                  activeStep >= 2 ? 'text-blue-600 font-bold' : 'text-gray-400'
+                }`}>
+                  <Languages className={`h-3.5 w-3.5 ${activeStep >= 2 ? 'text-blue-500' : 'text-gray-300'}`} />
+                  2. Indic Translation {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                </span>
+                
+                <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+                
+                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
+                  activeStep >= 3 ? 'text-orange-600 font-bold' : 'text-gray-400'
+                }`}>
+                  <Volume2 className={`h-3.5 w-3.5 ${activeStep >= 3 ? 'text-orange-500' : 'text-gray-300'}`} />
+                  3. TTS Output {activeStep === 3 && isPlayinggroundRunning && <Loader2 className="h-3 w-3 animate-spin text-orange-500" />}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
