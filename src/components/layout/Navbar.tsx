@@ -8,6 +8,7 @@ import { signOut, useSession } from 'next-auth/react';
 export const Navbar: React.FC = () => {
   const { data: session, status } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const userName = session?.user?.name || session?.user?.email || 'Active User';
   const userImage = session?.user?.image;
@@ -81,10 +82,11 @@ export const Navbar: React.FC = () => {
               {/* Profile Card */}
               <div className="flex items-center gap-2.5 border border-gray-200 rounded-full px-3 py-1.5 bg-white shadow-2xs">
                 <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                  {userImage ? (
+                  {userImage && !imageError ? (
                     <img
                       src={userImage}
                       alt={userName}
+                      onError={() => setImageError(true)}
                       className="h-6 w-6 rounded-full object-cover"
                     />
                   ) : (
