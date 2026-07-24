@@ -99,6 +99,7 @@ export default function ProfilePage() {
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(true);
   const [isTopupLoading, setIsTopupLoading] = useState<number | null>(null);
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; isError?: boolean } | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   async function fetchProfile() {
     try {
@@ -359,10 +360,11 @@ export default function ProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-5 -mt-10">
                 {/* Avatar with Camera Icon Overlay on Hover */}
                 <div className="relative shrink-0 group">
-                  {profile?.image ? (
+                  {profile?.image && !imageError ? (
                     <img
                       src={profile.image}
                       alt={profile.name || 'User'}
+                      onError={() => setImageError(true)}
                       className="h-20 w-20 rounded-2xl border-4 border-white shadow-md object-cover bg-gray-50"
                     />
                   ) : (
