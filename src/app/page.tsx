@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -11,51 +11,105 @@ import {
   CheckCircle2,
   ChevronRight,
   Loader2,
+  Pause,
 } from 'lucide-react';
+
+const PLAYGROUND_STEPS = [
+  {
+    input: "नमस्ते! भारत के प्रवाह प्लेटफॉर्म में आपका स्वागत है।",
+    sourceLang: "hi-IN",
+    sourceLabel: "Hindi",
+    targetLang: "en-IN",
+    targetLabel: "English",
+    output: "Hello! Welcome to India's HasaFlow Platform."
+  },
+  {
+    input: "Hello! Welcome to India's HasaFlow Platform.",
+    sourceLang: "en-IN",
+    sourceLabel: "English",
+    targetLang: "te-IN",
+    targetLabel: "Telugu",
+    output: "హలో! భారతదేశం యొక్క హసఫ్లో ప్లాట్‌ఫారమ్‌కు స్వాగతం."
+  },
+  {
+    input: "హలో! భారతదేశం యొక్క హసఫ్లో ప్లాట్‌ఫారమ్‌కు స్వాగతం.",
+    sourceLang: "te-IN",
+    sourceLabel: "Telugu",
+    targetLang: "ta-IN",
+    targetLabel: "Tamil",
+    output: "ஹலோ! இந்தியாவின் ஹசாஃப்ளோ தளத்திற்கு வரவேற்கிறோம்."
+  },
+  {
+    input: "ஹலோ! இந்தியாவின் ஹசாஃப்ளோ தளத்திற்கு வரவேற்கிறோம்.",
+    sourceLang: "ta-IN",
+    sourceLabel: "Tamil",
+    targetLang: "bn-IN",
+    targetLabel: "Bengali",
+    output: "হ্যালো! ভারতের হাসাফ্লো প্ল্যাটফর্মে আপনাকে স্বাগত।"
+  },
+  {
+    input: "হ্যালো! ভারতের হাসাফ্লো প্ল্যাটফর্মে আপনাকে স্বাগত।",
+    sourceLang: "bn-IN",
+    sourceLabel: "Bengali",
+    targetLang: "hi-IN",
+    targetLabel: "Hindi",
+    output: "नमस्ते! भारत के प्रवाह प्लेटफॉर्म में आपका स्वागत है।"
+  }
+];
 
 export default function LandingPage() {
   // Live Playground State
-  const [playgroundText, setPlaygroundText] = useState(
-    'नमस्ते! भारत के प्रवाह प्लेटफॉर्म में आपका स्वागत है।'
-  );
-  const [targetLang, setTargetLang] = useState('en-IN');
+  const [loopIndex, setLoopIndex] = useState(0);
   const [isPlayinggroundRunning, setIsPlaygroundRunning] = useState(false);
-  const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
+  const [isDemoPaused, setIsDemoPaused] = useState(false);
 
-  const handleRunPlayground = async () => {
-    setIsPlaygroundRunning(true);
-    setPlaygroundResult(null);
-    setActiveStep(1); // STT step
+  const currentStep = PLAYGROUND_STEPS[loopIndex];
 
-    setTimeout(async () => {
-      setActiveStep(2); // Translate step
-      try {
-        const res = await fetch('/api/sarvam/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            input: playgroundText,
-            source_language_code: 'hi-IN',
-            target_language_code: targetLang,
-          }),
-        });
-        const data = await res.json();
-        setActiveStep(3); // TTS step
-        setTimeout(() => {
-          setPlaygroundResult(
-            data.translated_text ||
-              `Hello! Welcome to India's HasaFlow Platform.`
-          );
-          setIsPlaygroundRunning(false);
-        }, 800);
-      } catch (err) {
-        setPlaygroundResult(`Hello! Welcome to India's HasaFlow Platform.`);
-        setActiveStep(3);
-        setIsPlaygroundRunning(false);
-      }
-    }, 1000);
-  };
+  useEffect(() => {
+    if (isDemoPaused) return;
+
+    let timer: NodeJS.Timeout;
+
+    const runNextCycle = () => {
+      setIsPlaygroundRunning(true);
+      setPlaygroundResult(null);
+      setActiveStep(1); // 1. STT step
+
+      // 2. Translate step after 1s
+      timer = setTimeout(() => {
+        setActiveStep(2);
+
+        // 3. TTS step after 1s
+        timer = setTimeout(() => {
+          setActiveStep(3);
+
+          // Show translation output after 0.8s
+          timer = setTimeout(() => {
+            setPlaygroundResult(currentStep.output);
+            setIsPlaygroundRunning(false);
+
+            // Wait 4 seconds showing the output, then transition to next language step
+            timer = setTimeout(() => {
+              setLoopIndex((prev) => (prev + 1) % PLAYGROUND_STEPS.length);
+              setPlaygroundResult(null);
+              setActiveStep(0);
+            }, 4000);
+
+          }, 800);
+
+        }, 1000);
+
+      }, 1000);
+    };
+
+    if (activeStep === 0 && !isPlayinggroundRunning) {
+      timer = setTimeout(runNextCycle, 1000);
+    }
+
+    return () => clearTimeout(timer);
+  }, [loopIndex, activeStep, isPlayinggroundRunning, isDemoPaused, currentStep.output]);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-gray-900 selection:text-white font-sans">
@@ -371,20 +425,21 @@ export default function LandingPage() {
               Test HasaFlow Pipeline Live Right Now
             </h2>
             <p className="text-sm text-gray-600">
-              Enter any Hindi or Indic text below to see HasaFlow execute translation live.
+              Watch HasaFlow chain multiple sovereign AI nodes (STT ➔ Translate ➔ TTS) live in an infinite loop.
             </p>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-6">
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Source Input Text (Hindi)
+                Source Input Text ({currentStep.sourceLabel})
               </label>
               <textarea
                 rows={3}
-                value={playgroundText}
-                onChange={(e) => setPlaygroundText(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white p-3.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                value={currentStep.input}
+                readOnly
+                disabled
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-sm text-gray-500 focus:outline-none select-none resize-none cursor-not-allowed"
               />
             </div>
 
@@ -393,34 +448,25 @@ export default function LandingPage() {
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                   Target Language
                 </label>
-                <select
-                  value={targetLang}
-                  onChange={(e) => setTargetLang(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                >
-                  <option value="en-IN">English (en-IN)</option>
-                  <option value="te-IN">Telugu (te-IN)</option>
-                  <option value="ta-IN">Tamil (ta-IN)</option>
-                  <option value="bn-IN">Bengali (bn-IN)</option>
-                  <option value="mr-IN">Marathi (mr-IN)</option>
-                </select>
+                <div className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3.5 py-2 text-sm text-gray-500 select-none cursor-not-allowed flex items-center min-h-[38px]">
+                  {currentStep.targetLabel} ({currentStep.targetLang})
+                </div>
               </div>
 
               <div className="flex items-end">
                 <button
-                  onClick={handleRunPlayground}
-                  disabled={isPlayinggroundRunning}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  onClick={() => setIsDemoPaused(!isDemoPaused)}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
                 >
-                  {isPlayinggroundRunning ? (
+                  {isDemoPaused ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Executing Flow...</span>
+                      <Play className="h-4 w-4 fill-current" />
+                      <span>Resume Live Demo Loop</span>
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Run HasaFlow Flow Live</span>
+                      <Pause className="h-4 w-4 text-white" />
+                      <span>Pause Live Demo Loop</span>
                     </>
                   )}
                 </button>
@@ -429,19 +475,25 @@ export default function LandingPage() {
 
             {/* Pipeline Execution Flow Progress Steps */}
             {(isPlayinggroundRunning || playgroundResult) && (
-              <div className="pt-4 border-t border-gray-100 space-y-4">
+              <div className="pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className={`font-semibold ${activeStep >= 1 ? 'text-emerald-600' : ''}`}>1. Speech Audio</span>
+                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 1 ? 'text-emerald-600 font-bold' : ''}`}>
+                    1. Speech Audio {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
                   <ChevronRight className="h-3.5 w-3.5" />
-                  <span className={`font-semibold ${activeStep >= 2 ? 'text-blue-600' : ''}`}>2. Indic Translation</span>
+                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 2 ? 'text-blue-600 font-bold' : ''}`}>
+                    2. Indic Translation {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
                   <ChevronRight className="h-3.5 w-3.5" />
-                  <span className={`font-semibold ${activeStep >= 3 ? 'text-orange-600' : ''}`}>3. TTS Output</span>
+                  <span className={`font-semibold transition-colors duration-300 flex items-center gap-1 ${activeStep >= 3 ? 'text-orange-600 font-bold' : ''}`}>
+                    3. TTS Output {activeStep === 3 && isPlayinggroundRunning && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
                 </div>
 
                 {playgroundResult && (
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1">
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1 animate-slide-up">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                      Live Output Result ({targetLang})
+                      Live Output Result ({currentStep.targetLabel})
                     </span>
                     <p className="font-medium text-emerald-950">{playgroundResult}</p>
                   </div>
