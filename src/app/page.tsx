@@ -72,44 +72,43 @@ export default function LandingPage() {
 
     let timer: NodeJS.Timeout;
 
-    const runNextCycle = () => {
-      setIsPlaygroundRunning(true);
-      setPlaygroundResult(null);
-      setActiveStep(1); // 1. STT step
-
-      // 2. Translate step after 1s
+    if (activeStep === 0) {
+      // Initial delay before starting the flow (STT)
+      timer = setTimeout(() => {
+        setIsPlaygroundRunning(true);
+        setPlaygroundResult(null);
+        setActiveStep(1);
+      }, 1500);
+    } else if (activeStep === 1) {
+      // Transition to translation step
       timer = setTimeout(() => {
         setActiveStep(2);
-
-        // 3. TTS step after 1s
-        timer = setTimeout(() => {
-          setActiveStep(3);
-
-          // Show translation output after 0.8s
-          timer = setTimeout(() => {
-            setPlaygroundResult(currentStep.output);
-            setIsPlaygroundRunning(false);
-
-            // Wait 4 seconds showing the output, then transition to next language step
-            timer = setTimeout(() => {
-              setLoopIndex((prev) => (prev + 1) % PLAYGROUND_STEPS.length);
-              setPlaygroundResult(null);
-              setActiveStep(0);
-            }, 4000);
-
-          }, 800);
-
-        }, 1000);
-
+      }, 1500);
+    } else if (activeStep === 2) {
+      // Transition to TTS output step
+      timer = setTimeout(() => {
+        setActiveStep(3);
+      }, 1500);
+    } else if (activeStep === 3) {
+      // Complete execution and show result (Transition to Step 4)
+      timer = setTimeout(() => {
+        setPlaygroundResult(currentStep.output);
+        setIsPlaygroundRunning(false);
+        setActiveStep(4);
       }, 1000);
-    };
-
-    if (activeStep === 0 && !isPlayinggroundRunning) {
-      timer = setTimeout(runNextCycle, 1000);
+    } else if (activeStep === 4) {
+      // Display output for 4 seconds, then reset state to start the next language cycle
+      timer = setTimeout(() => {
+        setLoopIndex((prev) => (prev + 1) % PLAYGROUND_STEPS.length);
+        setPlaygroundResult(null);
+        setActiveStep(0);
+      }, 4000);
     }
 
-    return () => clearTimeout(timer);
-  }, [loopIndex, activeStep, isPlayinggroundRunning, isDemoPaused, currentStep.output]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [activeStep, isDemoPaused, loopIndex, currentStep.output]);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-gray-900 selection:text-white font-sans">
