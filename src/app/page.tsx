@@ -29,12 +29,12 @@ const PLAYGROUND_PRESETS = [
   {
     id: 'health',
     tabName: '🏥 Health',
-    input: "Please drink plenty of warm water and take rest. If the fever continues, call us.",
+    input: "Please drink plenty of warm water and take rest. Call us.",
     sourceLang: "en-IN",
     sourceLabel: "English",
     targetLang: "te-IN",
     targetLabel: "Telugu",
-    output: "దయచేసి పుష్కలంగా గోరువెచ్చని నీరు త్రాగండి మరియు విశ్రాంతి తీసుకోండి. జ్వరం కొనసాగితే, మాకు కాల్ చేయండి."
+    output: "దయచేసి పుష్కలంగా గోరువెచ్చని నీరు త్రాగండి మరియు విశ్రాంతి తీసుకోండి. మాకు కాల్ చేయండి."
   },
   {
     id: 'travel',
