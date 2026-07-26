@@ -100,6 +100,8 @@ export default function LandingPage() {
     setPlaygroundAudio(null);
     setActiveStep(1); // Translate Node is active/running
 
+    let rateLimitMessage: string | null = null;
+
     try {
       // 1. Fetch Translation via public route
       const translateRes = await fetch('/api/sarvam/playground', {
@@ -113,6 +115,9 @@ export default function LandingPage() {
       });
 
       if (!translateRes.ok) {
+        if (translateRes.status === 429) {
+          rateLimitMessage = 'Rate limit exceeded. Trial playground is limited to 5 requests per minute.';
+        }
         const errData = await translateRes.json().catch(() => ({}));
         throw new Error(errData.error || `Translation failed with status ${translateRes.status}`);
       }
@@ -135,6 +140,9 @@ export default function LandingPage() {
       });
 
       if (!ttsRes.ok) {
+        if (ttsRes.status === 429) {
+          rateLimitMessage = 'Rate limit exceeded. Trial playground is limited to 5 requests per minute.';
+        }
         const errData = await ttsRes.json().catch(() => ({}));
         throw new Error(errData.error || `Voice synthesis failed with status ${ttsRes.status}`);
       }
@@ -148,9 +156,27 @@ export default function LandingPage() {
       setIsPlaygroundRunning(false);
       setActiveStep(3); // Output Audio Node is active/complete
 
+      // Autoplay the generated real audio stream
+      if (base64Audio) {
+        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+        setActiveAudioObj(audio);
+        audio.onplay = () => setSpeechPlaying(true);
+        audio.onended = () => {
+          setSpeechPlaying(false);
+          setActiveAudioObj(null);
+        };
+        audio.onerror = () => {
+          setSpeechPlaying(false);
+          setActiveAudioObj(null);
+        };
+        audio.play().catch((e) => console.error("Autoplay failed:", e));
+      }
+
     } catch (err: any) {
       console.warn('[Playground API Error - Falling Back]:', err.message);
-      setApiError(err.message);
+      if (rateLimitMessage) {
+        setApiError(rateLimitMessage);
+      }
 
       // Graceful fallback: run simulated clientside translation loop
       setTimeout(() => {
@@ -183,6 +209,21 @@ export default function LandingPage() {
           setPlaygroundAudio(null);
           setIsPlaygroundRunning(false);
           setActiveStep(3); // Complete
+
+          // Fallback autoplay via web speech synthesis
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance(outputText);
+            utterance.lang = targetLangCode;
+            const voices = window.speechSynthesis.getVoices();
+            const voice = voices.find((v) => v.lang.startsWith(targetLangCode.substring(0, 2)));
+            if (voice) {
+              utterance.voice = voice;
+            }
+            utterance.onstart = () => setSpeechPlaying(true);
+            utterance.onend = () => setSpeechPlaying(false);
+            utterance.onerror = () => setSpeechPlaying(false);
+            window.speechSynthesis.speak(utterance);
+          }
         }, 1200);
       }, 1500);
     }
@@ -735,8 +776,8 @@ export default function LandingPage() {
                         )}
                         {/* API Error Notice */}
                         {apiError && (
-                          <div className="text-[10px] text-amber-850 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed animate-fade-in">
-                            ⚠️ <strong>Real-Time API Notice:</strong> {apiError} (Showing simulated local translation fallback instead).
+                          <div className="text-[10px] text-red-800 bg-red-50 border border-red-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed animate-fade-in">
+                            ⚠️ <strong>Rate Limit Notice:</strong> {apiError} (Showing simulated local translation fallback instead).
                           </div>
                         )}
                       </div>
