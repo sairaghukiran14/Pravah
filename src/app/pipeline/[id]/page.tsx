@@ -248,7 +248,6 @@ export default function PipelineEditorPage({
             icon={<Save className="h-4 w-4 text-gray-600" />}
           >
             <span className="hidden sm:inline">Save Pipeline</span>
-            <span className="sm:hidden">Save</span>
           </Button>
 
           {isRunning ? (
@@ -259,7 +258,6 @@ export default function PipelineEditorPage({
               icon={<Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
             >
               <span className="hidden sm:inline">Cancel Run</span>
-              <span className="sm:hidden">Cancel</span>
             </Button>
           ) : (
             <Button
@@ -270,7 +268,6 @@ export default function PipelineEditorPage({
               icon={<Play className="h-4 w-4 fill-current text-white" />}
             >
               <span className="hidden sm:inline">Run Pipeline</span>
-              <span className="sm:hidden">Run</span>
             </Button>
           )}
         </div>
