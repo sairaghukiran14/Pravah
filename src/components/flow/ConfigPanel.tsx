@@ -90,7 +90,7 @@ export const ConfigPanel: React.FC = () => {
     <div 
       className={`transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden z-30 ${
         isVisible 
-          ? 'w-[85vw] max-w-[320px] md:w-72 border-r border-gray-200 absolute md:relative left-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none' 
+          ? 'w-[280px] sm:w-[320px] md:w-72 border-r border-gray-200 absolute md:relative left-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none' 
           : 'w-0 border-r-0 border-transparent'
       }`}
     >
