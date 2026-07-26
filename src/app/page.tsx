@@ -630,7 +630,7 @@ export default function LandingPage() {
                   <textarea
                     rows={4}
                     value={inputText}
-                    maxLength={100}
+                    maxLength={50}
                     onChange={(e) => {
                       setInputText(e.target.value);
                       if (activeStep !== 0) {
@@ -644,9 +644,9 @@ export default function LandingPage() {
                     placeholder="Type or paste custom text here to translate..."
                   />
                   <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold px-1">
-                    <span>Limit: 100 characters max for trial playground</span>
-                    <span className={inputText.length >= 100 ? 'text-amber-600 font-bold' : ''}>
-                      {inputText.length} / 100
+                    <span>Limit: 50 characters max for trial playground</span>
+                    <span className={inputText.length >= 50 ? 'text-amber-600 font-bold' : ''}>
+                      {inputText.length} / 50
                     </span>
                   </div>
                 </div>
