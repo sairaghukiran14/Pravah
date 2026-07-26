@@ -563,7 +563,7 @@ export default function LandingPage() {
       <section id="playground" className="py-20 bg-gray-50 border-t border-gray-200">
         <div className="mx-auto max-w-4xl px-4 space-y-8">
           <div className="text-center space-y-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-purple-600">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Interactive Test Bench
             </span>
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
@@ -607,7 +607,7 @@ export default function LandingPage() {
                     }}
                     className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border cursor-pointer transition-all ${
                       selectedPresetId === preset.id
-                        ? 'bg-purple-600 border-purple-600 text-white shadow-xs'
+                        ? 'bg-gray-900 border-gray-900 text-white shadow-xs'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
@@ -637,7 +637,7 @@ export default function LandingPage() {
                         setApiError(null);
                       }
                     }}
-                    className="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 shadow-xs resize-none"
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 shadow-xs resize-none"
                     placeholder="Type or paste custom text here to translate..."
                   />
                 </div>
@@ -661,7 +661,7 @@ export default function LandingPage() {
                           setActiveStep(0);
                         }
                       }}
-                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 shadow-xs cursor-pointer min-h-[38px]"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 shadow-xs cursor-pointer min-h-[38px]"
                     >
                       {TARGET_LANGUAGES.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -675,7 +675,7 @@ export default function LandingPage() {
                     <button
                       onClick={runManualPipeline}
                       disabled={isPlayinggroundRunning}
-                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isPlayinggroundRunning ? (
                         <>
@@ -751,7 +751,7 @@ export default function LandingPage() {
                     <div className="flex-grow flex flex-col items-center justify-center space-y-2">
                       {isPlayinggroundRunning ? (
                         <>
-                          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                          <Loader2 className="h-5 w-5 animate-spin text-gray-900" />
                           <p className="text-xs font-semibold text-gray-600">
                             {activeStep === 1 && "Translating to Target Language..."}
                             {activeStep === 2 && "Synthesizing Speech Output (TTS)..."}
