@@ -68,90 +68,19 @@ const TARGET_LANGUAGES = [
 
 export default function LandingPage() {
   // Live Playground State
-  const [loopIndex, setLoopIndex] = useState(0);
   const [selectedPresetId, setSelectedPresetId] = useState('support');
   const [inputText, setInputText] = useState(PLAYGROUND_PRESETS[0].input);
   const [sourceLangCode, setSourceLangCode] = useState(PLAYGROUND_PRESETS[0].sourceLang);
   const [sourceLangLabel, setSourceLangLabel] = useState(PLAYGROUND_PRESETS[0].sourceLabel);
   const [targetLangCode, setTargetLangCode] = useState(PLAYGROUND_PRESETS[0].targetLang);
   const [targetLangLabel, setTargetLangLabel] = useState(PLAYGROUND_PRESETS[0].targetLabel);
-  const [isManualMode, setIsManualMode] = useState(false);
   const [isPlayinggroundRunning, setIsPlaygroundRunning] = useState(false);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
-  const [isDemoPaused, setIsDemoPaused] = useState(false);
-  const [isTransitioningOut, setIsTransitioningOut] = useState(false);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [playgroundAudio, setPlaygroundAudio] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [activeAudioObj, setActiveAudioObj] = useState<HTMLAudioElement | null>(null);
-
-  // Auto-sync states from loop index when in autoplay loop mode
-  useEffect(() => {
-    if (!isManualMode) {
-      const preset = PLAYGROUND_PRESETS[loopIndex];
-      setSelectedPresetId(preset.id);
-      setInputText(preset.input);
-      setSourceLangCode(preset.sourceLang);
-      setSourceLangLabel(preset.sourceLabel);
-      setTargetLangCode(preset.targetLang);
-      setTargetLangLabel(preset.targetLabel);
-      setApiError(null);
-    }
-  }, [loopIndex, isManualMode]);
-
-  // Autoplay loop runner
-  useEffect(() => {
-    if (isManualMode || isDemoPaused) {
-      setIsTransitioningOut(false);
-      return;
-    }
-
-    let timer: NodeJS.Timeout;
-    let fadeOutTimer: NodeJS.Timeout;
-
-    const preset = PLAYGROUND_PRESETS[loopIndex];
-
-    if (activeStep === 0) {
-      timer = setTimeout(() => {
-        setIsPlaygroundRunning(true);
-        setPlaygroundResult(null);
-        setPlaygroundAudio(null);
-        setApiError(null);
-        setActiveStep(1);
-      }, 1500);
-    } else if (activeStep === 1) {
-      timer = setTimeout(() => {
-        setActiveStep(2);
-      }, 1500);
-    } else if (activeStep === 2) {
-      timer = setTimeout(() => {
-        setActiveStep(3);
-      }, 1500);
-    } else if (activeStep === 3) {
-      timer = setTimeout(() => {
-        setPlaygroundResult(preset.output);
-        setIsPlaygroundRunning(false);
-        setActiveStep(4);
-      }, 1000);
-    } else if (activeStep === 4) {
-      fadeOutTimer = setTimeout(() => {
-        setIsTransitioningOut(true);
-      }, 3500);
-
-      timer = setTimeout(() => {
-        setLoopIndex((prev) => (prev + 1) % PLAYGROUND_PRESETS.length);
-        setPlaygroundResult(null);
-        setIsTransitioningOut(false);
-        setActiveStep(0);
-      }, 4000);
-    }
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(fadeOutTimer);
-    };
-  }, [activeStep, isManualMode, isDemoPaused, loopIndex]);
 
   // Manual sandbox execution logic calling the public trial API
   const runManualPipeline = async () => {
@@ -655,33 +584,6 @@ export default function LandingPage() {
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-6">
             
-            {/* Sandbox Mode / Auto-Loop Toggle Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-gray-100 gap-3">
-              <div className="flex items-center gap-2">
-                <span className={`flex h-2 w-2 rounded-full ${isManualMode ? 'bg-purple-500 animate-pulse' : 'bg-emerald-500 animate-ping'}`} />
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {isManualMode ? "🎮 Sandbox Mode (Autoplay Paused)" : "🔄 Autoplay Mode (Interactive)"}
-                </span>
-              </div>
-              {isManualMode && (
-                <button
-                  onClick={() => {
-                    setIsManualMode(false);
-                    setLoopIndex(0);
-                    setActiveStep(0);
-                    setPlaygroundResult(null);
-                    if (typeof window !== 'undefined' && window.speechSynthesis) {
-                      window.speechSynthesis.cancel();
-                      setSpeechPlaying(false);
-                    }
-                  }}
-                  className="text-xs font-bold text-purple-600 hover:text-purple-700 cursor-pointer flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-3 py-1 rounded-full transition-colors"
-                >
-                  <RotateCcw className="h-3 w-3" /> Restore Autoplay Loop
-                </button>
-              )}
-            </div>
-
             {/* Presets Selection Tabs */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -692,7 +594,6 @@ export default function LandingPage() {
                   <button
                     key={preset.id}
                     onClick={() => {
-                      setIsManualMode(true);
                       setSelectedPresetId(preset.id);
                       setInputText(preset.input);
                       setSourceLangCode(preset.sourceLang);
@@ -700,14 +601,20 @@ export default function LandingPage() {
                       setTargetLangCode(preset.targetLang);
                       setTargetLangLabel(preset.targetLabel);
                       setPlaygroundResult(null);
+                      setPlaygroundAudio(null);
+                      setApiError(null);
                       setActiveStep(0);
                       if (typeof window !== 'undefined' && window.speechSynthesis) {
                         window.speechSynthesis.cancel();
-                        setSpeechPlaying(false);
                       }
+                      if (activeAudioObj) {
+                        activeAudioObj.pause();
+                        setActiveAudioObj(null);
+                      }
+                      setSpeechPlaying(false);
                     }}
                     className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border cursor-pointer transition-all ${
-                      isManualMode && selectedPresetId === preset.id
+                      selectedPresetId === preset.id
                         ? 'bg-purple-600 border-purple-600 text-white shadow-xs'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
@@ -722,11 +629,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               {/* Left Column: Inputs & Controls */}
               <div className="space-y-6 w-full">
-                <div className={`space-y-2 transition-all duration-500 ease-in-out ${
-                  isTransitioningOut
-                    ? 'opacity-0 -translate-y-2'
-                    : 'opacity-100 translate-y-0'
-                }`}>
+                <div className="space-y-2">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Source Input Text ({sourceLangLabel})
                   </label>
@@ -734,11 +637,12 @@ export default function LandingPage() {
                     rows={4}
                     value={inputText}
                     onChange={(e) => {
-                      setIsManualMode(true);
                       setInputText(e.target.value);
                       if (activeStep !== 0) {
                         setActiveStep(0);
                         setPlaygroundResult(null);
+                        setPlaygroundAudio(null);
+                        setApiError(null);
                       }
                     }}
                     className="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 shadow-xs resize-none"
@@ -746,11 +650,7 @@ export default function LandingPage() {
                   />
                 </div>
 
-                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-500 ease-in-out ${
-                  isTransitioningOut
-                    ? 'opacity-0 -translate-y-2'
-                    : 'opacity-100 translate-y-0'
-                }`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                       Target Language
@@ -758,13 +658,14 @@ export default function LandingPage() {
                     <select
                       value={targetLangCode}
                       onChange={(e) => {
-                        setIsManualMode(true);
                         const selectedCode = e.target.value;
                         const match = TARGET_LANGUAGES.find((t) => t.code === selectedCode);
                         if (match) {
                           setTargetLangCode(selectedCode);
                           setTargetLangLabel(match.label);
                           setPlaygroundResult(null);
+                          setPlaygroundAudio(null);
+                          setApiError(null);
                           setActiveStep(0);
                         }
                       }}
@@ -779,52 +680,29 @@ export default function LandingPage() {
                   </div>
 
                   <div className="flex items-end">
-                    {isManualMode ? (
-                      <button
-                        onClick={runManualPipeline}
-                        disabled={isPlayinggroundRunning}
-                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isPlayinggroundRunning ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin text-white" />
-                            <span>Running Simulation...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 fill-current text-white" />
-                            <span>Run Pipeline</span>
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setIsDemoPaused(!isDemoPaused)}
-                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
-                      >
-                        {isDemoPaused ? (
-                          <>
-                            <Play className="h-4 w-4 fill-current text-white" />
-                            <span>Resume Autoplay</span>
-                          </>
-                        ) : (
-                          <>
-                            <Pause className="h-4 w-4 text-white" />
-                            <span>Pause Autoplay</span>
-                          </>
-                        )}
-                      </button>
-                    )}
+                    <button
+                      onClick={runManualPipeline}
+                      disabled={isPlayinggroundRunning}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isPlayinggroundRunning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-white" />
+                          <span>Running Simulation...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 fill-current text-white" />
+                          <span>Run Pipeline</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
 
               {/* Right Column: Live Output Box (Always Visible) */}
-              <div className={`space-y-2 w-full transition-all duration-500 ease-in-out ${
-                isTransitioningOut
-                  ? 'opacity-0 translate-y-2'
-                  : 'opacity-100 translate-y-0'
-              }`}>
+              <div className="space-y-2 w-full">
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Live Output Result ({targetLangLabel})
                 </label>
@@ -848,7 +726,7 @@ export default function LandingPage() {
                           {playgroundResult}
                         </p>
                         {/* If the input was custom (not a preset), display the conversion notice */}
-                        {isManualMode && !apiError && !PLAYGROUND_PRESETS.some(
+                        {!apiError && !PLAYGROUND_PRESETS.some(
                           (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
                         ) && (
                           <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed animate-fade-in">
@@ -904,11 +782,7 @@ export default function LandingPage() {
             </div>
 
             {/* Bottom Row: Visual Flow Node Graph Connections */}
-            <div className={`pt-4 border-t border-gray-150 transition-all duration-500 ease-in-out ${
-              isTransitioningOut
-                ? 'opacity-0 translate-y-2'
-                : 'opacity-100 translate-y-0'
-            }`}>
+            <div className="pt-4 border-t border-gray-150">
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block text-center select-none">
                   Live Visual Pipeline Execution Graph
