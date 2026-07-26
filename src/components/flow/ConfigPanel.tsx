@@ -94,16 +94,16 @@ export const ConfigPanel: React.FC = () => {
           : 'w-0 border-r-0 border-transparent'
       }`}
     >
-      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-y-auto min-w-0">
+      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-y-auto overflow-x-hidden min-w-0">
         {isVisible && selectedNode && (
-          <div className="p-4 flex-1 space-y-4">
+          <div className="p-4 flex-1 space-y-4 min-w-0">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                {nodeType === 'stt' && <div className="p-1.5 rounded-lg bg-emerald-50"><Mic className="h-4 w-4 text-emerald-600" /></div>}
-                {nodeType === 'translate' && <div className="p-1.5 rounded-lg bg-blue-50"><Languages className="h-4 w-4 text-blue-600" /></div>}
-                {nodeType === 'tts' && <div className="p-1.5 rounded-lg bg-orange-50"><Volume2 className="h-4 w-4 text-orange-600" /></div>}
-                <div>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                {nodeType === 'stt' && <div className="p-1.5 rounded-lg bg-emerald-50 shrink-0"><Mic className="h-4 w-4 text-emerald-600" /></div>}
+                {nodeType === 'translate' && <div className="p-1.5 rounded-lg bg-blue-50 shrink-0"><Languages className="h-4 w-4 text-blue-600" /></div>}
+                {nodeType === 'tts' && <div className="p-1.5 rounded-lg bg-orange-50 shrink-0"><Volume2 className="h-4 w-4 text-orange-600" /></div>}
+                <div className="min-w-0">
                   <input
                     type="text"
                     value={selectedNode.data.label as string}
@@ -111,15 +111,15 @@ export const ConfigPanel: React.FC = () => {
                     className="text-sm font-semibold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none transition-colors w-full p-0 m-0 leading-tight"
                     placeholder="Node Label"
                   />
-                  <p className="text-[10px] text-gray-400 font-mono mt-0.5">{selectedNode.id}</p>
+                  <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">{selectedNode.id}</p>
                 </div>
               </div>
-              <button onClick={() => selectNode(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer">
+              <button onClick={() => selectNode(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer shrink-0">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-220px)]">
+            <div className="space-y-3 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-220px)] min-w-0">
               {/* STT */}
               {nodeType === 'stt' && (
                 <>
