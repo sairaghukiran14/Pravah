@@ -622,12 +622,15 @@ export default function LandingPage() {
               {/* Left Column: Inputs & Controls */}
               <div className="space-y-6 w-full">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Source Input Text ({sourceLangLabel})
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Source Input Text ({sourceLangLabel})
+                    </label>
+                  </div>
                   <textarea
                     rows={4}
                     value={inputText}
+                    maxLength={100}
                     onChange={(e) => {
                       setInputText(e.target.value);
                       if (activeStep !== 0) {
@@ -640,6 +643,12 @@ export default function LandingPage() {
                     className="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 shadow-xs resize-none"
                     placeholder="Type or paste custom text here to translate..."
                   />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold px-1">
+                    <span>Limit: 100 characters max for trial playground</span>
+                    <span className={inputText.length >= 100 ? 'text-amber-600 font-bold' : ''}>
+                      {inputText.length} / 100
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
