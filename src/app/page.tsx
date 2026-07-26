@@ -82,6 +82,9 @@ export default function LandingPage() {
   const [isDemoPaused, setIsDemoPaused] = useState(false);
   const [isTransitioningOut, setIsTransitioningOut] = useState(false);
   const [speechPlaying, setSpeechPlaying] = useState(false);
+  const [playgroundAudio, setPlaygroundAudio] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [activeAudioObj, setActiveAudioObj] = useState<HTMLAudioElement | null>(null);
 
   // Auto-sync states from loop index when in autoplay loop mode
   useEffect(() => {
@@ -93,6 +96,7 @@ export default function LandingPage() {
       setSourceLangLabel(preset.sourceLabel);
       setTargetLangCode(preset.targetLang);
       setTargetLangLabel(preset.targetLabel);
+      setApiError(null);
     }
   }, [loopIndex, isManualMode]);
 
@@ -112,6 +116,8 @@ export default function LandingPage() {
       timer = setTimeout(() => {
         setIsPlaygroundRunning(true);
         setPlaygroundResult(null);
+        setPlaygroundAudio(null);
+        setApiError(null);
         setActiveStep(1);
       }, 1500);
     } else if (activeStep === 1) {
@@ -147,63 +153,122 @@ export default function LandingPage() {
     };
   }, [activeStep, isManualMode, isDemoPaused, loopIndex]);
 
-  // Manual sandbox execution logic
-  const runManualPipeline = () => {
+  // Manual sandbox execution logic calling the public trial API
+  const runManualPipeline = async () => {
     if (isPlayinggroundRunning) return;
     
-    // Stop any active Web Speech synthesis
+    // Stop any active Web Speech synthesis or audio objects
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      setSpeechPlaying(false);
     }
+    if (activeAudioObj) {
+      activeAudioObj.pause();
+      setActiveAudioObj(null);
+    }
+    setSpeechPlaying(false);
+    setApiError(null);
 
     setIsPlaygroundRunning(true);
     setPlaygroundResult(null);
+    setPlaygroundAudio(null);
     setActiveStep(1);
 
-    // Chain execution timeouts to simulate active pipeline nodes
-    setTimeout(() => {
+    try {
+      // 1. Fetch Translation via public route
+      const translateRes = await fetch('/api/sarvam/playground', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'translate',
+          text: inputText,
+          targetLanguageCode: targetLangCode,
+        }),
+      });
+
+      if (!translateRes.ok) {
+        const errData = await translateRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Translation failed with status ${translateRes.status}`);
+      }
+
+      const translateData = await translateRes.json();
+      const translatedText = translateData.translatedText;
+
       setActiveStep(2);
+
+      // 2. Fetch Text-to-Speech via public route
+      const ttsRes = await fetch('/api/sarvam/playground', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'tts',
+          text: translatedText,
+          targetLanguageCode: targetLangCode,
+          speaker: 'aditya',
+        }),
+      });
+
+      if (!ttsRes.ok) {
+        const errData = await ttsRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Voice synthesis failed with status ${ttsRes.status}`);
+      }
+
+      const ttsData = await ttsRes.json();
+      const base64Audio = ttsData.audios?.[0] || null;
+
+      setActiveStep(3);
+
       setTimeout(() => {
-        setActiveStep(3);
+        setPlaygroundResult(translatedText);
+        setPlaygroundAudio(base64Audio);
+        setIsPlaygroundRunning(false);
+        setActiveStep(4);
+      }, 1000);
+
+    } catch (err: any) {
+      console.warn('[Playground API Error - Falling Back]:', err.message);
+      setApiError(err.message);
+
+      // Graceful fallback: run simulated clientside translation loop
+      setTimeout(() => {
+        setActiveStep(2);
         setTimeout(() => {
-          // Check if custom text matches any preset input exactly
-          const matchingPreset = PLAYGROUND_PRESETS.find(
-            (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
-          );
-          
-          let outputText = '';
-          if (matchingPreset) {
-            outputText = matchingPreset.output;
-          } else {
-            // Provide context-aware mock translation
-            if (targetLangCode === 'en-IN') {
-              outputText = `Hello! [Simulated translation of: "${inputText.substring(0, 35)}..."]`;
-            } else if (targetLangCode === 'hi-IN') {
-              outputText = `नमस्ते! [कृत्रिम अनुवाद: "${inputText.substring(0, 35)}..."]`;
-            } else if (targetLangCode === 'te-IN') {
-              outputText = `హలో! [అనుకరణ అనువాదం: "${inputText.substring(0, 35)}..."]`;
-            } else if (targetLangCode === 'ta-IN') {
-              outputText = `வணக்கம்! [உருவகப்படுத்தப்பட்ட மொழிபெயர்ப்பு: "${inputText.substring(0, 35)}..."]`;
-            } else if (targetLangCode === 'bn-IN') {
-              outputText = `হ্যালো! [অনুকরণীয় অনুবাদ: "${inputText.substring(0, 35)}..."]`;
+          setActiveStep(3);
+          setTimeout(() => {
+            const matchingPreset = PLAYGROUND_PRESETS.find(
+              (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
+            );
+            
+            let outputText = '';
+            if (matchingPreset) {
+              outputText = matchingPreset.output;
             } else {
-              outputText = `Output: [Simulated Indic flow of: "${inputText.substring(0, 35)}..."]`;
+              if (targetLangCode === 'en-IN') {
+                outputText = `Hello! [Simulated translation of: "${inputText.substring(0, 35)}..."]`;
+              } else if (targetLangCode === 'hi-IN') {
+                outputText = `नमस्ते! [कृत्रিম अनुवाद: "${inputText.substring(0, 35)}..."]`;
+              } else if (targetLangCode === 'te-IN') {
+                outputText = `హలో! [అనుకరణ అనువాదం: "${inputText.substring(0, 35)}..."]`;
+              } else if (targetLangCode === 'ta-IN') {
+                outputText = `வணக்கம்! [உருவகப்படுத்தப்பட்ட மொழிபெயர்ப்பு: "${inputText.substring(0, 35)}..."]`;
+              } else if (targetLangCode === 'bn-IN') {
+                outputText = `হ্যালো! [অনুকরণীয় অনুবাদ: "${inputText.substring(0, 35)}..."]`;
+              } else {
+                outputText = `Output: [Simulated Indic flow of: "${inputText.substring(0, 35)}..."]`;
+              }
             }
-          }
-          
-          setPlaygroundResult(outputText);
-          setIsPlaygroundRunning(false);
-          setActiveStep(4);
+
+            setPlaygroundResult(outputText);
+            setPlaygroundAudio(null);
+            setIsPlaygroundRunning(false);
+            setActiveStep(4);
+          }, 1000);
         }, 1200);
       }, 1500);
-    }, 1500);
+    }
   };
 
-  // Browser-native speech synthesising client side
-  const speakResult = () => {
-    if (!playgroundResult) return;
-    
+  // Browser-native speech synthesising client side fallback
+  const speakViaWebSpeech = () => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       alert("Browser Text-to-Speech is not supported on this browser.");
       return;
@@ -215,7 +280,7 @@ export default function LandingPage() {
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(playgroundResult);
+    const utterance = new SpeechSynthesisUtterance(playgroundResult || '');
     utterance.lang = targetLangCode;
     
     const voices = window.speechSynthesis.getVoices();
@@ -231,13 +296,47 @@ export default function LandingPage() {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Play real audio or fall back to web speech synth
+  const speakResult = () => {
+    if (!playgroundResult) return;
+
+    if (playgroundAudio) {
+      if (speechPlaying && activeAudioObj) {
+        activeAudioObj.pause();
+        setSpeechPlaying(false);
+        return;
+      }
+
+      const audio = new Audio(`data:audio/wav;base64,${playgroundAudio}`);
+      setActiveAudioObj(audio);
+      audio.onplay = () => setSpeechPlaying(true);
+      audio.onended = () => {
+        setSpeechPlaying(false);
+        setActiveAudioObj(null);
+      };
+      audio.onerror = () => {
+        setSpeechPlaying(false);
+        setActiveAudioObj(null);
+      };
+      audio.play().catch((e) => {
+        console.error("Audio playback failed, falling back to Web Speech:", e);
+        speakViaWebSpeech();
+      });
+    } else {
+      speakViaWebSpeech();
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (activeAudioObj) {
+        activeAudioObj.pause();
+      }
     };
-  }, []);
+  }, [activeAudioObj]);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-gray-900 selection:text-white font-sans">
@@ -749,11 +848,17 @@ export default function LandingPage() {
                           {playgroundResult}
                         </p>
                         {/* If the input was custom (not a preset), display the conversion notice */}
-                        {isManualMode && !PLAYGROUND_PRESETS.some(
+                        {isManualMode && !apiError && !PLAYGROUND_PRESETS.some(
                           (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
                         ) && (
-                          <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed">
+                          <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed animate-fade-in">
                             💡 <strong>Simulated Translation.</strong> To test custom inputs on live population-scale Sarvam AI models, sign up for a free developer account!
+                          </div>
+                        )}
+                        {/* API Error Notice */}
+                        {apiError && (
+                          <div className="text-[10px] text-amber-850 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed animate-fade-in">
+                            ⚠️ <strong>Real-Time API Notice:</strong> {apiError} (Showing simulated local translation fallback instead).
                           </div>
                         )}
                       </div>
