@@ -93,9 +93,9 @@ export const ConfigPanel: React.FC = () => {
         : 'w-0 border-r-0 border-transparent'
         }`}
     >
-      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-y-auto overflow-x-hidden min-w-0">
+      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-hidden min-w-0">
         {isVisible && selectedNode && (
-          <div className="p-4 flex-1 space-y-4 min-w-0">
+          <div className="p-4 flex-1 space-y-4 min-w-0 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
@@ -118,7 +118,7 @@ export const ConfigPanel: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-3 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-220px)] min-w-0">
+            <div className="space-y-3 overflow-y-auto overflow-x-hidden flex-1 min-w-0">
               {/* STT */}
               {nodeType === 'stt' && (
                 <>

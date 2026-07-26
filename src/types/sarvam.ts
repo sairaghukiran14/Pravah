@@ -33,6 +33,7 @@ export interface SarvamTTSRequest {
   speaker?: string;
   pace?: number;
   model?: string;
+  temperature?: number;
 }
 
 export interface SarvamTTSResponse {
