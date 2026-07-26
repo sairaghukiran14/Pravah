@@ -81,8 +81,6 @@ export default function LandingPage() {
   const [playgroundAudio, setPlaygroundAudio] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [activeAudioObj, setActiveAudioObj] = useState<HTMLAudioElement | null>(null);
-
-  // Manual sandbox execution logic calling the public trial API
   const runManualPipeline = async () => {
     if (isPlayinggroundRunning) return;
     
@@ -100,7 +98,7 @@ export default function LandingPage() {
     setIsPlaygroundRunning(true);
     setPlaygroundResult(null);
     setPlaygroundAudio(null);
-    setActiveStep(1);
+    setActiveStep(1); // Translate Node is active/running
 
     try {
       // 1. Fetch Translation via public route
@@ -122,7 +120,7 @@ export default function LandingPage() {
       const translateData = await translateRes.json();
       const translatedText = translateData.translatedText;
 
-      setActiveStep(2);
+      setActiveStep(2); // Sarvam TTS Node is active/running
 
       // 2. Fetch Text-to-Speech via public route
       const ttsRes = await fetch('/api/sarvam/playground', {
@@ -144,14 +142,11 @@ export default function LandingPage() {
       const ttsData = await ttsRes.json();
       const base64Audio = ttsData.audios?.[0] || null;
 
-      setActiveStep(3);
-
-      setTimeout(() => {
-        setPlaygroundResult(translatedText);
-        setPlaygroundAudio(base64Audio);
-        setIsPlaygroundRunning(false);
-        setActiveStep(4);
-      }, 1000);
+      // Complete Pipeline
+      setPlaygroundResult(translatedText);
+      setPlaygroundAudio(base64Audio);
+      setIsPlaygroundRunning(false);
+      setActiveStep(3); // Output Audio Node is active/complete
 
     } catch (err: any) {
       console.warn('[Playground API Error - Falling Back]:', err.message);
@@ -159,38 +154,35 @@ export default function LandingPage() {
 
       // Graceful fallback: run simulated clientside translation loop
       setTimeout(() => {
-        setActiveStep(2);
+        setActiveStep(2); // Shift to TTS active
         setTimeout(() => {
-          setActiveStep(3);
-          setTimeout(() => {
-            const matchingPreset = PLAYGROUND_PRESETS.find(
-              (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
-            );
-            
-            let outputText = '';
-            if (matchingPreset) {
-              outputText = matchingPreset.output;
+          const matchingPreset = PLAYGROUND_PRESETS.find(
+            (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
+          );
+          
+          let outputText = '';
+          if (matchingPreset) {
+            outputText = matchingPreset.output;
+          } else {
+            if (targetLangCode === 'en-IN') {
+              outputText = `Hello! [Simulated translation of: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'hi-IN') {
+              outputText = `नमस्ते! [कृत्रिम अनुवाद: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'te-IN') {
+              outputText = `హలో! [అనుకరణ అనువాదం: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'ta-IN') {
+              outputText = `வணக்கம்! [உருவகப்படுத்தப்பட்ட மொழிபெயர்ப்பு: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'bn-IN') {
+              outputText = `হ্যালো! [অনুকরণীয় অনুবাদ: "${inputText.substring(0, 35)}..."]`;
             } else {
-              if (targetLangCode === 'en-IN') {
-                outputText = `Hello! [Simulated translation of: "${inputText.substring(0, 35)}..."]`;
-              } else if (targetLangCode === 'hi-IN') {
-                outputText = `नमस्ते! [कृत्रিম अनुवाद: "${inputText.substring(0, 35)}..."]`;
-              } else if (targetLangCode === 'te-IN') {
-                outputText = `హలో! [అనుకరణ అనువాదం: "${inputText.substring(0, 35)}..."]`;
-              } else if (targetLangCode === 'ta-IN') {
-                outputText = `வணக்கம்! [உருவகப்படுத்தப்பட்ட மொழிபெயர்ப்பு: "${inputText.substring(0, 35)}..."]`;
-              } else if (targetLangCode === 'bn-IN') {
-                outputText = `হ্যালো! [অনুকরণীয় অনুবাদ: "${inputText.substring(0, 35)}..."]`;
-              } else {
-                outputText = `Output: [Simulated Indic flow of: "${inputText.substring(0, 35)}..."]`;
-              }
+              outputText = `Output: [Simulated Indic flow of: "${inputText.substring(0, 35)}..."]`;
             }
+          }
 
-            setPlaygroundResult(outputText);
-            setPlaygroundAudio(null);
-            setIsPlaygroundRunning(false);
-            setActiveStep(4);
-          }, 1000);
+          setPlaygroundResult(outputText);
+          setPlaygroundAudio(null);
+          setIsPlaygroundRunning(false);
+          setActiveStep(3); // Complete
         }, 1200);
       }, 1500);
     }
@@ -761,9 +753,8 @@ export default function LandingPage() {
                         <>
                           <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                           <p className="text-xs font-semibold text-gray-600">
-                            {activeStep === 1 && "Capturing Speech Audio (STT)..."}
-                            {activeStep === 2 && "Translating to Target Language..."}
-                            {activeStep === 3 && "Synthesizing Speech Output (TTS)..."}
+                            {activeStep === 1 && "Translating to Target Language..."}
+                            {activeStep === 2 && "Synthesizing Speech Output (TTS)..."}
                           </p>
                         </>
                       ) : (
@@ -788,50 +779,38 @@ export default function LandingPage() {
                   Live Visual Pipeline Execution Graph
                 </span>
                 <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
-                  {/* Node 1: Audio Source */}
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                    activeStep >= 1 ? 'bg-pink-50 border-pink-200 text-pink-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
-                  }`}>
-                    <Mic className="h-3.5 w-3.5" /> Input Audio
+                  {/* Node 1: Source Text */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-pink-200 bg-pink-50 text-pink-700 text-xs font-semibold shadow-xs">
+                    Source Text
                   </div>
                   
                   <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                   
-                  {/* Node 2: Sarvam STT */}
+                  {/* Node 2: Translate Node */}
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                    activeStep >= 1 ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                    activeStep >= 1 ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
                   }`}>
-                    {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />}
-                    Sarvam STT
-                  </div>
-                  
-                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
-                  
-                  {/* Node 3: Sarvam Translate */}
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                    activeStep >= 2 ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
-                  }`}>
-                    {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+                    {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
                     Translate Node
                   </div>
                   
                   <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                   
-                  {/* Node 4: Sarvam TTS */}
+                  {/* Node 3: Sarvam TTS */}
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                    activeStep >= 3 ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                    activeStep >= 2 ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
                   }`}>
-                    {activeStep === 3 && <Loader2 className="h-3 w-3 animate-spin text-orange-600" />}
+                    {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin text-orange-600" />}
                     Sarvam TTS
                   </div>
                   
                   <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                   
-                  {/* Node 5: Audio Output */}
+                  {/* Node 4: Output Audio */}
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                    activeStep >= 4 ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                    activeStep >= 3 ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
                   }`}>
-                    <Volume2 className="h-3.5 w-3.5" /> Output Voice
+                    <Volume2 className="h-3.5 w-3.5" /> Output Audio
                   </div>
                 </div>
               </div>
