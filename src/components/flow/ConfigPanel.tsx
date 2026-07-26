@@ -88,11 +88,13 @@ export const ConfigPanel: React.FC = () => {
 
   return (
     <div 
-      className={`transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden ${
-        isVisible ? 'w-full sm:w-80 md:w-72 border-r border-gray-200' : 'w-0 border-r-0 border-transparent'
+      className={`transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden z-30 ${
+        isVisible 
+          ? 'w-[85vw] max-w-[320px] md:w-72 border-r border-gray-200 absolute md:relative left-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none' 
+          : 'w-0 border-r-0 border-transparent'
       }`}
     >
-      <aside className="relative w-full sm:w-80 md:w-72 h-full bg-white flex flex-col justify-between z-20 shadow-xl md:shadow-none overflow-y-auto min-w-[300px] md:min-w-[288px]">
+      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-y-auto min-w-0">
         {isVisible && selectedNode && (
           <div className="p-4 flex-1 space-y-4">
             {/* Header */}

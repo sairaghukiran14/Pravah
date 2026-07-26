@@ -174,33 +174,34 @@ export default function PipelineEditorPage({
 
       {/* Editor Sub-Header Toolbar */}
       <div className="h-14 border-b border-gray-200 bg-white px-4 flex items-center justify-between z-20">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href={projectId ? `/dashboard/project/${projectId}` : '/dashboard'}
             className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Back</span>
           </Link>
 
           <div className="h-4 w-px bg-gray-200" />
 
           {/* Editable Pipeline Name */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <input
               type="text"
               value={pipelineName}
               onChange={(e) => setPipelineName(e.target.value)}
               disabled={isSaving || isRunning}
-              className="bg-transparent font-semibold text-sm text-gray-900 focus:outline-none focus:bg-gray-50 px-2 py-1 rounded transition-colors disabled:opacity-50"
+              className="bg-transparent font-semibold text-xs sm:text-sm text-gray-900 focus:outline-none focus:bg-gray-50 px-1 sm:px-2 py-1 rounded transition-colors disabled:opacity-50 max-w-[80px] sm:max-w-[150px] md:max-w-none"
             />
             {isDirty && (
-              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                Unsaved Changes
+              <span className="text-[9px] sm:text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 sm:px-2 py-0.5 rounded-full font-medium shrink-0">
+                <span className="hidden sm:inline">Unsaved Changes</span>
+                <span className="sm:hidden">Unsaved</span>
               </span>
             )}
             {saveSuccess && (
-              <span className="text-[10px] text-emerald-600 flex items-center gap-1 font-medium">
-                <CheckCircle2 className="h-3 w-3" /> Saved!
+              <span className="text-[9px] sm:text-[10px] text-emerald-600 flex items-center gap-0.5 sm:gap-1 font-medium shrink-0">
+                <CheckCircle2 className="h-3 w-3" /> <span className="hidden sm:inline">Saved!</span>
               </span>
             )}
           </div>
@@ -226,7 +227,7 @@ export default function PipelineEditorPage({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link href={`/pipeline/${pipelineId}/history`}>
             <Button
               variant="ghost"
@@ -234,7 +235,7 @@ export default function PipelineEditorPage({
               icon={<History className="h-4 w-4 text-gray-500" />}
               disabled={isRunning || isSaving}
             >
-              History
+              <span className="hidden sm:inline">History</span>
             </Button>
           </Link>
 
@@ -246,7 +247,8 @@ export default function PipelineEditorPage({
             onClick={handleSave}
             icon={<Save className="h-4 w-4 text-gray-600" />}
           >
-            Save Pipeline
+            <span className="hidden sm:inline">Save Pipeline</span>
+            <span className="sm:hidden">Save</span>
           </Button>
 
           {isRunning ? (
@@ -256,7 +258,8 @@ export default function PipelineEditorPage({
               onClick={() => usePipelineStore.getState().cancelExecution()}
               icon={<Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
             >
-              Cancel Run
+              <span className="hidden sm:inline">Cancel Run</span>
+              <span className="sm:hidden">Cancel</span>
             </Button>
           ) : (
             <Button
@@ -266,7 +269,8 @@ export default function PipelineEditorPage({
               onClick={() => setIsRunDialogOpen(true)}
               icon={<Play className="h-4 w-4 fill-current text-white" />}
             >
-              Run Pipeline
+              <span className="hidden sm:inline">Run Pipeline</span>
+              <span className="sm:hidden">Run</span>
             </Button>
           )}
         </div>

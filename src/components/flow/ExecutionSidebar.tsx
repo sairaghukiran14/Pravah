@@ -17,6 +17,16 @@ export const ExecutionSidebar: React.FC = () => {
 
   const [width, setWidth] = useState(320);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Handle resizing
   const startResizing = useCallback((e: React.MouseEvent) => {
@@ -58,18 +68,26 @@ export const ExecutionSidebar: React.FC = () => {
 
   return (
     <div 
-      className="transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden border-l border-gray-200"
-      style={{ width: isVisible ? `${width}px` : '0px', borderWidth: isVisible ? '1px' : '0px' }}
+      className={`transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden border-l border-gray-200 z-30 ${
+        isVisible
+          ? 'absolute md:relative right-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none'
+          : 'hidden md:block'
+      }`}
+      style={{ 
+        width: isVisible ? (isMobile ? 'min(320px, 85vw)' : `${width}px`) : '0px',
+        borderWidth: isVisible ? '1px' : '0px'
+      }}
     >
       <aside 
-        className="relative flex-shrink-0 flex h-full bg-white shadow-xl z-20 min-w-[250px]"
-        style={{ width: `${width}px` }}
+        className="relative flex-shrink-0 flex h-full bg-white min-w-0 w-full"
       >
       {/* Resize Handle */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 z-10 transition-colors"
-        onMouseDown={startResizing}
-      />
+      {!isMobile && (
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 z-10 transition-colors"
+          onMouseDown={startResizing}
+        />
+      )}
 
       <div className="flex-1 flex flex-col h-full overflow-hidden ml-1">
         {/* Header */}
