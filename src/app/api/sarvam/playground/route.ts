@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeSarvamTranslate, executeSarvamTTS } from '@/lib/sarvam';
 
-const MAX_PLAYGROUND_CHARACTERS = 50; // Cut limit to 50 characters for cost saving
+const MAX_PLAYGROUND_CHARACTERS = 75; // Cut limit to 75 characters for cost saving
 
 type Bucket = {
   tokens: number;

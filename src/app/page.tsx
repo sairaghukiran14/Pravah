@@ -630,7 +630,6 @@ export default function LandingPage() {
                   <textarea
                     rows={4}
                     value={inputText}
-                    maxLength={50}
                     onChange={(e) => {
                       setInputText(e.target.value);
                       if (activeStep !== 0) {
@@ -644,9 +643,9 @@ export default function LandingPage() {
                     placeholder="Type or paste custom text here to translate..."
                   />
                   <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold px-1">
-                    <span>Limit: 50 characters max for trial playground</span>
-                    <span className={inputText.length >= 50 ? 'text-amber-600 font-bold' : ''}>
-                      {inputText.length} / 50
+                    <span>Limit: 75 characters max for trial playground</span>
+                    <span className={inputText.length > 75 ? 'text-red-500 font-bold' : ''}>
+                      {inputText.length} / 75
                     </span>
                   </div>
                 </div>
@@ -683,7 +682,7 @@ export default function LandingPage() {
                   <div className="flex items-end">
                     <button
                       onClick={runManualPipeline}
-                      disabled={isPlayinggroundRunning}
+                      disabled={isPlayinggroundRunning || inputText.length > 75 || inputText.trim() === ''}
                       className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isPlayinggroundRunning ? (
