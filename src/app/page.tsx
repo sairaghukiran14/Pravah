@@ -12,64 +12,93 @@ import {
   ChevronRight,
   Loader2,
   Pause,
+  RotateCcw,
 } from 'lucide-react';
 
-const PLAYGROUND_STEPS = [
+const PLAYGROUND_PRESETS = [
   {
-    input: "नमस्ते! भारत के प्रवाह प्लेटफॉर्म में आपका स्वागत है।",
+    id: 'support',
+    tabName: '💬 Support',
+    input: "नमस्ते! मेरा पेमेंट कट गया है लेकिन सब्स्क्रिप्शन अभी तक चालू नहीं हुआ।",
     sourceLang: "hi-IN",
     sourceLabel: "Hindi",
     targetLang: "en-IN",
     targetLabel: "English",
-    output: "Hello! Welcome to India's HasaFlow Platform."
+    output: "Hello! My payment was deducted, but the subscription has not been activated yet."
   },
   {
-    input: "Hello! Welcome to India's HasaFlow Platform.",
+    id: 'health',
+    tabName: '🏥 Health',
+    input: "Please drink plenty of warm water and take rest. If the fever continues, call us.",
     sourceLang: "en-IN",
     sourceLabel: "English",
     targetLang: "te-IN",
     targetLabel: "Telugu",
-    output: "హలో! భారతదేశం యొక్క హసఫ్లో ప్లాట్‌ఫారమ్‌కు స్వాగతం."
+    output: "దయచేసి పుష్కలంగా గోరువెచ్చని నీరు త్రాగండి మరియు విశ్రాంతి తీసుకోండి. జ్వరం కొనసాగితే, మాకు కాల్ చేయండి."
   },
   {
-    input: "హలో! భారతదేశం యొక్క హసఫ్లో ప్లాట్‌ఫారమ్‌కు స్వాగతం.",
+    id: 'travel',
+    tabName: '✈️ Travel',
+    input: "ఇక్కడికి దగ్గరలో మంచి సంప్రదాయ భోజన హోటల్స్ ఏమైనా ఉన్నాయా?",
     sourceLang: "te-IN",
     sourceLabel: "Telugu",
     targetLang: "ta-IN",
     targetLabel: "Tamil",
-    output: "ஹலோ! இந்தியாவின் ஹசாஃப்ளோ தளத்திற்கு வரவேற்கிறோம்."
+    output: "அருகிலுள்ள ஏதேனும் நல்ல பாரம்பரிய உணவு விடுதிகள் உள்ளனவா?"
   },
   {
-    input: "ஹலோ! இந்தியாவின் ஹசாஃப்ளோ தளத்திற்கு வரவேற்கிறோம்.",
-    sourceLang: "ta-IN",
-    sourceLabel: "Tamil",
-    targetLang: "bn-IN",
-    targetLabel: "Bengali",
-    output: "হ্যালো! ভারতের হাসাফ্লো প্ল্যাটফর্মে আপনাকে স্বাগত।"
-  },
-  {
-    input: "হ্যালো! ভারতের হাসাফ্লো প্ল্যাটফর্মে আপনাকে স্বাগত।",
+    id: 'ecommerce',
+    tabName: '🛍️ E-Commerce',
+    input: "আমি আমার অর্ডার বাতিল করতে চাই, রিফান্ড কখন পাব?",
     sourceLang: "bn-IN",
     sourceLabel: "Bengali",
     targetLang: "hi-IN",
     targetLabel: "Hindi",
-    output: "नमस्ते! भारत के प्रवाह प्लेटफॉर्म में आपका स्वागत है।"
+    output: "मैं अपना ऑर्डर रद्द करना चाहता हूं, मुझे रिफান্ড कब मिलेगा?"
   }
+];
+
+const TARGET_LANGUAGES = [
+  { label: 'English', code: 'en-IN' },
+  { label: 'Hindi', code: 'hi-IN' },
+  { label: 'Telugu', code: 'te-IN' },
+  { label: 'Tamil', code: 'ta-IN' },
+  { label: 'Bengali', code: 'bn-IN' },
 ];
 
 export default function LandingPage() {
   // Live Playground State
   const [loopIndex, setLoopIndex] = useState(0);
+  const [selectedPresetId, setSelectedPresetId] = useState('support');
+  const [inputText, setInputText] = useState(PLAYGROUND_PRESETS[0].input);
+  const [sourceLangCode, setSourceLangCode] = useState(PLAYGROUND_PRESETS[0].sourceLang);
+  const [sourceLangLabel, setSourceLangLabel] = useState(PLAYGROUND_PRESETS[0].sourceLabel);
+  const [targetLangCode, setTargetLangCode] = useState(PLAYGROUND_PRESETS[0].targetLang);
+  const [targetLangLabel, setTargetLangLabel] = useState(PLAYGROUND_PRESETS[0].targetLabel);
+  const [isManualMode, setIsManualMode] = useState(false);
   const [isPlayinggroundRunning, setIsPlaygroundRunning] = useState(false);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
   const [isDemoPaused, setIsDemoPaused] = useState(false);
   const [isTransitioningOut, setIsTransitioningOut] = useState(false);
+  const [speechPlaying, setSpeechPlaying] = useState(false);
 
-  const currentStep = PLAYGROUND_STEPS[loopIndex];
-
+  // Auto-sync states from loop index when in autoplay loop mode
   useEffect(() => {
-    if (isDemoPaused) {
+    if (!isManualMode) {
+      const preset = PLAYGROUND_PRESETS[loopIndex];
+      setSelectedPresetId(preset.id);
+      setInputText(preset.input);
+      setSourceLangCode(preset.sourceLang);
+      setSourceLangLabel(preset.sourceLabel);
+      setTargetLangCode(preset.targetLang);
+      setTargetLangLabel(preset.targetLabel);
+    }
+  }, [loopIndex, isManualMode]);
+
+  // Autoplay loop runner
+  useEffect(() => {
+    if (isManualMode || isDemoPaused) {
       setIsTransitioningOut(false);
       return;
     }
@@ -77,38 +106,35 @@ export default function LandingPage() {
     let timer: NodeJS.Timeout;
     let fadeOutTimer: NodeJS.Timeout;
 
+    const preset = PLAYGROUND_PRESETS[loopIndex];
+
     if (activeStep === 0) {
-      // Initial delay before starting the flow (STT)
       timer = setTimeout(() => {
         setIsPlaygroundRunning(true);
         setPlaygroundResult(null);
         setActiveStep(1);
       }, 1500);
     } else if (activeStep === 1) {
-      // Transition to translation step
       timer = setTimeout(() => {
         setActiveStep(2);
       }, 1500);
     } else if (activeStep === 2) {
-      // Transition to TTS output step
       timer = setTimeout(() => {
         setActiveStep(3);
       }, 1500);
     } else if (activeStep === 3) {
-      // Complete execution and show result (Transition to Step 4)
       timer = setTimeout(() => {
-        setPlaygroundResult(currentStep.output);
+        setPlaygroundResult(preset.output);
         setIsPlaygroundRunning(false);
         setActiveStep(4);
       }, 1000);
     } else if (activeStep === 4) {
-      // Display output for 4 seconds, then reset state to start the next language cycle
       fadeOutTimer = setTimeout(() => {
         setIsTransitioningOut(true);
       }, 3500);
 
       timer = setTimeout(() => {
-        setLoopIndex((prev) => (prev + 1) % PLAYGROUND_STEPS.length);
+        setLoopIndex((prev) => (prev + 1) % PLAYGROUND_PRESETS.length);
         setPlaygroundResult(null);
         setIsTransitioningOut(false);
         setActiveStep(0);
@@ -119,7 +145,99 @@ export default function LandingPage() {
       clearTimeout(timer);
       clearTimeout(fadeOutTimer);
     };
-  }, [activeStep, isDemoPaused, loopIndex, currentStep.output]);
+  }, [activeStep, isManualMode, isDemoPaused, loopIndex]);
+
+  // Manual sandbox execution logic
+  const runManualPipeline = () => {
+    if (isPlayinggroundRunning) return;
+    
+    // Stop any active Web Speech synthesis
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setSpeechPlaying(false);
+    }
+
+    setIsPlaygroundRunning(true);
+    setPlaygroundResult(null);
+    setActiveStep(1);
+
+    // Chain execution timeouts to simulate active pipeline nodes
+    setTimeout(() => {
+      setActiveStep(2);
+      setTimeout(() => {
+        setActiveStep(3);
+        setTimeout(() => {
+          // Check if custom text matches any preset input exactly
+          const matchingPreset = PLAYGROUND_PRESETS.find(
+            (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
+          );
+          
+          let outputText = '';
+          if (matchingPreset) {
+            outputText = matchingPreset.output;
+          } else {
+            // Provide context-aware mock translation
+            if (targetLangCode === 'en-IN') {
+              outputText = `Hello! [Simulated translation of: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'hi-IN') {
+              outputText = `नमस्ते! [कृत्रिम अनुवाद: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'te-IN') {
+              outputText = `హలో! [అనుకరణ అనువాదం: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'ta-IN') {
+              outputText = `வணக்கம்! [உருவகப்படுத்தப்பட்ட மொழிபெயர்ப்பு: "${inputText.substring(0, 35)}..."]`;
+            } else if (targetLangCode === 'bn-IN') {
+              outputText = `হ্যালো! [অনুকরণীয় অনুবাদ: "${inputText.substring(0, 35)}..."]`;
+            } else {
+              outputText = `Output: [Simulated Indic flow of: "${inputText.substring(0, 35)}..."]`;
+            }
+          }
+          
+          setPlaygroundResult(outputText);
+          setIsPlaygroundRunning(false);
+          setActiveStep(4);
+        }, 1200);
+      }, 1500);
+    }, 1500);
+  };
+
+  // Browser-native speech synthesising client side
+  const speakResult = () => {
+    if (!playgroundResult) return;
+    
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      alert("Browser Text-to-Speech is not supported on this browser.");
+      return;
+    }
+
+    if (speechPlaying) {
+      window.speechSynthesis.cancel();
+      setSpeechPlaying(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(playgroundResult);
+    utterance.lang = targetLangCode;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find((v) => v.lang.startsWith(targetLangCode.substring(0, 2)));
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.onstart = () => setSpeechPlaying(true);
+    utterance.onend = () => setSpeechPlaying(false);
+    utterance.onerror = () => setSpeechPlaying(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-gray-900 selection:text-white font-sans">
@@ -432,11 +550,75 @@ export default function LandingPage() {
               Test HasaFlow Pipeline Live Right Now
             </h2>
             <p className="text-sm text-gray-600">
-              Watch HasaFlow chain multiple sovereign AI nodes (STT ➔ Translate ➔ TTS) live in an infinite loop.
+              Try out preset use cases, customize source text and target languages, and run simulated pipelines with audio playback.
             </p>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-6">
+            
+            {/* Sandbox Mode / Auto-Loop Toggle Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-gray-100 gap-3">
+              <div className="flex items-center gap-2">
+                <span className={`flex h-2 w-2 rounded-full ${isManualMode ? 'bg-purple-500 animate-pulse' : 'bg-emerald-500 animate-ping'}`} />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {isManualMode ? "🎮 Sandbox Mode (Autoplay Paused)" : "🔄 Autoplay Mode (Interactive)"}
+                </span>
+              </div>
+              {isManualMode && (
+                <button
+                  onClick={() => {
+                    setIsManualMode(false);
+                    setLoopIndex(0);
+                    setActiveStep(0);
+                    setPlaygroundResult(null);
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                      window.speechSynthesis.cancel();
+                      setSpeechPlaying(false);
+                    }
+                  }}
+                  className="text-xs font-bold text-purple-600 hover:text-purple-700 cursor-pointer flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-3 py-1 rounded-full transition-colors"
+                >
+                  <RotateCcw className="h-3 w-3" /> Restore Autoplay Loop
+                </button>
+              )}
+            </div>
+
+            {/* Presets Selection Tabs */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Select Workflow Use Case
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {PLAYGROUND_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      setIsManualMode(true);
+                      setSelectedPresetId(preset.id);
+                      setInputText(preset.input);
+                      setSourceLangCode(preset.sourceLang);
+                      setSourceLangLabel(preset.sourceLabel);
+                      setTargetLangCode(preset.targetLang);
+                      setTargetLangLabel(preset.targetLabel);
+                      setPlaygroundResult(null);
+                      setActiveStep(0);
+                      if (typeof window !== 'undefined' && window.speechSynthesis) {
+                        window.speechSynthesis.cancel();
+                        setSpeechPlaying(false);
+                      }
+                    }}
+                    className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border cursor-pointer transition-all ${
+                      isManualMode && selectedPresetId === preset.id
+                        ? 'bg-purple-600 border-purple-600 text-white shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {preset.tabName}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Top Row: Left Column (Inputs) & Right Column (Output) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               {/* Left Column: Inputs & Controls */}
@@ -447,14 +629,21 @@ export default function LandingPage() {
                     : 'opacity-100 translate-y-0'
                 }`}>
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Source Input Text ({currentStep.sourceLabel})
+                    Source Input Text ({sourceLangLabel})
                   </label>
                   <textarea
                     rows={4}
-                    value={currentStep.input}
-                    readOnly
-                    disabled
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-sm text-gray-500 focus:outline-none select-none resize-none cursor-not-allowed"
+                    value={inputText}
+                    onChange={(e) => {
+                      setIsManualMode(true);
+                      setInputText(e.target.value);
+                      if (activeStep !== 0) {
+                        setActiveStep(0);
+                        setPlaygroundResult(null);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 shadow-xs resize-none"
+                    placeholder="Type or paste custom text here to translate..."
                   />
                 </div>
 
@@ -467,28 +656,66 @@ export default function LandingPage() {
                     <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                       Target Language
                     </label>
-                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3.5 py-2 text-sm text-gray-500 select-none cursor-not-allowed flex items-center min-h-[38px]">
-                      {currentStep.targetLabel} ({currentStep.targetLang})
-                    </div>
+                    <select
+                      value={targetLangCode}
+                      onChange={(e) => {
+                        setIsManualMode(true);
+                        const selectedCode = e.target.value;
+                        const match = TARGET_LANGUAGES.find((t) => t.code === selectedCode);
+                        if (match) {
+                          setTargetLangCode(selectedCode);
+                          setTargetLangLabel(match.label);
+                          setPlaygroundResult(null);
+                          setActiveStep(0);
+                        }
+                      }}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 shadow-xs cursor-pointer min-h-[38px]"
+                    >
+                      {TARGET_LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label} ({lang.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="flex items-end">
-                    <button
-                      onClick={() => setIsDemoPaused(!isDemoPaused)}
-                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
-                    >
-                      {isDemoPaused ? (
-                        <>
-                          <Play className="h-4 w-4 fill-current" />
-                          <span>Resume Live Loop</span>
-                        </>
-                      ) : (
-                        <>
-                          <Pause className="h-4 w-4 text-white" />
-                          <span>Pause Live Loop</span>
-                        </>
-                      )}
-                    </button>
+                    {isManualMode ? (
+                      <button
+                        onClick={runManualPipeline}
+                        disabled={isPlayinggroundRunning}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isPlayinggroundRunning ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin text-white" />
+                            <span>Running Simulation...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 fill-current text-white" />
+                            <span>Run Pipeline</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setIsDemoPaused(!isDemoPaused)}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-4 text-sm transition-all shadow-sm cursor-pointer"
+                      >
+                        {isDemoPaused ? (
+                          <>
+                            <Play className="h-4 w-4 fill-current text-white" />
+                            <span>Resume Autoplay</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="h-4 w-4 text-white" />
+                            <span>Pause Autoplay</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -500,22 +727,48 @@ export default function LandingPage() {
                   : 'opacity-100 translate-y-0'
               }`}>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Live Output Result ({currentStep.targetLabel})
+                  Live Output Result ({targetLangLabel})
                 </label>
                 
                 {playgroundResult ? (
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1.5 min-h-[148px] flex flex-col justify-between animate-slide-up">
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-3 min-h-[148px] flex flex-col justify-between animate-slide-up">
                     <div className="flex items-start gap-2.5">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 mt-0.5 animate-pulse">
+                      <button
+                        onClick={speakResult}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all ${
+                          speechPlaying
+                            ? 'bg-emerald-600 border-emerald-600 text-white animate-pulse'
+                            : 'bg-emerald-100 border-emerald-200 text-emerald-700 hover:bg-emerald-200'
+                        } mt-0.5 cursor-pointer`}
+                        title={speechPlaying ? "Stop Listening" : "Listen to Translated Audio"}
+                      >
                         <Volume2 className="h-4 w-4" />
+                      </button>
+                      <div className="flex-grow space-y-1.5">
+                        <p className="font-medium text-emerald-950 leading-relaxed pt-0.5">
+                          {playgroundResult}
+                        </p>
+                        {/* If the input was custom (not a preset), display the conversion notice */}
+                        {isManualMode && !PLAYGROUND_PRESETS.some(
+                          (p) => p.input.trim().toLowerCase() === inputText.trim().toLowerCase() && p.targetLang === targetLangCode
+                        ) && (
+                          <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-2 font-medium leading-relaxed">
+                            💡 <strong>Simulated Translation.</strong> To test custom inputs on live population-scale Sarvam AI models, sign up for a free developer account!
+                          </div>
+                        )}
                       </div>
-                      <p className="font-medium text-emerald-950 leading-relaxed flex-grow pt-0.5">
-                        {playgroundResult}
-                      </p>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-semibold uppercase tracking-wider pt-2 border-t border-emerald-100">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                      TTS Generation Complete
+                    <div className="flex items-center justify-between pt-2 border-t border-emerald-100">
+                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-semibold uppercase tracking-wider">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                        TTS Generation Complete
+                      </div>
+                      <button 
+                        onClick={speakResult}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                      >
+                        {speechPlaying ? "Pause Voice 🔇" : "Listen to Voice 🔊"}
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -523,21 +776,21 @@ export default function LandingPage() {
                     <div className="flex-grow flex flex-col items-center justify-center space-y-2">
                       {isPlayinggroundRunning ? (
                         <>
-                          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                          <p className="text-xs font-medium text-gray-500">
-                            {activeStep === 1 && "Capturing Speech Audio..."}
+                          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                          <p className="text-xs font-semibold text-gray-600">
+                            {activeStep === 1 && "Capturing Speech Audio (STT)..."}
                             {activeStep === 2 && "Translating to Target Language..."}
-                            {activeStep === 3 && "Synthesizing Speech Output..."}
+                            {activeStep === 3 && "Synthesizing Speech Output (TTS)..."}
                           </p>
                         </>
                       ) : (
                         <>
-                          <Volume2 className="h-5 w-5 text-gray-300" />
-                          <p className="text-xs">Waiting to start pipeline...</p>
+                          <Volume2 className="h-5 w-5 text-gray-300 animate-pulse" />
+                          <p className="text-xs">Click 'Run Pipeline' to execute flow</p>
                         </>
                       )}
                     </div>
-                    <div className="text-[10px] text-gray-400 uppercase tracking-wider pt-2 border-t border-gray-100 w-full">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider pt-2 border-t border-gray-150 w-full">
                       Pipeline Status: {isPlayinggroundRunning ? "Running" : "Idle"}
                     </div>
                   </div>
@@ -545,37 +798,63 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Bottom Row: Pipeline Execution Flow Progress Steps (Always Visible) */}
+            {/* Bottom Row: Visual Flow Node Graph Connections */}
             <div className={`pt-4 border-t border-gray-150 transition-all duration-500 ease-in-out ${
               isTransitioningOut
                 ? 'opacity-0 translate-y-2'
                 : 'opacity-100 translate-y-0'
             }`}>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
-                  activeStep >= 1 ? 'text-emerald-600 font-bold' : 'text-gray-400'
-                }`}>
-                  <Mic className={`h-3.5 w-3.5 ${activeStep >= 1 ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  1. Speech Audio {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />}
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block text-center select-none">
+                  Live Visual Pipeline Execution Graph
                 </span>
-                
-                <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-                
-                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
-                  activeStep >= 2 ? 'text-blue-600 font-bold' : 'text-gray-400'
-                }`}>
-                  <Languages className={`h-3.5 w-3.5 ${activeStep >= 2 ? 'text-blue-500' : 'text-gray-300'}`} />
-                  2. Indic Translation {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                </span>
-                
-                <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-                
-                <span className={`font-semibold transition-colors duration-300 flex items-center gap-1.5 ${
-                  activeStep >= 3 ? 'text-orange-600 font-bold' : 'text-gray-400'
-                }`}>
-                  <Volume2 className={`h-3.5 w-3.5 ${activeStep >= 3 ? 'text-orange-500' : 'text-gray-300'}`} />
-                  3. TTS Output {activeStep === 3 && isPlayinggroundRunning && <Loader2 className="h-3 w-3 animate-spin text-orange-500" />}
-                </span>
+                <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+                  {/* Node 1: Audio Source */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    activeStep >= 1 ? 'bg-pink-50 border-pink-200 text-pink-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
+                    <Mic className="h-3.5 w-3.5" /> Input Audio
+                  </div>
+                  
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                  
+                  {/* Node 2: Sarvam STT */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    activeStep >= 1 ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
+                    {activeStep === 1 && <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />}
+                    Sarvam STT
+                  </div>
+                  
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                  
+                  {/* Node 3: Sarvam Translate */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    activeStep >= 2 ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
+                    {activeStep === 2 && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+                    Translate Node
+                  </div>
+                  
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                  
+                  {/* Node 4: Sarvam TTS */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    activeStep >= 3 ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
+                    {activeStep === 3 && <Loader2 className="h-3 w-3 animate-spin text-orange-600" />}
+                    Sarvam TTS
+                  </div>
+                  
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                  
+                  {/* Node 5: Audio Output */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    activeStep >= 4 ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
+                    <Volume2 className="h-3.5 w-3.5" /> Output Voice
+                  </div>
+                </div>
               </div>
             </div>
           </div>
