@@ -89,11 +89,11 @@ export const ConfigPanel: React.FC = () => {
   return (
     <div
       className={`transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden z-30 ${isVisible
-          ? 'w-[280px] sm:w-[320px] md:w-72 border-r border-gray-200 absolute md:relative left-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none'
-          : 'w-0 border-r-0 border-transparent'
+        ? 'w-[280px] sm:w-[320px] md:w-72 border-r border-gray-200 absolute md:relative left-0 top-0 bottom-0 h-full bg-white shadow-2xl md:shadow-none'
+        : 'w-0 border-r-0 border-transparent'
         }`}
     >
-      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-x-hidden min-w-0">
+      <aside className="relative w-full h-full bg-white flex flex-col justify-between overflow-y-auto overflow-x-hidden min-w-0">
         {isVisible && selectedNode && (
           <div className="p-4 flex-1 space-y-4 min-w-0">
             {/* Header */}
@@ -220,8 +220,13 @@ export const ConfigPanel: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Button variant="outline" className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100 py-1.5 h-auto flex gap-1.5 " onClick={() => setIsConfirmingDelete(true)}>
-                <Trash2 className="h-3.5 w-3.5" /> Delete Node
+              <Button 
+                variant="outline" 
+                className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100 py-1.5 h-auto flex gap-1.5 items-center justify-center" 
+                onClick={() => setIsConfirmingDelete(true)}
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+              >
+                Delete Node
               </Button>
             )}
           </div>
