@@ -80,6 +80,8 @@ export async function POST(req: NextRequest) {
         text: text,
         target_language_code: targetLanguageCode,
         speaker: speaker || 'aditya',
+        pace: 0.95,
+        temperature: 0.7
       });
       return NextResponse.json({ audios: result.audios, format: result.format });
     } else {

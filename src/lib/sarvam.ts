@@ -191,8 +191,9 @@ export async function executeSarvamTTS(
         inputs: [payload.text],
         target_language_code: payload.target_language_code || 'hi-IN',
         speaker: payload.speaker || 'aditya',
-        pace: payload.pace || 1.0,
+        pace: payload.pace || 0.95, // Tune default speed slightly slower for human-like flow
         model: payload.model || 'bulbul:v3',
+        temperature: payload.temperature ?? 0.7 // Set prosodic natural variation temperature default
       }),
     });
 

@@ -214,11 +214,32 @@ export default function LandingPage() {
           if (typeof window !== 'undefined' && window.speechSynthesis) {
             const utterance = new SpeechSynthesisUtterance(outputText);
             utterance.lang = targetLangCode;
+            
+            // Human-like voice pacing and pitch tuning
+            utterance.rate = 0.95; // Slightly slower natural pace
+            utterance.pitch = 1.0; // Balanced tone pitch
+            
             const voices = window.speechSynthesis.getVoices();
-            const voice = voices.find((v) => v.lang.startsWith(targetLangCode.substring(0, 2)));
-            if (voice) {
-              utterance.voice = voice;
+            const langPrefix = targetLangCode.substring(0, 2).toLowerCase();
+            const matchingVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+            
+            // Prioritize high-quality natural/premium/google/siri engine voices
+            let bestVoice = matchingVoices.find((v) => {
+              const name = v.name.toLowerCase();
+              return name.includes('google') || name.includes('premium') || name.includes('natural') || name.includes('siri');
+            });
+            
+            if (!bestVoice && matchingVoices.length > 0) {
+              bestVoice = matchingVoices.find((v) => v.name.toLowerCase().includes('microsoft') || v.name.toLowerCase().includes('apple'));
             }
+            if (!bestVoice && matchingVoices.length > 0) {
+              bestVoice = matchingVoices[0];
+            }
+            
+            if (bestVoice) {
+              utterance.voice = bestVoice;
+            }
+            
             utterance.onstart = () => setSpeechPlaying(true);
             utterance.onend = () => setSpeechPlaying(false);
             utterance.onerror = () => setSpeechPlaying(false);
@@ -245,10 +266,29 @@ export default function LandingPage() {
     const utterance = new SpeechSynthesisUtterance(playgroundResult || '');
     utterance.lang = targetLangCode;
     
+    // Human-like voice pacing and pitch tuning
+    utterance.rate = 0.95; // Slightly slower natural pace
+    utterance.pitch = 1.0; // Balanced tone pitch
+    
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((v) => v.lang.startsWith(targetLangCode.substring(0, 2)));
-    if (voice) {
-      utterance.voice = voice;
+    const langPrefix = targetLangCode.substring(0, 2).toLowerCase();
+    const matchingVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+    
+    // Prioritize high-quality natural/premium/google/siri engine voices
+    let bestVoice = matchingVoices.find((v) => {
+      const name = v.name.toLowerCase();
+      return name.includes('google') || name.includes('premium') || name.includes('natural') || name.includes('siri');
+    });
+    
+    if (!bestVoice && matchingVoices.length > 0) {
+      bestVoice = matchingVoices.find((v) => v.name.toLowerCase().includes('microsoft') || v.name.toLowerCase().includes('apple'));
+    }
+    if (!bestVoice && matchingVoices.length > 0) {
+      bestVoice = matchingVoices[0];
+    }
+    
+    if (bestVoice) {
+      utterance.voice = bestVoice;
     }
 
     utterance.onstart = () => setSpeechPlaying(true);
