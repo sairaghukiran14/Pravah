@@ -45,3 +45,7 @@ scratch/
 next-env.d.ts
 test-script.ts
 src/scripts/test-apis.ts
+
+# agents config
+.agents/
+
