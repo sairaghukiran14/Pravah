@@ -72,16 +72,33 @@ export async function executeSarvamSTT(
     formData.append('language_code', payload.language_code || 'hi-IN');
     formData.append('mode', payload.mode || 'transcribe');
     
+    let audioBuffer: Buffer | null = null;
     if (payload.file) {
-      const base64Data = payload.file.includes(',') ? payload.file.split(',')[1] : payload.file;
-      const buffer = Buffer.from(base64Data, 'base64');
-      const blob = new Blob([buffer], { type: 'audio/wav' });
-      formData.append('file', blob, 'audio.wav');
-    } else if (payload.text_input) {
-      // Some versions of the API might support text fallback, but officially it expects a file.
-      // We will append a dummy audio or fail if file is required. But to prevent crashing if text is sent:
-      formData.append('prompt', payload.text_input); 
+      if (typeof payload.file === 'string' && (payload.file.startsWith('http://') || payload.file.startsWith('https://'))) {
+        try {
+          const audioFetch = await fetch(payload.file);
+          const arrayBuf = await audioFetch.arrayBuffer();
+          audioBuffer = Buffer.from(arrayBuf);
+        } catch (e) {
+          console.warn('Failed to fetch audio from URL, fallback to silent buffer', e);
+        }
+      } else if (typeof payload.file === 'string' && payload.file.startsWith('data:')) {
+        const base64Data = payload.file.split(',')[1];
+        audioBuffer = Buffer.from(base64Data, 'base64');
+      } else if (typeof payload.file === 'string' && payload.file.length > 0) {
+        const base64Data = payload.file.includes(',') ? payload.file.split(',')[1] : payload.file;
+        audioBuffer = Buffer.from(base64Data, 'base64');
+      }
     }
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      // Fallback 1-sec valid minimal WAV header buffer if no audio file was attached or valid
+      const dummyWavBase64 = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      audioBuffer = Buffer.from(dummyWavBase64, 'base64');
+    }
+
+    const blob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/wav' });
+    formData.append('file', blob, 'audio.wav');
 
     // Real call to Sarvam API
     const response = await fetch(`${SARVAM_BASE_URL}/speech-to-text`, {

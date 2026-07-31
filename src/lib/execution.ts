@@ -129,9 +129,17 @@ export async function executeSingleNode(
     } else if (node.type === 'url_input') {
       output = node.config?.url || upstreamInputText;
     } else if (node.type === 'audio_input') {
+      const audioPayload =
+        node.config?.audio_data?.data ||
+        node.config?.file ||
+        node.config?.url ||
+        node.config?.audio_data?.url ||
+        null;
       output = {
-        url: node.config?.url || null,
-        file: node.config?.file || null,
+        data: audioPayload,
+        file: audioPayload,
+        url: node.config?.audio_data?.url || node.config?.url || null,
+        name: node.config?.audio_data?.name || 'audio_input.wav',
         text: upstreamInputText
       };
     } else if (node.type === 'audio_output') {
@@ -142,8 +150,17 @@ export async function executeSingleNode(
       };
     } else if (node.type === 'stt') {
       const actualPayload = dynamicInputPayload?.passed_input || dynamicInputPayload;
+      const audioFile =
+        actualPayload?.data ||
+        actualPayload?.file ||
+        actualPayload?.url ||
+        node.config?.file ||
+        node.config?.audio_data?.data ||
+        node.config?.audio_data?.url ||
+        null;
+
       output = await executeSarvamSTT({
-        file: actualPayload?.data || actualPayload?.url, 
+        file: audioFile, 
         text_input: upstreamInputText || 'नमस्ते! भारत की कृत्रिम बुद्धिमत्ता सर्वम एआई।',
         language_code: node.config?.language_code || 'hi-IN',
         model: node.config?.model || 'saaras:v3',
