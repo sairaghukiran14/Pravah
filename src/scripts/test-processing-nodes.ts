@@ -30,7 +30,8 @@ async function main() {
     console.log(`[TEST] Testing processing node: ${type.toUpperCase()}`);
     const node: SerializedNode = {
       id: `mock_${type}_123`,
-      type,
+      type: type as any,
+      label: `Test ${type}`,
       positionX: 0,
       positionY: 0,
       config: {
