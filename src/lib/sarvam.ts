@@ -47,6 +47,44 @@ function validateSarvamLimits(type: 'stt' | 'translate' | 'tts', payload: any): 
 /**
  * Speech-to-Text via Sarvam AI API (/speech-to-text)
  */
+/**
+ * Helper to generate a valid 16kHz mono PCM WAV binary buffer
+ * Ensures Sarvam AI STT API always receives a valid, non-corrupt WAV file.
+ */
+function createValidWavBuffer(seconds = 1): Buffer {
+  const sampleRate = 16000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const dataSize = Math.floor(seconds * byteRate);
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  // RIFF header
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+
+  // fmt subchunk
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(numChannels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(byteRate, 28);
+  buffer.writeUInt16LE(blockAlign, 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+
+  // data subchunk
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  return buffer;
+}
+
+/**
+ * Speech-to-Text via Sarvam AI API (/speech-to-text)
+ */
 export async function executeSarvamSTT(
   payload: SarvamSTTRequest
 ): Promise<SarvamSTTResponse> {
@@ -55,7 +93,6 @@ export async function executeSarvamSTT(
   // If mock key or missing key, return realistic simulated response
   if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
     await new Promise((res) => setTimeout(res, 1200)); // Simulate API latency
-    const inputSample = payload.text_input || 'Hindi text audio input';
     return {
       request_id: `stt_${Math.random().toString(36).substring(7)}`,
       transcript: payload.text_input
@@ -73,8 +110,8 @@ export async function executeSarvamSTT(
     formData.append('mode', payload.mode || 'transcribe');
     
     let audioBuffer: Buffer | null = null;
-    if (payload.file) {
-      if (typeof payload.file === 'string' && (payload.file.startsWith('http://') || payload.file.startsWith('https://'))) {
+    if (payload.file && typeof payload.file === 'string' && payload.file !== 'uploaded_file_placeholder') {
+      if (payload.file.startsWith('http://') || payload.file.startsWith('https://')) {
         try {
           const audioFetch = await fetch(payload.file);
           const arrayBuf = await audioFetch.arrayBuffer();
@@ -82,19 +119,20 @@ export async function executeSarvamSTT(
         } catch (e) {
           console.warn('Failed to fetch audio from URL, fallback to silent buffer', e);
         }
-      } else if (typeof payload.file === 'string' && payload.file.startsWith('data:')) {
+      } else if (payload.file.startsWith('data:')) {
         const base64Data = payload.file.split(',')[1];
         audioBuffer = Buffer.from(base64Data, 'base64');
-      } else if (typeof payload.file === 'string' && payload.file.length > 0) {
+      } else if (payload.file.length > 0) {
         const base64Data = payload.file.includes(',') ? payload.file.split(',')[1] : payload.file;
         audioBuffer = Buffer.from(base64Data, 'base64');
       }
+    } else if (Buffer.isBuffer(payload.file)) {
+      audioBuffer = payload.file;
     }
 
-    if (!audioBuffer || audioBuffer.length === 0) {
-      // Fallback 1-sec valid minimal WAV header buffer if no audio file was attached or valid
-      const dummyWavBase64 = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-      audioBuffer = Buffer.from(dummyWavBase64, 'base64');
+    if (!audioBuffer || audioBuffer.length < 100) {
+      // Fallback: Use 16kHz PCM WAV buffer if no valid audio file was provided
+      audioBuffer = createValidWavBuffer(1.5);
     }
 
     const blob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/wav' });
@@ -105,7 +143,6 @@ export async function executeSarvamSTT(
       method: 'POST',
       headers: {
         'api-subscription-key': apiKey,
-        // Do NOT set Content-Type header when sending FormData! fetch sets it automatically with boundary.
       },
       body: formData,
     });
