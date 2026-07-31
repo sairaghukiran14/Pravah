@@ -216,10 +216,19 @@ export const ConfigPanel: React.FC = () => {
                           <Button 
                             type="button"
                             variant={isRecording ? "danger" : "secondary"} 
-                            size="sm" 
-                            className="w-full justify-center py-4"
+                            size="md" 
+                            className={`w-full justify-center ${isRecording ? 'animate-pulse ring-2 ring-red-500/30' : ''}`}
                             onClick={isRecording ? stopRecording : startRecording}
-                            icon={isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                            icon={
+                              isRecording ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                                  <Square className="h-3.5 w-3.5 fill-current" />
+                                </span>
+                              ) : (
+                                <Mic className="h-4 w-4 text-gray-700" />
+                              )
+                            }
                           >
                             {isRecording ? 'Stop Recording' : 'Start Recording'}
                           </Button>
