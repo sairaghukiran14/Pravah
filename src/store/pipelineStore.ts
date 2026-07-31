@@ -74,7 +74,6 @@ const getDefaultConfig = (type: NodeType) => {
     case 'image_input': return { source: 'upload' };
     case 'video_input': return { source: 'upload' };
     case 'url_input': return { url: '' };
-    case 'file_input': return { allow_multiple: false };
     
     // Processing
     case 'ocr': return { language: 'eng' };
@@ -107,7 +106,6 @@ const getDefaultLabel = (type: NodeType) => {
     case 'image_input': return 'Image Input';
     case 'video_input': return 'Video Input';
     case 'url_input': return 'URL Input';
-    case 'file_input': return 'File Input';
     
     // Processing
     case 'ocr': return 'OCR';

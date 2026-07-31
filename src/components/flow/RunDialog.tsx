@@ -118,7 +118,7 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
                             </Button>
                           ) : (
                             <div className="flex flex-col gap-2 w-full">
-                              <AudioPlayer src={inputs[node.id].url} />
+                              <AudioPlayer src={inputs[node.id].url} compact={true} />
                               <div className="flex justify-end">
                                 <button type="button" onClick={() => handleInputChange(node.id, null)} className="text-xs text-red-600 font-semibold hover:text-red-700 bg-red-50 hover:bg-red-100/85 px-2.5 py-1 rounded transition-colors cursor-pointer">Retake</button>
                               </div>

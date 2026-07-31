@@ -21,6 +21,14 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
   const output = usePipelineStore((s) => s.nodeOutputs[id]);
   const isSelected = selectedNodeId === id;
 
+  const updateNodeLabel = usePipelineStore((s) => s.updateNodeLabel);
+  const [isEditingLabel, setIsEditingLabel] = React.useState(false);
+  const [localLabel, setLocalLabel] = React.useState(typeLabel);
+
+  React.useEffect(() => {
+    setLocalLabel(typeLabel);
+  }, [typeLabel]);
+
   let statusAnimationClass = '';
   if (status === 'running') statusAnimationClass = 'node-status-running';
   else if (status === 'completed') statusAnimationClass = 'node-status-completed';
@@ -44,7 +52,25 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className={`p-1.5 rounded-lg ${iconBgClass}`}>{icon}</div>
-          <span className="text-xs font-semibold text-gray-900">{typeLabel}</span>
+          {isEditingLabel ? (
+            <input 
+              autoFocus
+              value={localLabel}
+              onChange={(e) => setLocalLabel(e.target.value)}
+              onBlur={() => { setIsEditingLabel(false); updateNodeLabel(id, localLabel); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditingLabel(false); updateNodeLabel(id, localLabel); } }}
+              className="text-xs font-semibold text-gray-900 bg-transparent outline-none border-b border-gray-400 w-full max-w-[120px]"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span 
+              className="text-xs font-semibold text-gray-900 cursor-text hover:bg-gray-100 px-1 rounded -ml-1 py-0.5 transition-colors" 
+              onClick={(e) => { e.stopPropagation(); setIsEditingLabel(true); }}
+              title="Click to rename"
+            >
+              {typeLabel}
+            </span>
+          )}
         </div>
 
         {status === 'running' && (
@@ -67,23 +93,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
       {/* Content */}
       <div className="p-3 text-xs space-y-1.5 text-gray-600">{children}</div>
 
-      {/* Output Snippet */}
-      {output && (
-        <div className="mx-3 mb-3 p-2 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px] font-mono text-emerald-700 truncate max-w-[250px]">
-          <span className="text-gray-400 font-sans block text-[9px] uppercase tracking-wider mb-0.5 font-semibold">Output</span>
-          {typeof output === 'string'
-            ? output
-            : output.audios
-              ? 'Audio Stream Ready'
-              : output.transcript || output.translated_text || 
-                output.sentiment || 
-                (output.keywords && Array.isArray(output.keywords) ? output.keywords.join(', ') : output.keywords) || 
-                output.category || 
-                output.summary || 
-                output.response || 
-                (typeof output === 'object' ? JSON.stringify(output) : String(output))}
-        </div>
-      )}
+
     </div>
   );
 };

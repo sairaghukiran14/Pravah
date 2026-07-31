@@ -168,6 +168,46 @@ export default function PipelineEditorPage({
     }
   };
 
+  // Run Pipeline Auto-Bypass Logic
+  const handleRunPipelineClick = () => {
+    const { nodes, edges } = usePipelineStore.getState();
+    const targetIds = new Set(edges.map((e) => e.target));
+    const entryNodes = nodes.filter((n) => !targetIds.has(n.id));
+    
+    let allConfigured = true;
+    const configuredInputs: Record<string, any> = {};
+
+    for (const node of entryNodes) {
+      const config = (node.data?.config as Record<string, any>) || {};
+      
+      if (node.type === 'text_input') {
+        if (!config.text || config.text.trim() === '') {
+          allConfigured = false; break;
+        }
+        configuredInputs[node.id] = config.text;
+      } else if (node.type === 'audio_input') {
+        if (config.input_type === 'url' && config.audio_url) {
+          configuredInputs[node.id] = { type: 'audio', url: config.audio_url };
+        } else if (config.audio_data) {
+          configuredInputs[node.id] = config.audio_data;
+        } else {
+          allConfigured = false; break;
+        }
+      } else if (node.type === 'url_input') {
+        if (!config.url || config.url.trim() === '') {
+          allConfigured = false; break;
+        }
+        configuredInputs[node.id] = config.url;
+      }
+    }
+
+    if (allConfigured && entryNodes.length > 0) {
+      handleRunExecution(configuredInputs);
+    } else {
+      setIsRunDialogOpen(true);
+    }
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden font-sans">
       <Navbar />
@@ -264,7 +304,7 @@ export default function PipelineEditorPage({
               variant="primary"
               size="sm"
               disabled={isSaving}
-              onClick={() => setIsRunDialogOpen(true)}
+              onClick={handleRunPipelineClick}
               icon={<Play className="h-4 w-4 fill-current text-white" />}
             >
               <span className="hidden sm:inline">Run Pipeline</span>

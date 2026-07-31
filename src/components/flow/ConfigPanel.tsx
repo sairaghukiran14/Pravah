@@ -5,7 +5,8 @@ import { usePipelineStore } from '@/store/pipelineStore';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { X, Trash2, Mic, Languages, Volume2, Play } from 'lucide-react';
+import { X, Trash2, Mic, Languages, Volume2, Play, Square, Upload } from 'lucide-react';
+import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
 const INDIC_LANGUAGES = [
   { label: 'Hindi (hi-IN)', value: 'hi-IN' },
@@ -48,6 +49,10 @@ export const ConfigPanel: React.FC = () => {
 
   const [isPlayingSample, setIsPlayingSample] = React.useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = React.useState(false);
+  
+  const [isRecording, setIsRecording] = React.useState(false);
+  const mediaRecorder = React.useRef<MediaRecorder | null>(null);
+  const audioChunks = React.useRef<Blob[]>([]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   const isVisible = !!selectedNode;
@@ -58,6 +63,43 @@ export const ConfigPanel: React.FC = () => {
 
   const handleChange = (key: string, value: any) => {
     if (selectedNode) updateNodeConfig(selectedNode.id, { [key]: value });
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorder.current = recorder;
+      audioChunks.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(blob);
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          handleChange('audio_data', { type: 'audio', data: reader.result, url: audioUrl });
+        };
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error accessing microphone', err);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
+    }
   };
 
   const playSample = async () => {
@@ -164,14 +206,111 @@ export const ConfigPanel: React.FC = () => {
               )}
 
               {/* New Input Nodes */}
-              {nodeType === 'audio_input' && <Select label="Input Type" value={config.input_type || 'upload'} onChange={(val) => handleChange('input_type', val)} options={[{ label: 'Upload Audio', value: 'upload' }, { label: 'Record Microphone', value: 'mic' }, { label: 'Audio URL', value: 'url' }]} />}
+              {nodeType === 'audio_input' && (
+                <>
+                  <Select label="Input Type" value={config.input_type || 'upload'} onChange={(val) => handleChange('input_type', val)} options={[{ label: 'Upload Audio', value: 'upload' }, { label: 'Record Microphone', value: 'mic' }, { label: 'Audio URL', value: 'url' }]} />
+                  
+                  {config.input_type === 'mic' && (
+                     <div className="flex flex-col gap-2 mt-2">
+                        {!config.audio_data ? (
+                          <Button 
+                            type="button"
+                            variant={isRecording ? "danger" : "secondary"} 
+                            size="sm" 
+                            className="w-full justify-center py-4"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            icon={isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                          >
+                            {isRecording ? 'Stop Recording' : 'Start Recording'}
+                          </Button>
+                        ) : (
+                          <div className="flex flex-col gap-2 w-full mt-2">
+                            <AudioPlayer src={config.audio_data.url} compact={true} />
+                            <div className="flex justify-end">
+                              <button type="button" onClick={() => handleChange('audio_data', null)} className="text-xs text-red-600 font-semibold hover:text-red-700 bg-red-50 hover:bg-red-100/85 px-2.5 py-1 rounded transition-colors cursor-pointer">Retake</button>
+                            </div>
+                          </div>
+                        )}
+                     </div>
+                  )}
+
+                  {(config.input_type === 'upload' || !config.input_type) && (
+                     <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                        <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                        <span className="text-xs text-gray-600 font-medium">Click to upload audio</span>
+                        <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="audio/*" onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = () => handleChange('audio_data', { type: 'audio', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                          }
+                        }} />
+                        {config.audio_data?.name && <div className="mt-2 text-[10px] font-semibold text-emerald-600">Selected: {config.audio_data.name}</div>}
+                     </div>
+                  )}
+
+                  {config.input_type === 'url' && (
+                     <div className="mt-2">
+                       <input type="url" placeholder="https://example.com/audio.mp3" value={config.audio_url || ''} className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" onChange={(e) => handleChange('audio_url', e.target.value)} />
+                     </div>
+                  )}
+                </>
+              )}
               {nodeType === 'text_input' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Text Area</label>
                   <textarea className="w-full rounded-lg border border-gray-300 p-2 text-sm" rows={4} value={config.text || ''} onChange={(e) => handleChange('text', e.target.value)} placeholder="Enter text here..." />
                 </div>
               )}
-              {nodeType === 'document_input' && <Select label="Document Format" value={config.format || 'pdf'} onChange={(val) => handleChange('format', val)} options={[{ label: 'PDF', value: 'pdf' }, { label: 'DOCX', value: 'docx' }, { label: 'TXT', value: 'txt' }]} />}
+              {nodeType === 'document_input' && (
+                <>
+                  <Select label="Document Format" value={config.format || 'pdf'} onChange={(val) => handleChange('format', val)} options={[{ label: 'PDF', value: 'pdf' }, { label: 'DOCX', value: 'docx' }, { label: 'TXT', value: 'txt' }]} />
+                  <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                    <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                    <span className="text-xs text-gray-600 font-medium">Click to upload document</span>
+                    <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.docx,.txt" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => handleChange('file_data', { type: 'document', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                      }
+                    }} />
+                    {config.file_data?.name && <div className="mt-2 text-[10px] font-semibold text-emerald-600 truncate max-w-[200px]">Selected: {config.file_data.name}</div>}
+                  </div>
+                </>
+              )}
+              {nodeType === 'image_input' && (
+                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                  <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-600 font-medium">Click to upload image</span>
+                  <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.readAsDataURL(file);
+                      reader.onload = () => handleChange('file_data', { type: 'image', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                    }
+                  }} />
+                  {config.file_data?.name && <div className="mt-2 text-[10px] font-semibold text-emerald-600 truncate max-w-[200px]">Selected: {config.file_data.name}</div>}
+                </div>
+              )}
+              {nodeType === 'video_input' && (
+                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                  <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-600 font-medium">Click to upload video</span>
+                  <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="video/*" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.readAsDataURL(file);
+                      reader.onload = () => handleChange('file_data', { type: 'video', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                    }
+                  }} />
+                  {config.file_data?.name && <div className="mt-2 text-[10px] font-semibold text-emerald-600 truncate max-w-[200px]">Selected: {config.file_data.name}</div>}
+                </div>
+              )}
               {nodeType === 'url_input' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">URL</label>

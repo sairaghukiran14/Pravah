@@ -193,6 +193,8 @@ export default function ProfilePage() {
               if (profile) {
                 setProfile({ ...profile, credits: resJson.credits });
               }
+              // Notify Navbar to refresh the credit badge
+              window.dispatchEvent(new CustomEvent('credits-updated'));
               fetchTransactions();
               setSuccessModal({
                 isOpen: true,

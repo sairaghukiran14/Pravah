@@ -30,10 +30,6 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
     title: 'URL Input',
     desc: 'Scrapes raw text or contents from public web URL targets.',
   },
-  file_input: {
-    title: 'File Input',
-    desc: 'Accepts generic data assets, csv tables, or logs to feed into other nodes.',
-  },
   stt: {
     title: 'Speech to Text (STT)',
     desc: 'Transcribes regional language audio recordings into text using Sarvam AI Saaras:v3.',

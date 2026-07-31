@@ -60,12 +60,12 @@ export async function POST(req: NextRequest) {
 
     const initialEdges = [
       {
-        id: `edge_1`,
+        id: `edge_${Math.random().toString(36).substring(2, 9)}`,
         source: initialNodes[0].id,
         target: initialNodes[1].id,
       },
       {
-        id: `edge_2`,
+        id: `edge_${Math.random().toString(36).substring(2, 9)}`,
         source: initialNodes[1].id,
         target: initialNodes[2].id,
       },
