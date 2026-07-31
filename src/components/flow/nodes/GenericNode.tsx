@@ -18,7 +18,6 @@ const getNodeMeta = (type: NodeType) => {
     case 'image_input': return { icon: <Image className="h-4 w-4 text-pink-600" />, bg: 'bg-pink-50' };
     case 'video_input': return { icon: <Video className="h-4 w-4 text-pink-600" />, bg: 'bg-pink-50' };
     case 'url_input': return { icon: <LinkIcon className="h-4 w-4 text-pink-600" />, bg: 'bg-pink-50' };
-    case 'file_input': return { icon: <FileUp className="h-4 w-4 text-pink-600" />, bg: 'bg-pink-50' };
 
     case 'ocr': return { icon: <ScanText className="h-4 w-4 text-purple-600" />, bg: 'bg-purple-50' };
     case 'vision': return { icon: <Eye className="h-4 w-4 text-purple-600" />, bg: 'bg-purple-50' };

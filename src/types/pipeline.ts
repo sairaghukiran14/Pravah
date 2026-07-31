@@ -1,7 +1,7 @@
 export type NodeType = 
   | 'stt' | 'translate' | 'tts'
   // Inputs
-  | 'audio_input' | 'text_input' | 'document_input' | 'image_input' | 'video_input' | 'url_input' | 'file_input'
+  | 'audio_input' | 'text_input' | 'document_input' | 'image_input' | 'video_input' | 'url_input'
   // Processing
   | 'ocr' | 'vision' | 'llm' | 'summarize' | 'sentiment' | 'keyword_extraction' | 'classification'
   // Outputs

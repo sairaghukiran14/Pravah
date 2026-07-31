@@ -147,12 +147,11 @@ export const ExecutionSidebar: React.FC = () => {
                       {typeof output === 'string' ? output : output.transcript || output.translated_text || 'Audio Output Generated'}
                     </span>
                   </div>
-                  {typeof output !== 'string' && output.audio_r2_key && (
-                    <AudioPlayer src={`/api/audio/${output.audio_r2_key}`} className="mt-1" />
-                  )}
-                  {typeof output !== 'string' && output.audios && output.audios.length > 0 && (
-                    <AudioPlayer src={`data:audio/wav;base64,${output.audios[0]}`} className="mt-1" />
-                  )}
+                  {typeof output !== 'string' && output.audio_r2_key ? (
+                    <AudioPlayer src={`/api/audio/${output.audio_r2_key}`} className="mt-1" compact={true} />
+                  ) : typeof output !== 'string' && output.audios && output.audios.length > 0 ? (
+                    <AudioPlayer src={`data:audio/wav;base64,${output.audios[0]}`} className="mt-1" compact={true} />
+                  ) : null}
                 </div>
               ))}
             </div>

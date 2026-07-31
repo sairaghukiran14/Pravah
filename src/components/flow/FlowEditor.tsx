@@ -22,7 +22,6 @@ const nodeTypes = {
   image_input: GenericNode,
   video_input: GenericNode,
   url_input: GenericNode,
-  file_input: GenericNode,
   ocr: GenericNode,
   vision: GenericNode,
   llm: GenericNode,

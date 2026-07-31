@@ -26,7 +26,6 @@ const inputNodes: ToolbarItem[] = [
   { type: 'image_input', title: 'Image', desc: 'Provide images for OCR processing or optical analysis.', icon: <Image className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
   { type: 'video_input', title: 'Video', desc: 'Input video files for subtitle generation and transcription.', icon: <Video className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
   { type: 'url_input', title: 'URL', desc: 'Scrape content from public web URLs.', icon: <LinkIcon className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
-  { type: 'file_input', title: 'File', desc: 'Upload generic data assets to feed into nodes.', icon: <FileUp className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
 ];
 
 const processingNodes: ToolbarItem[] = [
