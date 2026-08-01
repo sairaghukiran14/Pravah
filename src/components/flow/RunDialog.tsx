@@ -92,7 +92,9 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             {entryNodes.map((node) => {
               const config = node.data.config as Record<string, any>;  
-              const inputType = config?.input_type || 'text';
+              const inputType = node.type === 'audio_input' 
+                ? (config?.input_type || 'upload')
+                : (config?.input_type || 'text');
 
               return (
                 <div key={node.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-3">

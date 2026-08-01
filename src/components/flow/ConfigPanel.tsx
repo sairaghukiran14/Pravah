@@ -216,10 +216,19 @@ export const ConfigPanel: React.FC = () => {
                           <Button 
                             type="button"
                             variant={isRecording ? "danger" : "secondary"} 
-                            size="sm" 
-                            className="w-full justify-center py-4"
+                            size="md" 
+                            className={`w-full justify-center ${isRecording ? 'animate-pulse ring-2 ring-red-500/30' : ''}`}
                             onClick={isRecording ? stopRecording : startRecording}
-                            icon={isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                            icon={
+                              isRecording ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                                  <Square className="h-3.5 w-3.5 fill-current" />
+                                </span>
+                              ) : (
+                                <Mic className="h-4 w-4 text-gray-700" />
+                              )
+                            }
                           >
                             {isRecording ? 'Stop Recording' : 'Start Recording'}
                           </Button>
@@ -321,17 +330,29 @@ export const ConfigPanel: React.FC = () => {
               {/* New Processing Nodes */}
               {nodeType === 'llm' && (
                 <>
-                  <Select label="Model" value={config.model || 'gpt-4'} onChange={(val) => handleChange('model', val)} options={[{ label: 'GPT-4', value: 'gpt-4' }, { label: 'Claude 3 Opus', value: 'claude-3' }, { label: 'Gemini 1.5 Pro', value: 'gemini-1.5' }]} />
+                  <Select
+                    label="Model"
+                    value={config.model || 'sarvam-105b'}
+                    onChange={(val) => handleChange('model', val)}
+                    options={[
+                      { label: 'Sarvam-105B (Sovereign Reasoning LLM)', value: 'sarvam-105b' },
+                      { label: 'Sarvam-2B (Fast Indic Model)', value: 'sarvam-2b' },
+                    ]}
+                  />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Prompt</label>
-                    <textarea className="w-full rounded-lg border border-gray-300 p-2 text-sm" rows={3} value={config.prompt || ''} onChange={(e) => handleChange('prompt', e.target.value)} placeholder="System instructions..." />
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">System Prompt</label>
+                    <textarea className="w-full rounded-lg border border-gray-300 p-2 text-sm" rows={2} value={config.system_prompt || ''} onChange={(e) => handleChange('system_prompt', e.target.value)} placeholder="You are an AI assistant..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">User Prompt Instructions</label>
+                    <textarea className="w-full rounded-lg border border-gray-300 p-2 text-sm" rows={3} value={config.prompt || ''} onChange={(e) => handleChange('prompt', e.target.value)} placeholder="Specific instructions for incoming payload..." />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
                       <span>Temperature</span>
-                      <span className="font-mono text-gray-500">{config.temperature || 0.7}</span>
+                      <span className="font-mono text-gray-500">{config.temperature ?? 0.2}</span>
                     </label>
-                    <input type="range" min="0" max="2.0" step="0.1" value={config.temperature || 0.7} onChange={(e) => handleChange('temperature', parseFloat(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
+                    <input type="range" min="0" max="1.0" step="0.05" value={config.temperature ?? 0.2} onChange={(e) => handleChange('temperature', parseFloat(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
                   </div>
                 </>
               )}

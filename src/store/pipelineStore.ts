@@ -302,13 +302,120 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
 
     set({ isSaving: true });
 
-    const serializedNodes: SerializedNode[] = nodes.map((n) => ({
+    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<string> => {
+      const base64Data = dataUri.split(',')[1];
+      const mimeMatch = dataUri.match(/^data:([^;]+);/);
+      const mime = mimeMatch?.[1] || 'audio/wav';
+      const byteArray = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const blob = new Blob([byteArray], { type: mime });
+      const formData = new FormData();
+      formData.append('file', blob, name || 'audio.wav');
+      try {
+        const res = await fetch('/api/audio/upload', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success && result.key) {
+          return result.url || result.key;
+        }
+      } catch (e) {
+        console.warn('R2 upload failed during save', e);
+      }
+      return '';
+    };
+
+    // Scan nodes for any base64 data to upload
+    const updatedNodesConfigs: Record<string, any> = {};
+    for (const n of nodes) {
+      const config = n.data?.config as Record<string, any>;
+      if (config) {
+        let changed = false;
+        const newConfig = { ...config };
+        
+        if (config.audio_data?.data && typeof config.audio_data.data === 'string' && config.audio_data.data.startsWith('data:')) {
+          const r2Url = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
+          if (r2Url) {
+            newConfig.audio_data = {
+              ...config.audio_data,
+              data: r2Url,
+              r2_key: r2Url,
+              url: r2Url
+            };
+            changed = true;
+          }
+        }
+        
+        if (config.file_data?.data && typeof config.file_data.data === 'string' && config.file_data.data.startsWith('data:')) {
+          const r2Url = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
+          if (r2Url) {
+            newConfig.file_data = {
+              ...config.file_data,
+              data: r2Url,
+              r2_key: r2Url,
+              url: r2Url
+            };
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          updatedNodesConfigs[n.id] = newConfig;
+        }
+      }
+    }
+
+    // Apply any config updates to the store
+    if (Object.keys(updatedNodesConfigs).length > 0) {
+      set({
+        nodes: nodes.map(n => {
+          if (updatedNodesConfigs[n.id]) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                config: updatedNodesConfigs[n.id]
+              }
+            };
+          }
+          return n;
+        })
+      });
+    }
+
+    const currentNodes = get().nodes;
+
+    // Clean large binary data from configs before saving
+    // (audio base64, file base64, etc.) — keep R2 urls
+    const stripBinaryData = (config: Record<string, any>): Record<string, any> => {
+      const cleaned = { ...config };
+      if (cleaned.audio_data) {
+        const isUrl = typeof cleaned.audio_data.data === 'string' && !cleaned.audio_data.data.startsWith('data:');
+        cleaned.audio_data = {
+          type: cleaned.audio_data.type,
+          name: cleaned.audio_data.name,
+          r2_key: cleaned.audio_data.r2_key || (isUrl ? cleaned.audio_data.data : null),
+          data: isUrl ? cleaned.audio_data.data : null,
+          url: isUrl ? cleaned.audio_data.url || cleaned.audio_data.data : null,
+        };
+      }
+      if (cleaned.file_data) {
+        const isUrl = typeof cleaned.file_data.data === 'string' && !cleaned.file_data.data.startsWith('data:');
+        cleaned.file_data = {
+          type: cleaned.file_data.type,
+          name: cleaned.file_data.name,
+          r2_key: cleaned.file_data.r2_key || (isUrl ? cleaned.file_data.data : null),
+          data: isUrl ? cleaned.file_data.data : null,
+          url: isUrl ? cleaned.file_data.url || cleaned.file_data.data : null,
+        };
+      }
+      return cleaned;
+    };
+
+    const serializedNodes: SerializedNode[] = currentNodes.map((n) => ({
       id: n.id,
       type: n.type as NodeType,
       label: (n.data.label as string) || getDefaultLabel(n.type as NodeType),
       positionX: n.position.x,
       positionY: n.position.y,
-      config: (n.data.config as Record<string, any>) || {},
+      config: stripBinaryData((n.data.config as Record<string, any>) || {}),
     }));
 
     const serializedEdges: SerializedEdge[] = edges.map((e) => ({
@@ -339,19 +446,22 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       return true;
     } catch (err) {
       console.error('Error saving pipeline:', err);
-      // Fallback: save to localStorage for client-only persistence
-      const localKey = `pipeline_${pipelineId}`;
-      localStorage.setItem(
-        localKey,
-        JSON.stringify({
-          id: pipelineId,
-          name: pipelineName,
-          projectId,
-          nodes: serializedNodes,
-          edges: serializedEdges,
-          updatedAt: new Date().toISOString(),
-        })
-      );
+      try {
+        const localKey = `pipeline_${pipelineId}`;
+        localStorage.setItem(
+          localKey,
+          JSON.stringify({
+            id: pipelineId,
+            name: pipelineName,
+            projectId,
+            nodes: serializedNodes,
+            edges: serializedEdges,
+            updatedAt: new Date().toISOString(),
+          })
+        );
+      } catch (storageErr) {
+        console.warn('localStorage fallback also failed:', storageErr);
+      }
 
       set({ isDirty: false, isSaving: false });
       return true;

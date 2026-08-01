@@ -33,15 +33,6 @@ export async function POST(
   const initialInputText = 'नमस्ते! भारत की कृत्रिम बुद्धिमत्ता सर्वम एआई।';
   const initialInputs: Record<string, any> = {};
   
-  try {
-    const body = await req.json();
-    if (body.inputs) {
-      Object.assign(initialInputs, body.inputs);
-    }
-  } catch (e) {
-    // optional body
-  }
-
   // Fetch pipeline structure
   let pipelineData: { nodes: SerializedNode[]; edges: SerializedEdge[] } = {
     nodes: [],
@@ -49,39 +40,83 @@ export async function POST(
   };
 
   try {
-    const dbPipeline = await prisma.pipeline.findFirst({
-      where: { 
-        id: pipelineId,
-        project: { userId }
-      },
-      include: { nodes: true, edges: true },
-    });
-
-    if (!dbPipeline) {
-      return new Response(JSON.stringify({ error: 'Pipeline not found or unauthorized' }), { status: 403 });
+    const body = await req.json();
+    if (body.inputs) {
+      Object.assign(initialInputs, body.inputs);
     }
-
-    if (dbPipeline && dbPipeline.nodes.length > 0) {
-      pipelineData = {
-        nodes: dbPipeline.nodes.map((n) => ({
-          id: n.id,
-          type: n.type as any,
-          label: n.label,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          config: (n.config as any) || {},
-        })),
-        edges: dbPipeline.edges.map((e) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle,
-          targetHandle: e.targetHandle,
-        })),
-      };
+    if (body.nodes && Array.isArray(body.nodes) && body.nodes.length > 0) {
+      pipelineData.nodes = body.nodes.map((n: any) => ({
+        id: n.id,
+        type: n.type || n.data?.type,
+        label: n.label || n.data?.label || n.type,
+        positionX: n.positionX || n.position?.x || 0,
+        positionY: n.positionY || n.position?.y || 0,
+        config: n.config || n.data?.config || {},
+      }));
+    }
+    if (body.edges && Array.isArray(body.edges)) {
+      pipelineData.edges = body.edges.map((e: any) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle || null,
+        targetHandle: e.targetHandle || null,
+      }));
     }
   } catch (e) {
-    console.warn('Prisma run fetch error:', e);
+    // optional body
+  }
+
+  // Only fetch from DB if the client did NOT send live nodes
+  if (pipelineData.nodes.length === 0) {
+    try {
+      const dbPipeline = await prisma.pipeline.findFirst({
+        where: { 
+          id: pipelineId,
+          project: { userId }
+        },
+        include: { nodes: true, edges: true },
+      });
+
+      if (!dbPipeline) {
+        return new Response(JSON.stringify({ error: 'Pipeline not found or unauthorized' }), { status: 403 });
+      }
+
+      if (dbPipeline.nodes.length > 0) {
+        pipelineData = {
+          nodes: dbPipeline.nodes.map((n) => ({
+            id: n.id,
+            type: n.type as any,
+            label: n.label,
+            positionX: n.positionX,
+            positionY: n.positionY,
+            config: (n.config as any) || {},
+          })),
+          edges: dbPipeline.edges.map((e) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle,
+            targetHandle: e.targetHandle,
+          })),
+        };
+      }
+    } catch (e) {
+      console.warn('Prisma run fetch error:', e);
+    }
+  } else {
+    // Verify pipeline ownership even when using client-provided nodes
+    try {
+      const dbPipeline = await prisma.pipeline.findFirst({
+        where: { id: pipelineId, project: { userId } },
+        select: { id: true },
+      });
+      if (!dbPipeline) {
+        return new Response(JSON.stringify({ error: 'Pipeline not found or unauthorized' }), { status: 403 });
+      }
+    } catch (e) {
+      console.warn('Prisma ownership check error:', e);
+    }
   }
 
   // Create real-time Server-Sent Events response stream

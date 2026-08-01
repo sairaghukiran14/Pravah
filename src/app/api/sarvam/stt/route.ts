@@ -15,12 +15,23 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
+    const fileItem = formData.get('file');
+    let filePayload: string | undefined = undefined;
+
+    if (fileItem && typeof fileItem === 'object' && 'arrayBuffer' in fileItem) {
+      const arrayBuf = await (fileItem as Blob).arrayBuffer();
+      const base64 = Buffer.from(arrayBuf).toString('base64');
+      filePayload = `data:${(fileItem as Blob).type || 'audio/wav'};base64,${base64}`;
+    } else if (typeof fileItem === 'string') {
+      filePayload = fileItem;
+    }
+
     const result = await executeSarvamSTT({
-      text_input: formData.get('text_input') as string | undefined,
-      language_code: formData.get('language_code') as string | undefined,
-      model: formData.get('model') as string | undefined,
-      mode: formData.get('mode') as string | undefined,
-      file: formData.get('file') ? 'uploaded_file_placeholder' : undefined,
+      text_input: (formData.get('text_input') as string) || undefined,
+      language_code: (formData.get('language_code') as string) || undefined,
+      model: (formData.get('model') as string) || undefined,
+      mode: (formData.get('mode') as string) || undefined,
+      file: filePayload,
     });
     return NextResponse.json(result);
   } catch (error: any) {
