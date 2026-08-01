@@ -14,10 +14,20 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const key = searchParams.get('key');
+  let key = searchParams.get('key');
 
   if (!key) {
     return new Response('Missing key parameter', { status: 400 });
+  }
+
+  // Self-heal: If key is a full URL, extract the filename key
+  if (key.startsWith('http://') || key.startsWith('https://')) {
+    const bucketMarker = key.includes('/pravah-assets/') ? '/pravah-assets/' : '/hasaflow-storage/';
+    if (key.includes(bucketMarker)) {
+      key = key.substring(key.indexOf(bucketMarker) + bucketMarker.length);
+    } else {
+      key = key.substring(key.lastIndexOf('/') + 1);
+    }
   }
 
   try {

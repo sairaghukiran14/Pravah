@@ -260,15 +260,25 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   loadPipeline: (pipeline) => {
+    const cleanKey = (keyOrUrl: string | null | undefined): string | null => {
+      if (!keyOrUrl) return null;
+      if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+        const bucketMarker = keyOrUrl.includes('/pravah-assets/') ? '/pravah-assets/' : '/hasaflow-storage/';
+        if (keyOrUrl.includes(bucketMarker)) {
+          return keyOrUrl.substring(keyOrUrl.indexOf(bucketMarker) + bucketMarker.length);
+        }
+        return keyOrUrl.substring(keyOrUrl.lastIndexOf('/') + 1);
+      }
+      return keyOrUrl;
+    };
+
     const nodes: Node[] = pipeline.nodes.map((n) => {
       const config = { ...((n.config as Record<string, any>) || getDefaultConfig(n.type)) };
 
       // Auto-migrate legacy Cloudflare direct R2 URLs to the secure proxy route
       if (config.audio_data) {
-        const r2Key = config.audio_data.r2_key || 
-          (typeof config.audio_data.url === 'string' && (config.audio_data.url.includes('r2.cloudflarestorage.com') || config.audio_data.url.includes('/pravah-assets/'))
-            ? config.audio_data.url.substring(config.audio_data.url.lastIndexOf('/') + 1)
-            : null);
+        const rawKey = config.audio_data.r2_key || config.audio_data.url;
+        const r2Key = cleanKey(rawKey);
             
         if (r2Key) {
           config.audio_data = {
@@ -281,10 +291,8 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       }
 
       if (config.file_data) {
-        const r2Key = config.file_data.r2_key || 
-          (typeof config.file_data.url === 'string' && (config.file_data.url.includes('r2.cloudflarestorage.com') || config.file_data.url.includes('/pravah-assets/'))
-            ? config.file_data.url.substring(config.file_data.url.lastIndexOf('/') + 1)
-            : null);
+        const rawKey = config.file_data.r2_key || config.file_data.url;
+        const r2Key = cleanKey(rawKey);
             
         if (r2Key) {
           config.file_data = {
