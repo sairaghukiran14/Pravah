@@ -134,12 +134,21 @@ export async function executeSarvamSTT(
     };
 
     if (payload.file && typeof payload.file === 'string' && payload.file !== 'uploaded_file_placeholder') {
-      if (payload.file.startsWith('http://') || payload.file.startsWith('https://')) {
+      const isHttp = payload.file.startsWith('http://') || payload.file.startsWith('https://');
+      const isLocalProxy = payload.file.startsWith('/api/audio/file');
+      
+      if (isHttp || isLocalProxy) {
         try {
           const isR2Url = payload.file.includes(`/${R2_BUCKET_NAME}/`) || payload.file.includes('/pravah-assets/');
-          if (isR2Url) {
-            const bucketMarker = payload.file.includes(`/${R2_BUCKET_NAME}/`) ? `/${R2_BUCKET_NAME}/` : '/pravah-assets/';
-            const key = payload.file.substring(payload.file.indexOf(bucketMarker) + bucketMarker.length);
+          if (isLocalProxy || isR2Url) {
+            let key = '';
+            if (isLocalProxy) {
+              const urlObj = new URL(payload.file, 'http://localhost');
+              key = urlObj.searchParams.get('key') || '';
+            } else {
+              const bucketMarker = payload.file.includes(`/${R2_BUCKET_NAME}/`) ? `/${R2_BUCKET_NAME}/` : '/pravah-assets/';
+              key = payload.file.substring(payload.file.indexOf(bucketMarker) + bucketMarker.length);
+            }
             
             const downloadRes = await downloadFromR2(key);
             audioBuffer = downloadRes.buffer;

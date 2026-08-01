@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       key: fileName,
-      url: result.url,
+      url: `/api/audio/file?key=${fileName}`,
       name: file.name,
       size: buffer.length,
       contentType: file.type,

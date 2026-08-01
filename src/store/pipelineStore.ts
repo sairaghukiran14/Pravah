@@ -302,7 +302,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
 
     set({ isSaving: true });
 
-    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<string> => {
+    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<{ url: string; key: string } | null> => {
       const base64Data = dataUri.split(',')[1];
       const mimeMatch = dataUri.match(/^data:([^;]+);/);
       const mime = mimeMatch?.[1] || 'audio/wav';
@@ -314,12 +314,12 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
         const res = await fetch('/api/audio/upload', { method: 'POST', body: formData });
         const result = await res.json();
         if (result.success && result.key) {
-          return result.url || result.key;
+          return { url: result.url, key: result.key };
         }
       } catch (e) {
         console.warn('R2 upload failed during save', e);
       }
-      return '';
+      return null;
     };
 
     // Scan nodes for any base64 data to upload
@@ -331,26 +331,26 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
         const newConfig = { ...config };
         
         if (config.audio_data?.data && typeof config.audio_data.data === 'string' && config.audio_data.data.startsWith('data:')) {
-          const r2Url = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
-          if (r2Url) {
+          const uploadRes = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
+          if (uploadRes) {
             newConfig.audio_data = {
               ...config.audio_data,
-              data: r2Url,
-              r2_key: r2Url,
-              url: r2Url
+              data: uploadRes.url,
+              r2_key: uploadRes.key,
+              url: uploadRes.url
             };
             changed = true;
           }
         }
         
         if (config.file_data?.data && typeof config.file_data.data === 'string' && config.file_data.data.startsWith('data:')) {
-          const r2Url = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
-          if (r2Url) {
+          const uploadRes = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
+          if (uploadRes) {
             newConfig.file_data = {
               ...config.file_data,
-              data: r2Url,
-              r2_key: r2Url,
-              url: r2Url
+              data: uploadRes.url,
+              r2_key: uploadRes.key,
+              url: uploadRes.url
             };
             changed = true;
           }
