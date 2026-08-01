@@ -260,16 +260,53 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   loadPipeline: (pipeline) => {
-    const nodes: Node[] = pipeline.nodes.map((n) => ({
-      id: n.id,
-      type: n.type,
-      position: { x: n.positionX, y: n.positionY },
-      data: {
-        label: n.label,
+    const nodes: Node[] = pipeline.nodes.map((n) => {
+      const config = { ...((n.config as Record<string, any>) || getDefaultConfig(n.type)) };
+
+      // Auto-migrate legacy Cloudflare direct R2 URLs to the secure proxy route
+      if (config.audio_data) {
+        const r2Key = config.audio_data.r2_key || 
+          (typeof config.audio_data.url === 'string' && (config.audio_data.url.includes('r2.cloudflarestorage.com') || config.audio_data.url.includes('/pravah-assets/'))
+            ? config.audio_data.url.substring(config.audio_data.url.lastIndexOf('/') + 1)
+            : null);
+            
+        if (r2Key) {
+          config.audio_data = {
+            ...config.audio_data,
+            r2_key: r2Key,
+            url: `/api/audio/file?key=${r2Key}`,
+            data: `/api/audio/file?key=${r2Key}`
+          };
+        }
+      }
+
+      if (config.file_data) {
+        const r2Key = config.file_data.r2_key || 
+          (typeof config.file_data.url === 'string' && (config.file_data.url.includes('r2.cloudflarestorage.com') || config.file_data.url.includes('/pravah-assets/'))
+            ? config.file_data.url.substring(config.file_data.url.lastIndexOf('/') + 1)
+            : null);
+            
+        if (r2Key) {
+          config.file_data = {
+            ...config.file_data,
+            r2_key: r2Key,
+            url: `/api/audio/file?key=${r2Key}`,
+            data: `/api/audio/file?key=${r2Key}`
+          };
+        }
+      }
+
+      return {
+        id: n.id,
         type: n.type,
-        config: n.config || getDefaultConfig(n.type),
-      },
-    }));
+        position: { x: n.positionX, y: n.positionY },
+        data: {
+          label: n.label,
+          type: n.type,
+          config,
+        },
+      };
+    });
 
     const edges: Edge[] = pipeline.edges.map((e) => ({
       id: e.id,
