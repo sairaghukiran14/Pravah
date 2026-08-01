@@ -24,8 +24,12 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
 
   const [inputs, setInputs] = useState<Record<string, any>>({});  
   const [isRecording, setIsRecording] = useState<Record<string, boolean>>({});
+  const [recordingDurations, setRecordingDurations] = useState<Record<string, number>>({});
+  const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  
   const mediaRecorders = useRef<Record<string, MediaRecorder | null>>({});
   const audioChunks = useRef<Record<string, Blob[]>>({});
+  const timerIntervals = useRef<Record<string, NodeJS.Timeout | null>>({});
 
   const handleInputChange = (nodeId: string, value: any) => {  
     setInputs((prev) => ({ ...prev, [nodeId]: value }));
@@ -33,6 +37,9 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
 
   const startRecording = async (nodeId: string) => {
     try {
+      setRecordingDurations((prev) => ({ ...prev, [nodeId]: 0 }));
+      setIsProcessing((prev) => ({ ...prev, [nodeId]: false }));
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRecorders.current[nodeId] = recorder;
@@ -45,6 +52,7 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
       };
 
       recorder.onstop = () => {
+        setIsProcessing((prev) => ({ ...prev, [nodeId]: true }));
         const blob = new Blob(audioChunks.current[nodeId], { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(blob);
         
@@ -53,6 +61,7 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
         reader.onloadend = () => {
           const base64data = reader.result;
           handleInputChange(nodeId, { type: 'audio', data: base64data, url: audioUrl });
+          setIsProcessing((prev) => ({ ...prev, [nodeId]: false }));
         };
         
         stream.getTracks().forEach((track) => track.stop());
@@ -60,6 +69,15 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
 
       recorder.start();
       setIsRecording((prev) => ({ ...prev, [nodeId]: true }));
+
+      // Setup duration timer
+      if (timerIntervals.current[nodeId]) {
+        clearInterval(timerIntervals.current[nodeId]!);
+      }
+      timerIntervals.current[nodeId] = setInterval(() => {
+        setRecordingDurations((prev) => ({ ...prev, [nodeId]: (prev[nodeId] || 0) + 1 }));
+      }, 1000);
+
     } catch (err) {
       console.error('Error accessing microphone', err);
       alert('Could not access microphone. Please check permissions.');
@@ -67,6 +85,10 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
   };
 
   const stopRecording = (nodeId: string) => {
+    if (timerIntervals.current[nodeId]) {
+      clearInterval(timerIntervals.current[nodeId]!);
+      timerIntervals.current[nodeId] = null;
+    }
     if (mediaRecorders.current[nodeId]) {
       mediaRecorders.current[nodeId]?.stop();
       setIsRecording((prev) => ({ ...prev, [nodeId]: false }));
@@ -105,19 +127,39 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
                   
                   {node.type === 'audio_input' ? (
                     <div>
-                      {inputType === 'mic' && (
+                       {inputType === 'mic' && (
                         <div className="flex flex-col gap-2">
-                          {!inputs[node.id] ? (
-                            <Button 
-                              type="button"
-                              variant={isRecording[node.id] ? "danger" : "secondary"} 
-                              size="sm" 
-                              className="w-full justify-center py-6"
-                              onClick={() => isRecording[node.id] ? stopRecording(node.id) : startRecording(node.id)}
-                              icon={isRecording[node.id] ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                            >
-                              {isRecording[node.id] ? 'Stop Recording' : 'Start Recording'}
-                            </Button>
+                          {isProcessing[node.id] ? (
+                            <div className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg bg-white">
+                              <span className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full mb-2"></span>
+                              <span className="text-xs text-gray-500 font-medium">Processing recording...</span>
+                            </div>
+                          ) : !inputs[node.id] ? (
+                            <div className="flex flex-col gap-2.5">
+                              {isRecording[node.id] && (
+                                <div className="flex items-center justify-center gap-2 py-1.5 bg-red-50 border border-red-100 rounded-lg animate-pulse">
+                                  <span className="h-2.5 w-2.5 rounded-full bg-red-600"></span>
+                                  <span className="text-xs font-mono font-bold text-red-600">
+                                    Recording: {((secs = 0) => {
+                                      const duration = recordingDurations[node.id] || 0;
+                                      const m = Math.floor(duration / 60).toString().padStart(2, '0');
+                                      const s = (duration % 60).toString().padStart(2, '0');
+                                      return `${m}:${s}`;
+                                    })()}
+                                  </span>
+                                </div>
+                              )}
+                              <Button 
+                                type="button"
+                                variant={isRecording[node.id] ? "danger" : "secondary"} 
+                                size="sm" 
+                                className="w-full justify-center py-6 cursor-pointer"
+                                onClick={() => isRecording[node.id] ? stopRecording(node.id) : startRecording(node.id)}
+                                icon={isRecording[node.id] ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                              >
+                                {isRecording[node.id] ? 'Stop Recording' : 'Start Recording'}
+                              </Button>
+                            </div>
                           ) : (
                             <div className="flex flex-col gap-2 w-full">
                               <AudioPlayer src={inputs[node.id].url} compact={true} />

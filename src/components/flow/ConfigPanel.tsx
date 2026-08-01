@@ -51,8 +51,12 @@ export const ConfigPanel: React.FC = () => {
   const [isConfirmingDelete, setIsConfirmingDelete] = React.useState(false);
   
   const [isRecording, setIsRecording] = React.useState(false);
+  const [recordingDuration, setRecordingDuration] = React.useState(0);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  
   const mediaRecorder = React.useRef<MediaRecorder | null>(null);
   const audioChunks = React.useRef<Blob[]>([]);
+  const timerInterval = React.useRef<NodeJS.Timeout | null>(null);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   const isVisible = !!selectedNode;
@@ -67,6 +71,9 @@ export const ConfigPanel: React.FC = () => {
 
   const startRecording = async () => {
     try {
+      setRecordingDuration(0);
+      setIsProcessing(false);
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRecorder.current = recorder;
@@ -77,18 +84,28 @@ export const ConfigPanel: React.FC = () => {
       };
 
       recorder.onstop = () => {
+        setIsProcessing(true);
         const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(blob);
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         reader.onloadend = () => {
           handleChange('audio_data', { type: 'audio', data: reader.result, url: audioUrl });
+          setIsProcessing(false);
         };
         stream.getTracks().forEach((track) => track.stop());
       };
 
       recorder.start();
       setIsRecording(true);
+
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+      }
+      timerInterval.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+
     } catch (err) {
       console.error('Error accessing microphone', err);
       alert('Could not access microphone. Please check permissions.');
@@ -96,6 +113,10 @@ export const ConfigPanel: React.FC = () => {
   };
 
   const stopRecording = () => {
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
       setIsRecording(false);
@@ -212,34 +233,53 @@ export const ConfigPanel: React.FC = () => {
                   
                   {config.input_type === 'mic' && (
                      <div className="flex flex-col gap-2 mt-2">
-                        {!config.audio_data ? (
-                          <Button 
-                            type="button"
-                            variant={isRecording ? "danger" : "secondary"} 
-                            size="md" 
-                            className={`w-full justify-center ${isRecording ? 'animate-pulse ring-2 ring-red-500/30' : ''}`}
-                            onClick={isRecording ? stopRecording : startRecording}
-                            icon={
-                              isRecording ? (
-                                <span className="flex items-center gap-1.5">
-                                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                                  <Square className="h-3.5 w-3.5 fill-current" />
-                                </span>
-                              ) : (
-                                <Mic className="h-4 w-4 text-gray-700" />
-                              )
-                            }
-                          >
-                            {isRecording ? 'Stop Recording' : 'Start Recording'}
-                          </Button>
-                        ) : (
-                          <div className="flex flex-col gap-2 w-full mt-2">
-                            <AudioPlayer src={config.audio_data.url} compact={true} />
-                            <div className="flex justify-end">
-                              <button type="button" onClick={() => handleChange('audio_data', null)} className="text-xs text-red-600 font-semibold hover:text-red-700 bg-red-50 hover:bg-red-100/85 px-2.5 py-1 rounded transition-colors cursor-pointer">Retake</button>
-                            </div>
-                          </div>
-                        )}
+                       {isProcessing ? (
+                         <div className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg bg-white">
+                           <span className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full mb-2"></span>
+                           <span className="text-xs text-gray-500 font-medium">Processing recording...</span>
+                         </div>
+                       ) : !config.audio_data ? (
+                         <div className="flex flex-col gap-2">
+                           {isRecording && (
+                             <div className="flex items-center justify-center gap-2 py-1.5 bg-red-50 border border-red-100 rounded-lg animate-pulse">
+                               <span className="h-2.5 w-2.5 rounded-full bg-red-600"></span>
+                               <span className="text-xs font-mono font-bold text-red-600">
+                                 Recording: {(() => {
+                                   const m = Math.floor(recordingDuration / 60).toString().padStart(2, '0');
+                                   const s = (recordingDuration % 60).toString().padStart(2, '0');
+                                   return `${m}:${s}`;
+                                 })()}
+                               </span>
+                             </div>
+                           )}
+                           <Button 
+                             type="button"
+                             variant={isRecording ? "danger" : "secondary"} 
+                             size="md" 
+                             className={`w-full justify-center ${isRecording ? 'animate-pulse ring-2 ring-red-500/30' : ''} cursor-pointer`}
+                             onClick={isRecording ? stopRecording : startRecording}
+                             icon={
+                               isRecording ? (
+                                 <span className="flex items-center gap-1.5">
+                                   <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                                   <Square className="h-3.5 w-3.5 fill-current" />
+                                 </span>
+                               ) : (
+                                 <Mic className="h-4 w-4 text-gray-700" />
+                               )
+                             }
+                           >
+                             {isRecording ? 'Stop Recording' : 'Start Recording'}
+                           </Button>
+                         </div>
+                       ) : (
+                         <div className="flex flex-col gap-2 w-full mt-2">
+                           <AudioPlayer src={config.audio_data.url} compact={true} />
+                           <div className="flex justify-end">
+                             <button type="button" onClick={() => handleChange('audio_data', null)} className="text-xs text-red-600 font-semibold hover:text-red-700 bg-red-50 hover:bg-red-100/85 px-2.5 py-1 rounded transition-colors cursor-pointer">Retake</button>
+                           </div>
+                         </div>
+                       )}
                      </div>
                   )}
 
