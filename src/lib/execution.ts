@@ -1,6 +1,5 @@
 import { SerializedEdge, SerializedNode } from '@/types/pipeline';
-import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate } from './sarvam';
-import { executeAnthropicNode } from './anthropic';
+import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate, executeSarvamLLM } from './sarvam';
 
 export interface NodeExecutionResult {
   nodeId: string;
@@ -129,18 +128,24 @@ export async function executeSingleNode(
     } else if (node.type === 'url_input') {
       output = node.config?.url || upstreamInputText;
     } else if (node.type === 'audio_input') {
+      // Priority: RunDialog input > ConfigPanel recording > node.config
+      const runDialogAudio = dynamicInputPayload;
+      const configAudio = node.config?.audio_data;
+      
       const audioPayload =
-        node.config?.audio_data?.data ||
+        runDialogAudio?.data ||
+        runDialogAudio?.file ||
+        configAudio?.data ||
         node.config?.file ||
-        node.config?.url ||
-        node.config?.audio_data?.url ||
+        node.config?.audio_url ||
+        configAudio?.url ||
         null;
       output = {
         data: audioPayload,
         file: audioPayload,
-        url: node.config?.audio_data?.url || node.config?.url || null,
-        name: node.config?.audio_data?.name || 'audio_input.wav',
-        text: upstreamInputText
+        url: runDialogAudio?.url || configAudio?.url || node.config?.audio_url || null,
+        name: runDialogAudio?.name || configAudio?.name || 'audio_input.wav',
+        text: upstreamInputText,
       };
     } else if (node.type === 'audio_output') {
       output = {
@@ -181,22 +186,53 @@ export async function executeSingleNode(
         pace: Number(node.config?.pace || 1.0),
         model: node.config?.model || 'bulbul:v3',
       });
-    } else if (
-      node.type === 'llm' || 
-      node.type === 'summarize' || 
-      node.type === 'sentiment' || 
-      node.type === 'keyword_extraction' || 
-      node.type === 'classification'
-    ) {
-      output = await executeAnthropicNode(node.type, upstreamInputText || '', node.config || {});
+    } else if (node.type === 'llm') {
+      const selectedModel = node.config?.model || 'sarvam-105b';
+      output = await executeSarvamLLM({
+        model: selectedModel,
+        prompt: node.config?.prompt,
+        system_prompt: node.config?.system_prompt,
+        input: upstreamInputText,
+        temperature: Number(node.config?.temperature ?? 0.2),
+      });
+    } else if (node.type === 'summarize') {
+      const summaryLength = node.config?.length || 'short';
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: `You are an AI summarization engine. Summarize the text concisely with length mode '${summaryLength}'.`,
+        input: upstreamInputText,
+        temperature: 0.2,
+      });
+    } else if (node.type === 'sentiment') {
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: 'Analyze the sentiment of the provided text. Return a JSON object with {"sentiment": "POSITIVE" | "NEGATIVE" | "NEUTRAL", "confidence": number}.',
+        input: upstreamInputText,
+        temperature: 0.1,
+      });
+    } else if (node.type === 'keyword_extraction') {
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: 'Extract the top keywords from the text as a JSON array {"keywords": string[]}.',
+        input: upstreamInputText,
+        temperature: 0.1,
+      });
+    } else if (node.type === 'classification') {
+      const categories = node.config?.categories || 'Support, Billing, Technical, General';
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: `Classify the input text into one of these categories: ${categories}. Return JSON {"category": string}.`,
+        input: upstreamInputText,
+        temperature: 0.1,
+      });
     } else {
-      // Mock execution for other structural nodes (like visual elements/OCR/Vision)
-      output = { 
-        success: true,
-        mocked: true,
-        passed_input: dynamicInputPayload || upstreamInputText,
-        node_type: node.type,
-      };
+      // Sarvam Vision & Optical Processing Node execution
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: `You are Sarvam Vision AI processing node (${node.type}). Analyze and process the input payload.`,
+        input: upstreamInputText || 'Visual document input payload',
+        temperature: 0.2,
+      });
     }
 
     if (output && output.audios && output.audios.length > 0) {

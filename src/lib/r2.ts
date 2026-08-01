@@ -111,3 +111,26 @@ export async function getR2PresignedUrl(fileName: string, expiresInSeconds = 360
 
   return await getSignedUrl(r2Client, command, { expiresIn: expiresInSeconds });
 }
+
+/**
+ * Download object from Cloudflare R2 as a Buffer
+ */
+export async function downloadFromR2(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const command = new GetObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: key,
+  });
+
+  const response = await r2Client.send(command);
+  
+  if (!response.Body) {
+    throw new Error('Empty response body from R2');
+  }
+
+  const bytes = await response.Body.transformToByteArray();
+  
+  return {
+    buffer: Buffer.from(bytes),
+    contentType: response.ContentType || 'application/octet-stream',
+  };
+}
