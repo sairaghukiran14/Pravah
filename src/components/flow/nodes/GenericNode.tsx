@@ -50,12 +50,38 @@ export const GenericNode: React.FC<NodeProps> = ({ id, data }) => {
     const keys = Object.keys(config).slice(0, 3);
     if (keys.length === 0) return null;
 
+    const renderValue = (val: any) => {
+      if (val && typeof val === 'object') {
+        if (val.name) return val.name;
+        
+        const getCleanName = (pathOrUrl: string) => {
+          if (!pathOrUrl) return '';
+          const str = String(pathOrUrl);
+          if (str.includes('key=')) {
+            return str.substring(str.indexOf('key=') + 4);
+          }
+          if (str.startsWith('http://') || str.startsWith('https://')) {
+            return str.substring(str.lastIndexOf('/') + 1);
+          }
+          return str;
+        };
+
+        if (val.r2_key) return getCleanName(val.r2_key);
+        if (val.url) return getCleanName(val.url);
+        if (val.type === 'audio') return 'Mic Recording';
+        return val.type || 'Object';
+      }
+      return String(val);
+    };
+
     return (
       <div className="flex flex-col gap-1">
         {keys.map(k => (
           <div key={k} className="flex justify-between items-center gap-2">
             <span className="text-gray-400 capitalize truncate max-w-[80px]">{k.replace('_', ' ')}:</span>
-            <span className="font-medium text-gray-800 text-xs truncate max-w-[100px]">{String(config[k]) || 'None'}</span>
+            <span className="font-medium text-gray-800 text-xs truncate max-w-[100px]" title={renderValue(config[k])}>
+              {renderValue(config[k]) || 'None'}
+            </span>
           </div>
         ))}
       </div>

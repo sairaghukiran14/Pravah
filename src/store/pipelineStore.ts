@@ -17,6 +17,7 @@ export interface PipelineStoreState {
   nodes: Node[];
   edges: Edge[];
   selectedNodeId: string | null;
+  edgeToDeleteId: string | null;
 
   // Metadata
   pipelineId: string | null;
@@ -39,10 +40,12 @@ export interface PipelineStoreState {
   onConnect: OnConnect;
   addNode: (type: NodeType, position: XYPosition) => void;
   removeNode: (id: string) => void;
+  removeEdge: (id: string) => void;
   updateNodeConfig: (id: string, config: Record<string, any>) => void;
   updateNodeLabel: (id: string, label: string) => void;
   selectNode: (id: string | null) => void;
   setHoveredNodeType: (type: NodeType | null) => void;
+  setEdgeToDeleteId: (id: string | null) => void;
 
   // Pipeline lifecycle actions
   loadPipeline: (pipeline: PipelineData) => void;
@@ -129,6 +132,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  edgeToDeleteId: null,
 
   pipelineId: null,
   pipelineName: 'Untitled Pipeline',
@@ -174,6 +178,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       edges: addEdge(
         {
           ...connection,
+          type: 'deletable',
           animated: true,
           style: { stroke: '#6366f1', strokeWidth: 2 },
         },
@@ -208,6 +213,13 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId,
+      isDirty: true,
+    });
+  },
+
+  removeEdge: (id) => {
+    set({
+      edges: get().edges.filter((e) => e.id !== id),
       isDirty: true,
     });
   },
@@ -253,6 +265,10 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
 
   selectNode: (id) => {
     set({ selectedNodeId: id });
+  },
+
+  setEdgeToDeleteId: (id) => {
+    set({ edgeToDeleteId: id });
   },
 
   setPipelineName: (name) => {
@@ -322,6 +338,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       target: e.target,
       sourceHandle: e.sourceHandle || undefined,
       targetHandle: e.targetHandle || undefined,
+      type: 'deletable',
       animated: true,
       style: { stroke: '#6366f1', strokeWidth: 2 },
     }));
