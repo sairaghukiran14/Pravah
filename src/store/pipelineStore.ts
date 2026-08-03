@@ -17,6 +17,7 @@ export interface PipelineStoreState {
   nodes: Node[];
   edges: Edge[];
   selectedNodeId: string | null;
+  edgeToDeleteId: string | null;
 
   // Metadata
   pipelineId: string | null;
@@ -39,10 +40,12 @@ export interface PipelineStoreState {
   onConnect: OnConnect;
   addNode: (type: NodeType, position: XYPosition) => void;
   removeNode: (id: string) => void;
+  removeEdge: (id: string) => void;
   updateNodeConfig: (id: string, config: Record<string, any>) => void;
   updateNodeLabel: (id: string, label: string) => void;
   selectNode: (id: string | null) => void;
   setHoveredNodeType: (type: NodeType | null) => void;
+  setEdgeToDeleteId: (id: string | null) => void;
 
   // Pipeline lifecycle actions
   loadPipeline: (pipeline: PipelineData) => void;
@@ -129,6 +132,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  edgeToDeleteId: null,
 
   pipelineId: null,
   pipelineName: 'Untitled Pipeline',
@@ -174,6 +178,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       edges: addEdge(
         {
           ...connection,
+          type: 'deletable',
           animated: true,
           style: { stroke: '#6366f1', strokeWidth: 2 },
         },
@@ -208,6 +213,13 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId,
+      isDirty: true,
+    });
+  },
+
+  removeEdge: (id) => {
+    set({
+      edges: get().edges.filter((e) => e.id !== id),
       isDirty: true,
     });
   },
@@ -255,21 +267,70 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
     set({ selectedNodeId: id });
   },
 
+  setEdgeToDeleteId: (id) => {
+    set({ edgeToDeleteId: id });
+  },
+
   setPipelineName: (name) => {
     set({ pipelineName: name, isDirty: true });
   },
 
   loadPipeline: (pipeline) => {
-    const nodes: Node[] = pipeline.nodes.map((n) => ({
-      id: n.id,
-      type: n.type,
-      position: { x: n.positionX, y: n.positionY },
-      data: {
-        label: n.label,
+    const cleanKey = (keyOrUrl: string | null | undefined): string | null => {
+      if (!keyOrUrl) return null;
+      if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+        const bucketMarker = keyOrUrl.includes('/pravah-assets/') ? '/pravah-assets/' : '/hasaflow-storage/';
+        if (keyOrUrl.includes(bucketMarker)) {
+          return keyOrUrl.substring(keyOrUrl.indexOf(bucketMarker) + bucketMarker.length);
+        }
+        return keyOrUrl.substring(keyOrUrl.lastIndexOf('/') + 1);
+      }
+      return keyOrUrl;
+    };
+
+    const nodes: Node[] = pipeline.nodes.map((n) => {
+      const config = { ...((n.config as Record<string, any>) || getDefaultConfig(n.type)) };
+
+      // Auto-migrate legacy Cloudflare direct R2 URLs to the secure proxy route
+      if (config.audio_data) {
+        const rawKey = config.audio_data.r2_key || config.audio_data.url;
+        const r2Key = cleanKey(rawKey);
+            
+        if (r2Key) {
+          config.audio_data = {
+            ...config.audio_data,
+            r2_key: r2Key,
+            url: `/api/audio/file?key=${r2Key}`,
+            data: `/api/audio/file?key=${r2Key}`
+          };
+        }
+      }
+
+      if (config.file_data) {
+        const rawKey = config.file_data.r2_key || config.file_data.url;
+        const r2Key = cleanKey(rawKey);
+            
+        if (r2Key) {
+          config.file_data = {
+            ...config.file_data,
+            r2_key: r2Key,
+            url: `/api/audio/file?key=${r2Key}`,
+            data: `/api/audio/file?key=${r2Key}`
+          };
+        }
+      }
+
+      return {
+        id: n.id,
         type: n.type,
-        config: n.config || getDefaultConfig(n.type),
-      },
-    }));
+        position: { x: n.positionX, y: n.positionY },
+        data: {
+          label: n.label,
+          type: n.type,
+          config,
+        },
+      };
+    });
 
     const edges: Edge[] = pipeline.edges.map((e) => ({
       id: e.id,
@@ -277,6 +338,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       target: e.target,
       sourceHandle: e.sourceHandle || undefined,
       targetHandle: e.targetHandle || undefined,
+      type: 'deletable',
       animated: true,
       style: { stroke: '#6366f1', strokeWidth: 2 },
     }));
@@ -302,7 +364,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
 
     set({ isSaving: true });
 
-    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<string> => {
+    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<{ url: string; key: string } | null> => {
       const base64Data = dataUri.split(',')[1];
       const mimeMatch = dataUri.match(/^data:([^;]+);/);
       const mime = mimeMatch?.[1] || 'audio/wav';
@@ -314,12 +376,12 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
         const res = await fetch('/api/audio/upload', { method: 'POST', body: formData });
         const result = await res.json();
         if (result.success && result.key) {
-          return result.url || result.key;
+          return { url: result.url, key: result.key };
         }
       } catch (e) {
         console.warn('R2 upload failed during save', e);
       }
-      return '';
+      return null;
     };
 
     // Scan nodes for any base64 data to upload
@@ -331,26 +393,26 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
         const newConfig = { ...config };
         
         if (config.audio_data?.data && typeof config.audio_data.data === 'string' && config.audio_data.data.startsWith('data:')) {
-          const r2Url = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
-          if (r2Url) {
+          const uploadRes = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
+          if (uploadRes) {
             newConfig.audio_data = {
               ...config.audio_data,
-              data: r2Url,
-              r2_key: r2Url,
-              url: r2Url
+              data: uploadRes.url,
+              r2_key: uploadRes.key,
+              url: uploadRes.url
             };
             changed = true;
           }
         }
         
         if (config.file_data?.data && typeof config.file_data.data === 'string' && config.file_data.data.startsWith('data:')) {
-          const r2Url = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
-          if (r2Url) {
+          const uploadRes = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
+          if (uploadRes) {
             newConfig.file_data = {
               ...config.file_data,
-              data: r2Url,
-              r2_key: r2Url,
-              url: r2Url
+              data: uploadRes.url,
+              r2_key: uploadRes.key,
+              url: uploadRes.url
             };
             changed = true;
           }

@@ -5,11 +5,13 @@ import {
   ReactFlow, Controls, Background, MiniMap, BackgroundVariant, useReactFlow, ReactFlowProvider,
 } from '@xyflow/react';
 import { usePipelineStore } from '@/store/pipelineStore';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { NODE_DESCRIPTIONS } from '@/lib/nodeHelp';
 import { STTNode } from './nodes/STTNode';
 import { TranslateNode } from './nodes/TranslateNode';
 import { TTSNode } from './nodes/TTSNode';
 import { GenericNode } from './nodes/GenericNode';
+import { DeletableEdge } from './nodes/DeletableEdge';
 import { NodeType } from '@/types/pipeline';
 
 const nodeTypes = { 
@@ -34,6 +36,10 @@ const nodeTypes = {
   file_output: GenericNode,
 };
 
+const edgeTypes = {
+  deletable: DeletableEdge,
+};
+
 const FlowEditorContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -46,6 +52,9 @@ const FlowEditorContent: React.FC = () => {
   const addNode = usePipelineStore((s) => s.addNode);
   const selectNode = usePipelineStore((s) => s.selectNode);
   const setHoveredNodeType = usePipelineStore((s) => s.setHoveredNodeType);
+  const edgeToDeleteId = usePipelineStore((s) => s.edgeToDeleteId);
+  const setEdgeToDeleteId = usePipelineStore((s) => s.setEdgeToDeleteId);
+  const removeEdge = usePipelineStore((s) => s.removeEdge);
 
   const [hoveredNode, setHoveredNode] = useState<{ id: string; type: string; label: string; x: number; y: number } | null>(null);
 
@@ -99,13 +108,14 @@ const FlowEditorContent: React.FC = () => {
         onConnect={onConnect}
         onPaneClick={() => selectNode(null)}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         snapToGrid
         snapGrid={[15, 15]}
         zoomOnPinch={true}
         panOnDrag={true}
         preventScrolling={true}
-        defaultEdgeOptions={{ animated: true, style: { stroke: '#d1d5db', strokeWidth: 2 } }}
+        defaultEdgeOptions={{ type: 'deletable', animated: true, style: { stroke: '#d1d5db', strokeWidth: 2 } }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
         <Controls position="bottom-right" />
@@ -121,6 +131,21 @@ const FlowEditorContent: React.FC = () => {
           className="hidden sm:block"
         />
       </ReactFlow>
+
+      {edgeToDeleteId && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Delete Connection"
+          message="Are you sure you want to delete this connection? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={() => {
+            removeEdge(edgeToDeleteId);
+            setEdgeToDeleteId(null);
+          }}
+          onCancel={() => setEdgeToDeleteId(null)}
+        />
+      )}
     </div>
   );
 };

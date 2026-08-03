@@ -91,7 +91,7 @@ export default function PipelineEditorPage({
     const { nodes, edges } = usePipelineStore.getState();
 
     // Upload any large binary data (audio/file) to R2 before sending
-    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<string> => {
+    const uploadBinaryToR2 = async (dataUri: string, name: string): Promise<{ url: string; key: string } | null> => {
       const base64Data = dataUri.split(',')[1];
       const mimeMatch = dataUri.match(/^data:([^;]+);/);
       const mime = mimeMatch?.[1] || 'audio/wav';
@@ -103,12 +103,12 @@ export default function PipelineEditorPage({
         const res = await fetch('/api/audio/upload', { method: 'POST', body: formData });
         const result = await res.json();
         if (result.success && result.key) {
-          return result.url || result.key;
+          return { url: result.url, key: result.key };
         }
       } catch (e) {
         console.warn('R2 upload failed, keeping data URI', e);
       }
-      return dataUri; // fallback: keep original
+      return null;
     };
 
     const serializedNodes = await Promise.all(nodes.map(async (n) => {
@@ -116,13 +116,17 @@ export default function PipelineEditorPage({
       
       // Upload audio_data.data if it's a base64 data URI
       if (config.audio_data?.data && typeof config.audio_data.data === 'string' && config.audio_data.data.startsWith('data:')) {
-        const r2Url = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
-        config.audio_data = { ...config.audio_data, data: r2Url, r2_key: r2Url };
+        const uploadRes = await uploadBinaryToR2(config.audio_data.data, config.audio_data.name || 'recording.wav');
+        if (uploadRes) {
+          config.audio_data = { ...config.audio_data, data: uploadRes.url, r2_key: uploadRes.key, url: uploadRes.url };
+        }
       }
       // Upload file_data.data if it's a base64 data URI
       if (config.file_data?.data && typeof config.file_data.data === 'string' && config.file_data.data.startsWith('data:')) {
-        const r2Url = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
-        config.file_data = { ...config.file_data, data: r2Url, r2_key: r2Url };
+        const uploadRes = await uploadBinaryToR2(config.file_data.data, config.file_data.name || 'file');
+        if (uploadRes) {
+          config.file_data = { ...config.file_data, data: uploadRes.url, r2_key: uploadRes.key, url: uploadRes.url };
+        }
       }
 
       return {
@@ -139,8 +143,10 @@ export default function PipelineEditorPage({
     const processedInputs = { ...inputs };
     for (const [key, value] of Object.entries(processedInputs)) {
       if (value && typeof value === 'object' && value.data && typeof value.data === 'string' && value.data.startsWith('data:')) {
-        const r2Url = await uploadBinaryToR2(value.data, value.name || 'input_audio.wav');
-        processedInputs[key] = { ...value, data: r2Url, r2_key: r2Url };
+        const uploadRes = await uploadBinaryToR2(value.data, value.name || 'input_audio.wav');
+        if (uploadRes) {
+          processedInputs[key] = { ...value, data: uploadRes.url, r2_key: uploadRes.key, url: uploadRes.url };
+        }
       }
     }
 
