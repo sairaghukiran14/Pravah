@@ -10,6 +10,7 @@ import { RunDialog } from '@/components/flow/RunDialog';
 import { ExecutionSidebar } from '@/components/flow/ExecutionSidebar';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { NODE_DESCRIPTIONS } from '@/lib/nodeHelp';
 import {
   ArrowLeft,
@@ -18,6 +19,7 @@ import {
   History,
   CheckCircle2,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function PipelineEditorPage({
@@ -30,6 +32,9 @@ export default function PipelineEditorPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isCreditsDialogOpen, setIsCreditsDialogOpen] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
+  const [pipelineCost, setPipelineCost] = useState(0);
 
   const pipelineName = usePipelineStore((s) => s.pipelineName);
   const setPipelineName = usePipelineStore((s) => s.setPipelineName);
@@ -81,6 +86,40 @@ export default function PipelineEditorPage({
   // Real-Time Server-Sent Events (SSE) Execution Handler
   const handleRunExecution = async (inputs: Record<string, any>) => {
     if (isRunning) return;
+
+    // Pre-execution credit verification check
+    try {
+      const res = await fetch('/api/user/profile');
+      if (res.ok) {
+        const userData = await res.json();
+        const credits = userData.credits ?? 0;
+
+        // Calculate estimated cost for the current nodes in pipeline
+        const { nodes } = usePipelineStore.getState();
+        let cost = 0;
+        for (const node of nodes) {
+          if (node.type === 'stt') {
+            cost += 0.375;
+          } else if (node.type === 'translate') {
+            cost += 0.05;
+          } else if (node.type === 'tts') {
+            cost += 0.05;
+          } else if (node.type !== 'audio_input' && node.type !== 'audio_output' && node.type !== 'text_input' && node.type !== 'text_output') {
+            cost += 0.50; // flat rate for other AI processing nodes
+          }
+        }
+
+        if (credits < cost || credits <= 0) {
+          setUserCredits(credits);
+          setPipelineCost(cost);
+          setIsCreditsDialogOpen(true);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to verify user credits, proceeding with pipeline run:', err);
+    }
+
     await savePipeline();
     startExecution();
     window.dispatchEvent(new CustomEvent('credits-updated'));
@@ -408,6 +447,46 @@ export default function PipelineEditorPage({
         onClose={() => setIsRunDialogOpen(false)}
         onConfirmRun={handleRunExecution}
       />
+
+      {/* Insufficient Credits Dialog */}
+      <Modal
+        isOpen={isCreditsDialogOpen}
+        onClose={() => setIsCreditsDialogOpen(false)}
+        title="Insufficient Credits"
+      >
+        <div className="flex flex-col gap-4 text-center py-2">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500 font-normal">
+              You do not have enough credits to run this pipeline.
+            </p>
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-around text-sm mt-2">
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-normal">Your Balance</span>
+                <span className="text-base font-semibold text-red-600">₹{userCredits.toFixed(2)}</span>
+              </div>
+              <div className="w-px bg-gray-200" />
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-normal">Estimated Cost</span>
+                <span className="text-base font-semibold text-gray-900">₹{pipelineCost.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+            <Button variant="secondary" onClick={() => setIsCreditsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Link href="/profile#billing">
+              <Button variant="primary">
+                Top Up Wallet
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
