@@ -30,46 +30,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Project not found or unauthorized' }, { status: 403 });
     }
 
-    // Default template nodes for new pipeline
-    const initialNodes = [
-      {
-        id: `node_stt_${Math.random().toString(36).substring(7)}`,
-        type: 'stt',
-        label: 'Speech to Text',
-        positionX: 100,
-        positionY: 200,
-        config: { language_code: 'hi-IN', model: 'saaras:v3', mode: 'transcribe' },
-      },
-      {
-        id: `node_tr_${Math.random().toString(36).substring(7)}`,
-        type: 'translate',
-        label: 'Translate',
-        positionX: 450,
-        positionY: 200,
-        config: { source_language_code: 'auto', target_language_code: 'te-IN', mode: 'formal' },
-      },
-      {
-        id: `node_tts_${Math.random().toString(36).substring(7)}`,
-        type: 'tts',
-        label: 'Text to Speech',
-        positionX: 800,
-        positionY: 200,
-        config: { target_language_code: 'te-IN', speaker: 'ritu', pace: 1.0, model: 'bulbul:v3' },
-      },
-    ];
-
-    const initialEdges = [
-      {
-        id: `edge_${Math.random().toString(36).substring(2, 9)}`,
-        source: initialNodes[0].id,
-        target: initialNodes[1].id,
-      },
-      {
-        id: `edge_${Math.random().toString(36).substring(2, 9)}`,
-        source: initialNodes[1].id,
-        target: initialNodes[2].id,
-      },
-    ];
+    // New pipelines start with an empty canvas
+    const initialNodes: any[] = [];
+    const initialEdges: any[] = [];
 
     const pipeline = await prisma.pipeline.create({
       data: {

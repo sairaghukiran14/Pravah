@@ -9,19 +9,19 @@ datasource db {
 }
 
 model User {
-  id                  String    @id @default(cuid())
+  id                  String         @id @default(cuid())
   name                String?
-  email               String    @unique
+  email               String         @unique
   emailVerified       DateTime?
   image               String?
-  onboardingCompleted Boolean   @default(false)
-  credits             Float     @default(50.00)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  onboardingCompleted Boolean        @default(false)
+  credits             Float          @default(50.00)
   accounts            Account[]
-  sessions            Session[]
-  projects            Project[]
   orders              PaymentOrder[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  projects            Project[]
+  sessions            Session[]
 }
 
 model Account {
@@ -30,15 +30,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -67,10 +66,10 @@ model Project {
   name        String
   description String?
   userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pipelines   Pipeline[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  pipelines   Pipeline[]
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -80,12 +79,12 @@ model Pipeline {
   name        String
   description String?
   projectId   String
-  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  nodes       PipelineNode[]
-  edges       PipelineEdge[]
-  runs        PipelineRun[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  edges       PipelineEdge[]
+  nodes       PipelineNode[]
+  runs        PipelineRun[]
 
   @@index([projectId])
 }
@@ -93,14 +92,14 @@ model Pipeline {
 model PipelineNode {
   id         String   @id @default(cuid())
   pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  type       String   // "stt" | "translate" | "tts"
+  type       String
   label      String
   positionX  Float
   positionY  Float
   config     Json     @default("{}")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@index([pipelineId])
 }
@@ -108,12 +107,12 @@ model PipelineNode {
 model PipelineEdge {
   id           String   @id @default(cuid())
   pipelineId   String
-  pipeline     Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  source       String   // source node id
-  target       String   // target node id
+  source       String
+  target       String
   sourceHandle String?
   targetHandle String?
   createdAt    DateTime @default(now())
+  pipeline     Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@index([pipelineId])
 }
@@ -121,12 +120,12 @@ model PipelineEdge {
 model PipelineRun {
   id         String    @id @default(cuid())
   pipelineId String
-  pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  status     String    @default("pending") // pending | running | completed | failed
+  status     String    @default("pending")
   input      Json?
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
   nodeRuns   NodeRun[]
+  pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@index([pipelineId])
 }
@@ -134,15 +133,15 @@ model PipelineRun {
 model NodeRun {
   id         String      @id @default(cuid())
   runId      String
-  run        PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   nodeId     String
   nodeType   String
-  status     String      @default("pending") // pending | running | completed | failed
+  status     String      @default("pending")
   input      Json?
   output     Json?
   error      String?
   startedAt  DateTime?
   finishedAt DateTime?
+  run        PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@index([runId])
   @@index([nodeId])
@@ -152,7 +151,7 @@ model CreditTransaction {
   id          String   @id @default(cuid())
   userId      String
   amount      Float
-  type        String   // purchase | deduction
+  type        String
   description String
   createdAt   DateTime @default(now())
 
@@ -160,17 +159,16 @@ model CreditTransaction {
 }
 
 model PaymentOrder {
-  id                 String   @id // Razorpay order id or mock order id
-  userId             String
-  amount             Float    // In INR (not paise)
-  currency           String   @default("INR")
-  status             String   // created | paid | failed
-  razorpayPaymentId  String?
-  razorpaySignature  String?
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id
+  userId            String
+  amount            Float
+  currency          String   @default("INR")
+  status            String
+  razorpayPaymentId String?
+  razorpaySignature String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
-
