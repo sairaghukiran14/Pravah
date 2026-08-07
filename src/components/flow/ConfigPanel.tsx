@@ -376,7 +376,6 @@ export const ConfigPanel: React.FC = () => {
                     onChange={(val) => handleChange('model', val)}
                     options={[
                       { label: 'Sarvam-105B (Sovereign Reasoning LLM)', value: 'sarvam-105b' },
-                      { label: 'Sarvam-2B (Fast Indic Model)', value: 'sarvam-2b' },
                     ]}
                   />
                   <div>

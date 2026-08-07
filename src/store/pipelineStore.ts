@@ -81,7 +81,7 @@ const getDefaultConfig = (type: NodeType) => {
     // Processing
     case 'ocr': return { language: 'eng' };
     case 'vision': return { prompt: 'Describe this image.' };
-    case 'llm': return { model: 'gpt-4', temperature: 0.7, prompt: 'Summarize the input.' };
+    case 'llm': return { model: 'sarvam-105b', temperature: 0.7, prompt: 'Summarize the input.' };
     case 'summarize': return { length: 'short' };
     case 'sentiment': return { format: 'json' };
     case 'keyword_extraction': return { max_keywords: 10 };

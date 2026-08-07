@@ -144,7 +144,15 @@ export const ExecutionSidebar: React.FC = () => {
                   <div>
                     <span className="text-gray-900 font-semibold font-sans block mb-1">{nodeId}</span>
                     <span className="text-gray-600 break-words whitespace-pre-wrap">
-                      {typeof output === 'string' ? output : output.transcript || output.translated_text || 'Audio Output Generated'}
+                      {typeof output === 'string' 
+                        ? output 
+                        : (output.name ? `Uploaded file: ${output.name}` : null)
+                          || output.response 
+                          || output.translated_text 
+                          || output.transcript 
+                          || output.text 
+                          || (output.url ? `File URL: ${output.url}` : null)
+                          || 'Audio Output Generated'}
                     </span>
                   </div>
                   {typeof output !== 'string' && output.audio_r2_key ? (

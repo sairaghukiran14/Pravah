@@ -1,5 +1,5 @@
 import { SerializedEdge, SerializedNode } from '@/types/pipeline';
-import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate, executeSarvamLLM } from './sarvam';
+import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate, executeSarvamLLM, executeSarvamVision } from './sarvam';
 
 export interface NodeExecutionResult {
   nodeId: string;
@@ -94,16 +94,19 @@ export async function executeSingleNode(
     const sourceOutput = nodeOutputs[sourceNodeId];
 
     if (sourceOutput) {
+      dynamicInputPayload = sourceOutput;
       if (typeof sourceOutput === 'string') {
         upstreamInputText = sourceOutput;
+      } else if (sourceOutput.response) {
+        upstreamInputText = sourceOutput.response;
       } else if (sourceOutput.translated_text) {
         upstreamInputText = sourceOutput.translated_text;
       } else if (sourceOutput.transcript) {
         upstreamInputText = sourceOutput.transcript;
+      } else if (sourceOutput.text) {
+        upstreamInputText = sourceOutput.text;
       } else if (sourceOutput.audios) {
         upstreamInputText = 'Audio Generated Successfully';
-      } else {
-        dynamicInputPayload = sourceOutput;
       }
     }
   } else {
@@ -145,6 +148,25 @@ export async function executeSingleNode(
         file: audioPayload,
         url: runDialogAudio?.url || configAudio?.url || node.config?.audio_url || null,
         name: runDialogAudio?.name || configAudio?.name || 'audio_input.wav',
+        text: upstreamInputText,
+      };
+    } else if (node.type === 'image_input' || node.type === 'video_input' || node.type === 'document_input' || node.type === 'file_output') {
+      const runDialogFile = dynamicInputPayload;
+      const configFile = node.config?.file_data || node.config?.file;
+      
+      const filePayload =
+        runDialogFile?.data ||
+        runDialogFile?.file ||
+        configFile?.data ||
+        node.config?.file ||
+        node.config?.file_url ||
+        configFile?.url ||
+        null;
+      output = {
+        data: filePayload,
+        file: filePayload,
+        url: runDialogFile?.url || configFile?.url || node.config?.file_url || null,
+        name: runDialogFile?.name || configFile?.name || `${node.type}_file`,
         text: upstreamInputText,
       };
     } else if (node.type === 'audio_output') {
@@ -225,8 +247,38 @@ export async function executeSingleNode(
         input: upstreamInputText,
         temperature: 0.1,
       });
+    } else if (node.type === 'vision') {
+      const fileData = 
+        dynamicInputPayload?.data ||
+        dynamicInputPayload?.file ||
+        node.config?.file_data?.data ||
+        node.config?.file?.data ||
+        null;
+      
+      if (!fileData) {
+        throw new Error('No document file (image/PDF) provided for Vision Node digitisation.');
+      }
+
+      // 1. Submit digitise job and poll for markdown output
+      const visionRes = await executeSarvamVision({
+        file: fileData,
+        language: node.config?.language || 'hi-IN',
+        output_format: 'md',
+      });
+
+      // 2. Query LLM to reason over the digitised text if a custom prompt is provided
+      const customPrompt = node.config?.prompt || 'Describe this image.';
+      const outputFormatText = `Document AI Digitised Text:\n\n${visionRes.text}`;
+      
+      output = await executeSarvamLLM({
+        model: 'sarvam-105b',
+        system_prompt: `You are a Document AI analysis assistant. The user wants you to analyze the digitized text of their document. Contextualize, describe, or extract details as requested by their prompt.`,
+        prompt: customPrompt,
+        input: outputFormatText,
+        temperature: 0.2,
+      });
     } else {
-      // Sarvam Vision & Optical Processing Node execution
+      // Sarvam Vision & Optical Processing Node fallback execution
       output = await executeSarvamLLM({
         model: 'sarvam-105b',
         system_prompt: `You are Sarvam Vision AI processing node (${node.type}). Analyze and process the input payload.`,

@@ -162,8 +162,8 @@ body {
 }
 
 /* Disable bold fonts in dashboard/app content only (not landing page) */
-.dashboard-content .font-bold, 
-.dashboard-content .font-semibold, 
+.dashboard-content .font-normal, 
+.dashboard-content .font-normal, 
 .dashboard-content .font-extrabold, 
 .dashboard-content strong, 
 .dashboard-content b,

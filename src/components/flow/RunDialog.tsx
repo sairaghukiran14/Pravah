@@ -192,6 +192,56 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
                          <input type="url" placeholder="https://example.com/audio.mp3" className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-gray-900 focus:outline-none" onChange={(e) => handleInputChange(node.id, e.target.value)} required />
                       )}
                     </div>
+                  ) : node.type === 'image_input' ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                       <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                       <span className="text-sm text-gray-600 font-medium">Click to upload image</span>
+                       <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG up to 10MB</span>
+                       <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) {
+                           const reader = new FileReader();
+                           reader.readAsDataURL(file);
+                           reader.onload = () => handleInputChange(node.id, { type: 'image', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                         }
+                       }} required={!inputs[node.id]} />
+                       {inputs[node.id]?.name && <div className="mt-2 text-xs font-semibold text-emerald-600">Selected: {inputs[node.id].name}</div>}
+                    </div>
+                  ) : node.type === 'video_input' ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                       <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                       <span className="text-sm text-gray-600 font-medium">Click to upload video</span>
+                       <span className="text-xs text-gray-400 mt-1">MP4, WebM up to 50MB</span>
+                       <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="video/*" onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) {
+                           const reader = new FileReader();
+                           reader.readAsDataURL(file);
+                           reader.onload = () => handleInputChange(node.id, { type: 'video', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                         }
+                       }} required={!inputs[node.id]} />
+                       {inputs[node.id]?.name && <div className="mt-2 text-xs font-semibold text-emerald-600">Selected: {inputs[node.id].name}</div>}
+                    </div>
+                  ) : node.type === 'document_input' ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                       <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                       <span className="text-sm text-gray-600 font-medium">Click to upload document</span>
+                       <span className="text-xs text-gray-400 mt-1">PDF, TXT, DOCX up to 10MB</span>
+                       <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.txt,.docx" onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) {
+                           const reader = new FileReader();
+                           reader.readAsDataURL(file);
+                           reader.onload = () => handleInputChange(node.id, { type: 'document', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                         }
+                       }} required={!inputs[node.id]} />
+                       {inputs[node.id]?.name && <div className="mt-2 text-xs font-semibold text-emerald-600">Selected: {inputs[node.id].name}</div>}
+                    </div>
+                  ) : node.type === 'url_input' ? (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">URL Link</label>
+                      <input type="url" placeholder="https://example.com/..." className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-gray-900 focus:outline-none" value={inputs[node.id] || ''} onChange={(e) => handleInputChange(node.id, e.target.value)} required />
+                    </div>
                   ) : (
                     <div>
                       {/* Default text input for generic nodes */}
