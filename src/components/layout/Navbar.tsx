@@ -42,8 +42,9 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center group">
-            <span className="text-base font-bold text-gray-900 group-hover:text-gray-700 transition-colors leading-none tracking-tight">
+          <Link href="/" className="flex items-center gap-2 group">
+            <img src="/logo.png" alt="hasaflow logo" className="h-5 w-5 object-contain" />
+            <span className="text-base font-normal text-gray-900 group-hover:text-gray-700 transition-colors leading-none tracking-tight">
               hasaflow
             </span>
           </Link>
@@ -90,11 +91,11 @@ export const Navbar: React.FC = () => {
                       className="h-6 w-6 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-white text-xs font-bold">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-white text-xs font-normal">
                       {userInitial}
                     </div>
                   )}
-                  <span className="text-xs font-semibold text-gray-800 hidden sm:inline">
+                  <span className="text-xs font-normal text-gray-800 hidden sm:inline">
                     {userName}
                   </span>
                 </Link>

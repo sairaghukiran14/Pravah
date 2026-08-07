@@ -67,6 +67,7 @@ const USE_CASE_MAP: Record<string, { title: string; icon: React.ReactNode }> = {
 };
 
 const LANG_MAP: Record<string, { name: string; script: string }> = {
+  'en-US': { name: 'English', script: 'English' },
   'hi-IN': { name: 'Hindi', script: 'हिंदी' },
   'te-IN': { name: 'Telugu', script: 'తెలుగు' },
   'ta-IN': { name: 'Tamil', script: 'தமிழ்' },

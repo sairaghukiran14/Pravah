@@ -53,8 +53,29 @@ async function verifyAllConnections() {
 
     console.log('✅ Sarvam AI API Connected & Responding Live!');
     console.log(`   └─ Real Translation Output: "${res.translated_text}"`);
+
+    console.log('   └─ Testing Sarvam LLM (sarvam-105b) chat completions...');
+    const { executeSarvamLLM } = await import('../lib/sarvam');
+    const llmRes = await executeSarvamLLM({
+      model: 'sarvam-105b',
+      prompt: 'Hello, respond with "OK" if you can hear me.',
+      temperature: 0.1,
+    });
+    console.log('✅ Sarvam LLM Connected & Responding Live!');
+    console.log(`   └─ LLM Output: "${llmRes.response}"`);
+
+    console.log('   └─ Testing Sarvam Document AI (executeSarvamVision) mock/live flow...');
+    const { executeSarvamVision } = await import('../lib/sarvam');
+    // Using a tiny base64 1x1 pixel PNG image to test connectivity
+    const tinyPngBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const visionRes = await executeSarvamVision({
+      file: tinyPngBase64,
+      language: 'hi-IN',
+    });
+    console.log('✅ Sarvam Document AI API connected successfully!');
+    console.log(`   └─ Digitised Output length: ${visionRes.text.length} characters`);
   } catch (err: any) {
-    console.error('❌ Sarvam AI API Request Error:', err.message);
+    console.error('❌ Sarvam AI API Request Error:', err.stack || err.message);
   }
 
   // 4. Test Cloudflare R2 File Storage Integration

@@ -16,6 +16,7 @@
     "@prisma/adapter-neon": "^7.9.0",
     "@prisma/client": "^6.19.3",
     "@xyflow/react": "^12.11.2",
+    "adm-zip": "^0.6.0",
     "lucide-react": "^1.25.0",
     "next": "16.2.11",
     "next-auth": "^5.0.0-beta.32",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

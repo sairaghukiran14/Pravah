@@ -10,6 +10,20 @@ import { downloadFromR2, R2_BUCKET_NAME } from './r2';
 
 const SARVAM_BASE_URL = 'https://api.sarvam.ai';
 
+async function fetchWithRetry(url: string, options: RequestInit, attempts = 2, delayMs = 1500): Promise<Response> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err: any) {
+      if (i === attempts - 1) throw err;
+      console.warn(`Fetch to ${url} failed (attempt ${i + 1}/${attempts}), retrying in ${delayMs}ms:`, err.message);
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+  }
+  throw new Error('Fetch failed after maximum retry attempts');
+}
+
 // Environment based limits for Sarvam API usage
 const MAX_AUDIO_SIZE_MB = parseInt(process.env.SARVAM_MAX_AUDIO_SIZE_MB || '10'); // default 10 MB
 const MAX_TEXT_LENGTH = parseInt(process.env.SARVAM_MAX_TEXT_LENGTH || '5000'); // default 5000 characters
@@ -203,7 +217,7 @@ export async function executeSarvamSTT(
     formData.append('file', blob, `audio.${detectedExt}`);
 
     // Real call to Sarvam API
-    const response = await fetch(`${SARVAM_BASE_URL}/speech-to-text`, {
+    const response = await fetchWithRetry(`${SARVAM_BASE_URL}/speech-to-text`, {
       method: 'POST',
       headers: {
         'api-subscription-key': apiKey,
@@ -255,7 +269,7 @@ export async function executeSarvamTranslate(
   }
 
   try {
-    const response = await fetch(`${SARVAM_BASE_URL}/translate`, {
+    const response = await fetchWithRetry(`${SARVAM_BASE_URL}/translate`, {
       method: 'POST',
       headers: {
         'api-subscription-key': apiKey,
@@ -299,7 +313,7 @@ export async function executeSarvamTTS(
   }
 
   try {
-    const response = await fetch(`${SARVAM_BASE_URL}/text-to-speech`, {
+    const response = await fetchWithRetry(`${SARVAM_BASE_URL}/text-to-speech`, {
       method: 'POST',
       headers: {
         'api-subscription-key': apiKey,
@@ -331,7 +345,7 @@ export interface SarvamLLMRequest {
   prompt?: string;
   system_prompt?: string;
   input?: string;
-  model?: string; // 'sarvam-105b' | 'sarvam-2b'
+  model?: string; // 'sarvam-105b'
   temperature?: number;
 }
 
@@ -362,7 +376,7 @@ export async function executeSarvamLLM(
   }
 
   try {
-    const response = await fetch(`${SARVAM_BASE_URL}/v1/chat/completions`, {
+    const response = await fetchWithRetry(`${SARVAM_BASE_URL}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'api-subscription-key': apiKey,
@@ -393,6 +407,205 @@ export async function executeSarvamLLM(
     };
   } catch (error: any) {
     console.error(`Sarvam LLM (${modelName}) execution error:`, error);
+    throw error;
+  }
+}
+
+export interface SarvamVisionRequest {
+  file: string; // base64 string
+  language?: string;
+  output_format?: 'html' | 'md';
+}
+
+export interface SarvamVisionResponse {
+  text: string;
+  job_id: string;
+}
+
+/**
+ * Sarvam Document AI / Vision Digitise Pipeline Endpoint integration.
+ * Submits job, polls status, obtains download URL, extracts zip buffer in-memory.
+ */
+export async function executeSarvamVision(payload: SarvamVisionRequest): Promise<SarvamVisionResponse> {
+  const apiKey = getApiKey();
+  const docLanguage = payload.language || 'hi-IN';
+  const outFormat = payload.output_format || 'md';
+
+  let fileBuffer: Buffer;
+  let detectedMime = 'image/png';
+  let detectedExt = 'png';
+
+  const isHttp = payload.file.startsWith('http://') || payload.file.startsWith('https://');
+  const isLocalProxy = payload.file.startsWith('/api/audio/file');
+
+  if (isHttp || isLocalProxy) {
+    try {
+      const isR2Url = payload.file.includes(`/${R2_BUCKET_NAME}/`) || payload.file.includes('/pravah-assets/');
+      if (isLocalProxy || isR2Url) {
+        let key = '';
+        if (isLocalProxy) {
+          const urlObj = new URL(payload.file, 'http://localhost');
+          key = urlObj.searchParams.get('key') || '';
+        } else {
+          const bucketMarker = payload.file.includes(`/${R2_BUCKET_NAME}/`) ? `/${R2_BUCKET_NAME}/` : '/pravah-assets/';
+          key = payload.file.substring(payload.file.indexOf(bucketMarker) + bucketMarker.length);
+        }
+        const downloadRes = await downloadFromR2(key);
+        fileBuffer = downloadRes.buffer;
+        detectedMime = downloadRes.contentType;
+      } else {
+        const fileFetch = await fetch(payload.file);
+        detectedMime = fileFetch.headers.get('content-type') || 'image/png';
+        fileBuffer = Buffer.from(await fileFetch.arrayBuffer());
+      }
+    } catch (err: any) {
+      console.error('Failed to download visual document from URL:', err);
+      throw new Error(`Failed to resolve document URL: ${err.message}`);
+    }
+  } else if (payload.file.startsWith('data:')) {
+    const parts = payload.file.split(';base64,');
+    const mimePart = parts[0];
+    const base64Data = parts[1];
+    detectedMime = mimePart.split(':')[1] || 'image/png';
+    fileBuffer = Buffer.from(base64Data, 'base64');
+  } else {
+    // Treat raw string as base64
+    fileBuffer = Buffer.from(payload.file, 'base64');
+  }
+
+  // Set detectedExt based on detectedMime
+  if (detectedMime.includes('pdf')) detectedExt = 'pdf';
+  else if (detectedMime.includes('jpeg') || detectedMime.includes('jpg')) detectedExt = 'jpg';
+  else if (detectedMime.includes('zip')) detectedExt = 'zip';
+  else detectedExt = 'png';
+
+  // Handle mock responses when using mock keys
+  if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
+    await new Promise((res) => setTimeout(res, 1500));
+    return {
+      job_id: `job_mock_${Math.random().toString(36).substring(7)}`,
+      text: `[Mock Document AI Digitised Output (${detectedExt})]: This is the mock text result parsed from the uploaded document file. It contains OCR structures, tables, and paragraphs detected in ${docLanguage} language.`,
+    };
+  }
+
+  try {
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)], { type: detectedMime });
+    const formData = new FormData();
+    formData.append('file', fileBlob, `document.${detectedExt}`);
+    formData.append('language', docLanguage);
+    formData.append('output_format', outFormat);
+
+    // 1. Submit Digitise Job
+    const createRes = await fetchWithRetry(`${SARVAM_BASE_URL}/doc-ai/v1/job/digitise`, {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': apiKey,
+      },
+      body: formData,
+    });
+
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      throw new Error(`Sarvam Doc-AI Submit Job Error (${createRes.status}): ${errText}`);
+    }
+
+    const jobData = await createRes.json();
+    const jobId = jobData.job_id;
+    if (!jobId) {
+      throw new Error('Sarvam API did not return a job_id');
+    }
+
+    // 2. Poll Status until Terminal
+    const TERMINAL = new Set(['completed', 'partially_completed', 'failed', 'rejected']);
+    let status = jobData.status || 'pending';
+    let pollCount = 0;
+    const maxPolls = 40; // 40 * 3s = 120s max timeout
+
+    while (!TERMINAL.has(status.toLowerCase()) && pollCount < maxPolls) {
+      pollCount++;
+      await new Promise((res) => setTimeout(res, 3000));
+
+      const statusRes = await fetchWithRetry(`${SARVAM_BASE_URL}/doc-ai/v1/job/${jobId}/status`, {
+        method: 'GET',
+        headers: {
+          'api-subscription-key': apiKey,
+        },
+      });
+
+      if (!statusRes.ok) {
+        const errText = await statusRes.text();
+        throw new Error(`Sarvam Doc-AI Check Status Error (${statusRes.status}): ${errText}`);
+      }
+
+      const statusData = await statusRes.json();
+      status = statusData.status || 'pending';
+    }
+
+    if (!['completed', 'partially_completed'].includes(status.toLowerCase())) {
+      throw new Error(`Sarvam Doc-AI Job did not complete successfully. Terminal status: ${status}`);
+    }
+
+    // 3. Fetch Download Url
+    const dlRes = await fetchWithRetry(`${SARVAM_BASE_URL}/doc-ai/v1/job/${jobId}/download-url`, {
+      method: 'GET',
+      headers: {
+        'api-subscription-key': apiKey,
+      },
+    });
+
+    if (!dlRes.ok) {
+      const errText = await dlRes.text();
+      throw new Error(`Sarvam Doc-AI Fetch Download Link Error (${dlRes.status}): ${errText}`);
+    }
+
+    const dlData = await dlRes.json();
+    const downloadUrl = dlData.url;
+    const downloadMethod = dlData.method || 'GET';
+
+    if (!downloadUrl) {
+      throw new Error('Sarvam API did not return download URL');
+    }
+
+    // 4. Download output zip file
+    const zipRes = await fetchWithRetry(downloadUrl, {
+      method: downloadMethod,
+    });
+
+    if (!zipRes.ok) {
+      throw new Error(`Failed to download digitized document output from link. Status: ${zipRes.status}`);
+    }
+
+    const zipBuffer = Buffer.from(await zipRes.arrayBuffer());
+
+    // 5. In-Memory Zip Extraction using adm-zip
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip(zipBuffer);
+    const zipEntries = zip.getEntries();
+
+    // Find the file ending with the configured extension (.md or .html)
+    const targetExt = `.${outFormat}`;
+    const outputEntry = zipEntries.find((entry) => entry.entryName.toLowerCase().endsWith(targetExt));
+
+    if (!outputEntry) {
+      // Fallback: search for any .md or .html file in the zip
+      const fallbackEntry = zipEntries.find(
+        (entry) => entry.entryName.toLowerCase().endsWith('.md') || entry.entryName.toLowerCase().endsWith('.html')
+      );
+      if (!fallbackEntry) {
+        throw new Error('No digitized text files (.md or .html) found in downloaded ZIP archive');
+      }
+      return {
+        job_id: jobId,
+        text: fallbackEntry.getData().toString('utf8'),
+      };
+    }
+
+    return {
+      job_id: jobId,
+      text: outputEntry.getData().toString('utf8'),
+    };
+  } catch (error: any) {
+    console.error('Sarvam Vision API execution error:', error);
     throw error;
   }
 }

@@ -16,7 +16,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   className = '',
   compact = false,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const wavesurferRef = useRef<any>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -24,6 +26,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check if source requires native HTML5 playback (e.g. dynamic blob recordings or webm files)
+  const isNative = src ? (src.startsWith('blob:') || src.includes('webm') || src.startsWith('data:audio/webm')) : false;
 
   // Helper to convert base64 data URI to Blob
   const dataURItoBlob = (dataURI: string) => {
@@ -38,13 +43,114 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return new Blob([ab], { type: mimeString });
   };
 
-  // Handle src changes
+  // 1. Initialize WaveSurfer on the client side (ONLY when not using native mode)
   useEffect(() => {
+    if (isNative || !src) return;
+
+    let active = true;
+    let wsInstance: any = null;
+    let blobUrl: string | null = null;
+
+    const initWaveSurfer = async () => {
+      if (
+        typeof window === 'undefined' || 
+        !containerRef.current || 
+        src === 'null' || 
+        src === 'undefined' || 
+        src.endsWith('/undefined') || 
+        src.endsWith('/null')
+      ) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const WaveSurfer = (await import('wavesurfer.js')).default;
+        
+        if (!active || !containerRef.current) return;
+
+        // Clean up previous instance if any
+        if (wavesurferRef.current) {
+          wavesurferRef.current.destroy();
+        }
+
+        setIsLoading(true);
+
+        wsInstance = WaveSurfer.create({
+          container: containerRef.current,
+          waveColor: '#cbd5e1', // slate-300
+          progressColor: '#0f172a', // slate-900
+          height: compact ? 28 : 36,
+          barWidth: 2,
+          barGap: 3,
+          barRadius: 2,
+          cursorWidth: 0,
+        });
+
+        // Set up events
+        wsInstance.on('ready', () => {
+          if (!active) return;
+          setDuration(wsInstance.getDuration());
+          setIsLoading(false);
+          wsInstance.setVolume(isMuted ? 0 : volume);
+          
+          if (autoPlay) {
+            wsInstance.play().catch((err: any) => console.warn('Autoplay blocked:', err));
+          }
+        });
+
+        wsInstance.on('play', () => setIsPlaying(true));
+        wsInstance.on('pause', () => setIsPlaying(false));
+        wsInstance.on('timeupdate', (time: number) => {
+          setCurrentTime(time);
+        });
+
+        wsInstance.on('finish', () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        });
+
+        // Load source
+        if (src.startsWith('data:')) {
+          const blob = dataURItoBlob(src);
+          blobUrl = URL.createObjectURL(blob);
+          wsInstance.load(blobUrl).catch((err: any) => {
+            console.error('WaveSurfer failed to load blob URL:', err);
+            setIsLoading(false);
+          });
+        } else {
+          wsInstance.load(src).catch((err: any) => {
+            console.error('WaveSurfer failed to load source URL:', err);
+            setIsLoading(false);
+          });
+        }
+
+        wavesurferRef.current = wsInstance;
+      } catch (err) {
+        console.error('Failed to initialize wavesurfer:', err);
+        setIsLoading(false);
+      }
+    };
+
+    initWaveSurfer();
+
+    return () => {
+      active = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (wsInstance) {
+        try {
+          wsInstance.destroy();
+        } catch (e) {}
+      }
+    };
+  }, [src, autoPlay, isNative]);
+
+  // 2. Initialize Native Audio events (ONLY when in native mode)
+  useEffect(() => {
+    if (!isNative || !src) return;
+
     const audio = audioRef.current;
-    if (!audio || !src) {
-      setIsLoading(false);
-      return;
-    }
+    if (!audio) return;
 
     setIsLoading(true);
     let blobUrl: string | null = null;
@@ -60,24 +166,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       audio.load();
       if (autoPlay) {
-        audio.play().catch((err) => console.error('AutoPlay failed:', err));
+        audio.play().catch((err) => console.warn('Native autoplay blocked:', err));
       }
     } catch (error) {
-      console.error('Error setting up audio source:', error);
+      console.error('Error setting up native audio source:', error);
       setIsLoading(false);
     }
-
-    return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [src, autoPlay]);
-
-  // Handle audio events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
 
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onLoadedMetadata = () => {
@@ -101,6 +195,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     audio.addEventListener('playing', onPlaying);
 
     return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('canplay', onCanPlay);
@@ -109,14 +204,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       audio.removeEventListener('waiting', onWaiting);
       audio.removeEventListener('playing', onPlaying);
     };
-  }, []);
+  }, [src, autoPlay, isNative]);
 
   // Handle mute and volume changes
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+    if (isNative) {
+      if (audioRef.current) {
+        audioRef.current.volume = isMuted ? 0 : volume;
+      }
+    } else {
+      if (wavesurferRef.current) {
+        wavesurferRef.current.setVolume(isMuted ? 0 : volume);
+      }
     }
-  }, [volume, isMuted]);
+  }, [volume, isMuted, isNative]);
 
   // Format seconds to MM:SS
   const formatTime = (time: number) => {
@@ -127,17 +228,31 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
+    if (isNative) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play().catch((err) => {
+          console.error('Native playback failed:', err);
+        });
+      }
     } else {
-      audioRef.current.play().catch((err) => {
-        console.error('Native playback failed:', err);
-      });
+      const ws = wavesurferRef.current;
+      if (!ws) return;
+      if (isPlaying) {
+        ws.pause();
+      } else {
+        ws.play().catch((err: any) => {
+          console.error('WaveSurfer playback failed:', err);
+        });
+      }
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isNative) return;
     const time = parseFloat(e.target.value);
     setCurrentTime(time);
     if (audioRef.current) {
@@ -171,15 +286,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   return (
     <div className={`flex items-center gap-2 ${compact ? 'p-1 pr-2 sm:gap-3' : 'sm:gap-4 p-1.5 pr-2 sm:pr-3'} rounded-full border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-300 w-full overflow-hidden ${className}`}>
       
-      {/* Hidden native audio element */}
-      <audio ref={audioRef} preload="auto" />
+      {/* Hidden native audio element for native mode */}
+      {isNative && <audio ref={audioRef} preload="auto" />}
 
       {/* Play/Pause Button */}
       <button
         type="button"
         onClick={togglePlay}
         disabled={isLoading && !isPlaying}
-        className={`${compact ? 'w-8 h-8' : 'w-10 h-10 sm:w-11 sm:h-11'} rounded-full bg-[#111827] text-white flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed shrink-0 shadow-sm`}
+        className={`${compact ? 'w-8 h-8' : 'w-10 h-10 sm:w-11 sm:h-11'} rounded-full bg-[#111827] text-white flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed shrink-0 shadow-sm cursor-pointer`}
         aria-label={isPlaying ? 'Pause' : 'Play'}
       >
         {isLoading && !isPlaying ? (
@@ -191,22 +306,33 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         )}
       </button>
 
-      {/* Progress Bar & Times */}
-      <div className="flex items-center flex-1 gap-1.5 sm:gap-2 min-w-0">
+      {/* Progress Bar (Native) OR Waveform Canvas (WaveSurfer) */}
+      <div className="flex items-center flex-1 gap-1.5 sm:gap-3 min-w-0">
         <span className={`text-[10px] ${compact ? 'sm:text-[11px] min-w-[28px]' : 'sm:text-xs min-w-[32px] sm:min-w-[36px]'} font-medium tabular-nums text-slate-500 text-right shrink-0`}>
           {formatTime(currentTime)}
         </span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.01}
-          value={currentTime}
-          onChange={handleSeek}
-          disabled={!duration}
-          className="flex-1 h-1.5 min-w-0 accent-slate-900 bg-gray-200 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed transition-all"
-          aria-label="Seek timeline"
-        />
+        
+        {isNative ? (
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.01}
+            value={currentTime}
+            onChange={handleSeek}
+            disabled={!duration}
+            className="flex-1 h-1.5 min-w-0 accent-slate-900 bg-gray-200 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed transition-all"
+            aria-label="Seek timeline"
+          />
+        ) : (
+          /* WaveSurfer mounts here */
+          <div 
+            ref={containerRef} 
+            className="flex-1 min-w-0 cursor-pointer"
+            style={{ height: compact ? '28px' : '36px' }}
+          />
+        )}
+
         <span className={`text-[10px] ${compact ? 'sm:text-[11px] min-w-[28px]' : 'sm:text-xs min-w-[32px] sm:min-w-[36px]'} font-medium tabular-nums text-slate-500 shrink-0`}>
           {formatTime(duration)}
         </span>
@@ -220,7 +346,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <button
               type="button"
               onClick={toggleMute}
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 transition-colors focus:outline-none cursor-pointer"
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
@@ -248,7 +374,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <button
           type="button"
           onClick={toggleMute}
-          className={`${compact ? 'flex' : 'sm:hidden'} p-1.5 rounded-full text-slate-400 hover:text-slate-700 transition-colors focus:outline-none shrink-0`}
+          className={`${compact ? 'flex' : 'sm:hidden'} p-1.5 rounded-full text-slate-400 hover:text-slate-700 transition-colors focus:outline-none shrink-0 cursor-pointer`}
           aria-label={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted || volume === 0 ? (
@@ -266,7 +392,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <button
           type="button"
           onClick={handleDownload}
-          className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none flex items-center justify-center"
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
           aria-label="Download audio"
         >
           <Download className="w-4 h-4" />

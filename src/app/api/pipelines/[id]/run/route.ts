@@ -240,6 +240,7 @@ export async function POST(
               where: { runId, nodeId: node.id },
               data: {
                 status: 'failed',
+                input: result.input || {},
                 error: result.error,
                 finishedAt: new Date(),
               },

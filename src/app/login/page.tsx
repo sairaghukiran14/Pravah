@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { ArrowRight, Mic, Languages, Volume2, Sparkles, HeartHandshake, Zap, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
   const [isExistingUser, setIsExistingUser] = useState(false);
   const { data: session, status } = useSession();
   const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -18,6 +20,16 @@ export default function LoginPage() {
       setToast({ show: false, message: '' });
     }, 3000);
   };
+
+  useEffect(() => {
+    if (error) {
+      if (error === 'Configuration') {
+        triggerToast('Auth configuration error. Please verify Google Client ID and Secret.');
+      } else {
+        triggerToast(`Authentication error: ${error}`);
+      }
+    }
+  }, [error]);
 
   /* Auth hook */
   useEffect(() => {
@@ -77,10 +89,11 @@ export default function LoginPage() {
         <div className="relative z-10">
           {/* Brand header */}
           <div className="flex items-center gap-2">
-            <Link href="/" className="hover:opacity-85 transition-opacity">
-              <span className="text-xl font-normal tracking-tight text-gray-900">hasaflow</span>
+            <Link href="/" className="hover:opacity-85 transition-opacity flex items-center gap-1.5 sm:gap-2">
+              <img src="/logo.png" alt="hasaflow logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain" />
+              <span className="text-lg sm:text-xl font-normal tracking-tight text-gray-900 leading-none">hasaflow</span>
             </Link>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-normal">Indic AI</span>
+            <span className="inline-flex items-center px-2 h-5 sm:h-5.5 rounded-full text-xs font-normal bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs whitespace-nowrap">Indic AI</span>
           </div>
         </div>
 
@@ -168,8 +181,9 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-10">
             <div className="lg:hidden mb-6">
-              <Link href="/" className="hover:opacity-85 transition-opacity inline-block">
-                <h1 className="text-3xl font-normal tracking-tight text-gray-900">hasaflow</h1>
+              <Link href="/" className="hover:opacity-85 transition-opacity flex items-center justify-center gap-1.5">
+                <img src="/logo.png" alt="hasaflow logo" className="h-6 w-6 object-contain" />
+                <h1 className="text-3xl font-normal tracking-tight text-gray-900 leading-none">hasaflow</h1>
               </Link>
               <p className="text-xs text-gray-500 mt-1 font-normal">Visual AI Pipeline Builder for Indic Speech & Language</p>
             </div>
@@ -235,5 +249,17 @@ export default function LoginPage() {
       )}
 
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white text-gray-400 text-sm font-normal">
+        Loading Auth Page...
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

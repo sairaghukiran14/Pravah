@@ -113,7 +113,7 @@ export default function OnboardingPage() {
       <header className="border-b border-gray-200 bg-white py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="hover:opacity-85 transition-opacity">
-            <span className="text-xl font-bold tracking-tight text-gray-900">
+            <span className="text-xl font-normal tracking-tight text-gray-900">
               hasaflow
             </span>
           </Link>
@@ -134,7 +134,7 @@ export default function OnboardingPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-normal transition-all cursor-pointer ${
                     isActive
                       ? 'bg-white text-gray-900 shadow-sm border border-gray-200/80 ring-1 ring-gray-900/5'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/60'
@@ -160,10 +160,10 @@ export default function OnboardingPage() {
           {activeTab === 1 && (
             <div className="space-y-6 animate-fadeIn pt-2">
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <span className="text-[11px] font-normal text-gray-400 uppercase tracking-wider">
                   QUESTION 1 OF 3
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-gray-900">
                   What is your primary role?
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -213,7 +213,7 @@ export default function OnboardingPage() {
                         {item.icon}
                       </div>
                       <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-gray-900 flex items-center justify-between">
+                        <h3 className="text-sm font-normal text-gray-900 flex items-center justify-between">
                           <span>{item.title}</span>
                           {isSelected && (
                             <CheckCircle2 className="h-4 w-4 text-gray-900" />
@@ -234,10 +234,10 @@ export default function OnboardingPage() {
           {activeTab === 2 && (
             <div className="space-y-6 animate-fadeIn pt-2">
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <span className="text-[11px] font-normal text-gray-400 uppercase tracking-wider">
                   QUESTION 2 OF 3
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-gray-900">
                   What are you planning to build with HasaFlow?
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -292,7 +292,7 @@ export default function OnboardingPage() {
                           {item.icon}
                         </div>
                         <div>
-                          <h3 className="text-sm font-semibold text-gray-900">
+                          <h3 className="text-sm font-normal text-gray-900">
                             {item.title}
                           </h3>
                           <p className="text-xs text-gray-500">{item.desc}</p>
@@ -315,10 +315,10 @@ export default function OnboardingPage() {
           {activeTab === 3 && (
             <div className="space-y-6 animate-fadeIn pt-2">
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <span className="text-[11px] font-normal text-gray-400 uppercase tracking-wider">
                   QUESTION 3 OF 3
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-gray-900">
                   Target Indic Languages & Volume
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -328,11 +328,12 @@ export default function OnboardingPage() {
 
               {/* Language Selector Pills */}
               <div className="space-y-3">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700">
+                <label className="block text-xs font-normal uppercase tracking-wider text-gray-700">
                   Select Target Languages
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {[
+                    { code: 'en-US', script: 'English', name: 'English' },
                     { code: 'hi-IN', script: 'हिंदी', name: 'Hindi' },
                     { code: 'te-IN', script: 'తెలుగు', name: 'Telugu' },
                     { code: 'ta-IN', script: 'தமிழ்', name: 'Tamil' },
@@ -355,7 +356,7 @@ export default function OnboardingPage() {
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
                       >
-                        <span className="font-bold mr-1">{lang.script}</span> ({lang.name})
+                        <span className="font-normal mr-1">{lang.script}</span> ({lang.name})
                       </button>
                     );
                   })}
@@ -364,7 +365,7 @@ export default function OnboardingPage() {
 
               {/* Scale Selector */}
               <div className="space-y-3 pt-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700">
+                <label className="block text-xs font-normal uppercase tracking-wider text-gray-700">
                   Expected Monthly Pipeline Runs
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -384,7 +385,7 @@ export default function OnboardingPage() {
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <span className="text-xs font-bold text-gray-900 block">{item.label}</span>
+                        <span className="text-xs font-normal text-gray-900 block">{item.label}</span>
                         <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">{item.badge}</span>
                       </div>
                     );
@@ -400,7 +401,7 @@ export default function OnboardingPage() {
           {activeTab > 1 ? (
             <button
               onClick={() => setActiveTab((prev) => prev - 1)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors py-2 px-3 rounded-lg hover:bg-gray-100 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-normal text-gray-600 hover:text-gray-900 transition-colors py-2 px-3 rounded-lg hover:bg-gray-100 cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" /> Previous Tab
             </button>
@@ -411,7 +412,7 @@ export default function OnboardingPage() {
           {activeTab < 3 ? (
             <button
               onClick={() => setActiveTab((prev) => prev + 1)}
-              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold text-xs py-2.5 px-6 transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-normal text-xs py-2.5 px-6 transition-all shadow-xs cursor-pointer"
             >
               <span>Next Tab</span>
               <ArrowRight className="h-4 w-4" />
@@ -420,7 +421,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleFinish}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold text-xs py-2.5 px-6 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-normal text-xs py-2.5 px-6 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-70"
             >
               <span>{isSaving ? 'Completing Setup...' : 'Complete Setup & Go to Dashboard'}</span>
               {!isSaving && <ArrowRight className="h-4 w-4" />}
