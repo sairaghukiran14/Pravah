@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ HasaFlow — Visual AI Pipeline Builder
+# ⚡ Pravah — Visual AI Pipeline Builder
 
 **Visual drag-and-drop workflow orchestration engine for building, connecting, and executing complex AI pipelines.**
 
@@ -14,7 +14,7 @@
 
 ---
 
-HasaFlow is a powerful, full-stack workflow orchestration studio that allows users to programmatically design, connect, and execute Directed Acyclic Graph (DAG) pipelines for AI processing. With an intuitive drag-and-drop interface, developers and teams can easily build complex audio, translation, and text-processing workflows without writing backend integration code.
+Pravah is a powerful, full-stack workflow orchestration studio that allows users to programmatically design, connect, and execute Directed Acyclic Graph (DAG) pipelines for AI processing. With an intuitive drag-and-drop interface, developers and teams can easily build complex audio, translation, and text-processing workflows without writing backend integration code.
 
 ## 🚀 Key Features
 
@@ -49,8 +49,8 @@ HasaFlow is a powerful, full-stack workflow orchestration studio that allows use
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/sairaghukiran14/hasaflow.git
-   cd hasaflow
+   git clone https://github.com/sairaghukiran14/pravah.git
+   cd pravah
    ```
 
 2. **Install dependencies**

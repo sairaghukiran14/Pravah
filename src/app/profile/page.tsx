@@ -172,7 +172,7 @@ export default function ProfilePage() {
         key: orderData.keyId,
         amount: orderData.order.amount,
         currency: 'INR',
-        name: 'HasaFlow AI',
+        name: 'Pravah AI',
         description: `Wallet Topup - ₹${amount}`,
         order_id: orderData.order.id,
         handler: async (response: any) => {
@@ -252,7 +252,7 @@ export default function ProfilePage() {
       fetchTransactions();
       
       if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('hasaflow_user_onboarding');
+        const saved = localStorage.getItem('pravah_user_onboarding');
         if (saved) {
           try {
             setOnboarding(JSON.parse(saved));
@@ -298,7 +298,7 @@ export default function ProfilePage() {
 
   const handleRetakeOnboarding = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('hasaflow_user_onboarding');
+      localStorage.removeItem('pravah_user_onboarding');
     }
     router.push('/onboarding');
   };
@@ -700,7 +700,7 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center text-center space-y-4 pt-2">
               {/* Brand Logo/Header */}
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-semibold text-xs select-none">
-                hasaflow
+                pravah
               </div>
 
               {/* Status Icon */}

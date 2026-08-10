@@ -43,9 +43,9 @@ export const Navbar: React.FC = () => {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 group">
-            <img src="/logo.png" alt="hasaflow logo" className="h-5 w-5 object-contain" />
+            <img src="/logo.png" alt="pravah logo" className="h-5 w-5 object-contain" />
             <span className="text-base font-normal text-gray-900 group-hover:text-gray-700 transition-colors leading-none tracking-tight">
-              hasaflow
+              pravah
             </span>
           </Link>
 

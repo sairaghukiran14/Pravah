@@ -14,7 +14,7 @@ dotenv.config({ path: '.env' });
 const accountId = process.env.R2_ACCOUNT_ID || '';
 const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
 const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
-export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'hasaflow-storage';
+export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'pravah-storage';
 
 // R2 endpoint format: https://<account_id>.r2.cloudflarestorage.com
 const endpoint = process.env.R2_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : '');

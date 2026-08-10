@@ -279,7 +279,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
     const cleanKey = (keyOrUrl: string | null | undefined): string | null => {
       if (!keyOrUrl) return null;
       if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
-        const bucketMarker = keyOrUrl.includes('/pravah-assets/') ? '/pravah-assets/' : '/hasaflow-storage/';
+        const bucketMarker = keyOrUrl.includes('/pravah-assets/') ? '/pravah-assets/' : '/pravah-storage/';
         if (keyOrUrl.includes(bucketMarker)) {
           return keyOrUrl.substring(keyOrUrl.indexOf(bucketMarker) + bucketMarker.length);
         }

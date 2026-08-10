@@ -8,7 +8,7 @@ async function verifyAllConnections() {
   const { checkR2Connection } = await import('../lib/r2');
 
   console.log('--------------------------------------------------');
-  console.log('🔍 Testing HasaFlow System Connections & Integrations');
+  console.log('🔍 Testing Pravah System Connections & Integrations');
   console.log('--------------------------------------------------');
 
   // 1. Test Neon PostgreSQL Database Connection
