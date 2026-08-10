@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# Ignore local admin and diagnostic scripts
+/src/scripts/
+
 # production
 /build
 
