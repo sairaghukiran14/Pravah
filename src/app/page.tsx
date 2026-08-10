@@ -709,7 +709,7 @@ export default function LandingPage() {
                 <div className="space-y-1">
                   <span className="text-xs font-normal uppercase tracking-wider text-blue-600">Pay-As-You-Go Top-Ups</span>
                   <h3 className="text-2xl font-normal text-slate-900 tracking-tight">
-                    Top Up Wallet Anytime Starting at ₹50
+                    Top Up Wallet Anytime Starting at ₹20
                   </h3>
                   <p className="text-xs text-slate-500">
                     Never worry about lost unspent monthly subscriptions. Buy credits when you need them.
