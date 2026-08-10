@@ -145,17 +145,14 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
 
-            {/* Brand Logo & Indic AI Badge (Matching reference image) */}
+            {/* Brand Logo */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group shrink-0">
-                <img src="/logo.png" alt="pravah logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain" />
-                <span className="text-lg sm:text-xl font-normal tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors leading-none">
+                <img src="/logo.png" alt="pravah logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain rounded-[20%]" />
+                <span className="text-lg sm:text-xl font-normal tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors leading-none -mt-[5px]">
                   pravah
                 </span>
               </Link>
-              <span className="inline-flex items-center px-2 sm:px-2.5 h-5 sm:h-5.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs whitespace-nowrap shrink-0">
-                Indic AI
-              </span>
             </div>
 
             {/* Desktop Navigation Links */}
@@ -709,7 +706,7 @@ export default function LandingPage() {
                 <div className="space-y-1">
                   <span className="text-xs font-normal uppercase tracking-wider text-blue-600">Pay-As-You-Go Top-Ups</span>
                   <h3 className="text-2xl font-normal text-slate-900 tracking-tight">
-                    Top Up Wallet Anytime Starting at ₹20
+                    Top Up Wallet Anytime Starting at ₹50
                   </h3>
                   <p className="text-xs text-slate-500">
                     Never worry about lost unspent monthly subscriptions. Buy credits when you need them.
@@ -816,7 +813,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="font-normal text-slate-900 text-sm">Scale On-Demand</h4>
                 <p className="text-slate-500 leading-relaxed">
-                  Need to run 50,000 voice audio files tomorrow? Top up ₹500 instantly with Razorpay and scale without tier upgrade delays.
+                  Need to run 5,000 voice audio files tomorrow? Top up ₹500 instantly with Razorpay and scale without tier upgrade delays.
                 </p>
               </div>
             </div>
@@ -852,14 +849,10 @@ export default function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-
           </div>
         </div>
       </section>
-
       {/* ━━━ FOOTER (Matching exact footer branding & version tag from reference image) ━━━ */}
-
-
     </div>
   );
 }
