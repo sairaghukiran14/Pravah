@@ -226,6 +226,274 @@ export const ConfigPanel: React.FC = () => {
                 </>
               )}
 
+              {/* Podcast Generator */}
+              {nodeType === 'podcast' && (
+                <>
+                  <Select label="Speaker A Voice" value={config.speaker_a || 'aditya'} onChange={(val) => handleChange('speaker_a', val)} options={SPEAKER_VOICES} />
+                  <Select label="Speaker B Voice" value={config.speaker_b || 'ritu'} onChange={(val) => handleChange('speaker_b', val)} options={SPEAKER_VOICES} />
+                  <Select label="Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={INDIC_LANGUAGES} />
+                  
+                  <Select 
+                    label="Conversation Style" 
+                    value={config.conversation_style || 'debate'} 
+                    onChange={(val) => handleChange('conversation_style', val)} 
+                    options={[
+                      { label: 'Contrasting Debate', value: 'debate' },
+                      { label: 'Host Interview (Q&A)', value: 'interview' },
+                      { label: 'Casual Chit-Chat', value: 'casual' }
+                    ]} 
+                  />
+
+                  <Select 
+                    label="Scripting Style" 
+                    value={config.script_type || 'formal'} 
+                    onChange={(val) => handleChange('script_type', val)} 
+                    options={[
+                      { label: 'Formal INDIC Grammar', value: 'formal' },
+                      { label: 'Code-Mixed Vernacular (Hinglish/etc)', value: 'code-mixed' }
+                    ]} 
+                  />
+
+                  <div className="flex items-center gap-2 py-1">
+                    <input 
+                      type="checkbox" 
+                      id="inject_fillers"
+                      checked={config.inject_fillers !== false} 
+                      onChange={(e) => handleChange('inject_fillers', e.target.checked)} 
+                      className="rounded border-gray-300 text-gray-900 focus:ring-gray-900 h-4 w-4 cursor-pointer" 
+                    />
+                    <label htmlFor="inject_fillers" className="text-sm font-medium text-gray-700 cursor-pointer select-none">Inject Human Conversational Fillers</label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                      <span>Speaker A Pace</span>
+                      <span className="font-mono text-gray-500">{config.pace_a || 1.0}x</span>
+                    </label>
+                    <input type="range" min="0.8" max="1.2" step="0.05" value={config.pace_a || 1.0} onChange={(e) => handleChange('pace_a', parseFloat(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                      <span>Speaker B Pace</span>
+                      <span className="font-mono text-gray-500">{config.pace_b || 0.95}x</span>
+                    </label>
+                    <input type="range" min="0.8" max="1.2" step="0.05" value={config.pace_b || 0.95} onChange={(e) => handleChange('pace_b', parseFloat(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                      <span>Conversational Turns</span>
+                      <span className="font-mono text-gray-500">{config.turns || 4} turns</span>
+                    </label>
+                    <input type="range" min="2" max="10" step="2" value={config.turns || 4} onChange={(e) => handleChange('turns', parseInt(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
+                  </div>
+                </>
+              )}
+
+              {/* Router */}
+              {nodeType === 'router' && (
+                <>
+                  <Select 
+                    label="Condition Type" 
+                    value={config.condition_type || 'contains'} 
+                    onChange={(val) => handleChange('condition_type', val)} 
+                    options={[
+                      { label: 'Text Contains', value: 'contains' },
+                      { label: 'Text Equals', value: 'equals' },
+                      { label: 'Text Starts With', value: 'starts_with' },
+                      { label: 'Sentiment Equals', value: 'sentiment' },
+                      { label: 'Category Equals', value: 'classification' }
+                    ]} 
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition Value</label>
+                    <input 
+                      type="text" 
+                      value={config.condition_value || ''} 
+                      onChange={(e) => handleChange('condition_value', e.target.value)} 
+                      placeholder="e.g. billing, POSITIVE, etc." 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Delay */}
+              {nodeType === 'delay' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                    <span>Delay Duration</span>
+                    <span className="font-mono text-gray-500">{config.duration || 5} seconds</span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="30" 
+                    step="1" 
+                    value={config.duration || 5} 
+                    onChange={(e) => handleChange('duration', parseInt(e.target.value))} 
+                    className="w-full accent-gray-900 cursor-pointer" 
+                  />
+                </div>
+              )}
+
+              {/* Chunker / Splitter */}
+              {nodeType === 'pdf_splitter' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                      <span>Chunk Size (chars)</span>
+                      <span className="font-mono text-gray-500">{config.chunk_size || 500} chars</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="100" 
+                      max="3000" 
+                      step="50" 
+                      value={config.chunk_size || 500} 
+                      onChange={(e) => handleChange('chunk_size', parseInt(e.target.value))} 
+                      className="w-full accent-gray-900 cursor-pointer" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                      <span>Chunk Overlap</span>
+                      <span className="font-mono text-gray-500">{config.chunk_overlap || 50} chars</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="500" 
+                      step="10" 
+                      value={config.chunk_overlap || 50} 
+                      onChange={(e) => handleChange('chunk_overlap', parseInt(e.target.value))} 
+                      className="w-full accent-gray-900 cursor-pointer" 
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Vector Query */}
+              {nodeType === 'vector_search' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Query Text</label>
+                    <input 
+                      type="text" 
+                      value={config.query || ''} 
+                      onChange={(e) => handleChange('query', e.target.value)} 
+                      placeholder="e.g. {{text_input}} or search terms" 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Fallback Context Document</label>
+                    <textarea 
+                      rows={3} 
+                      value={config.fallback_context || ''} 
+                      onChange={(e) => handleChange('fallback_context', e.target.value)} 
+                      placeholder="Enter optional document context here..." 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Transliteration */}
+              {nodeType === 'transliteration' && (
+                <>
+                  <Select 
+                    label="Source Script" 
+                    value={config.source_script || 'Devanagari'} 
+                    onChange={(val) => handleChange('source_script', val)} 
+                    options={[
+                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
+                      { label: 'Telugu', value: 'Telugu' },
+                      { label: 'Tamil', value: 'Tamil' },
+                      { label: 'Latin (English/Romanized)', value: 'Latin' }
+                    ]} 
+                  />
+                  <Select 
+                    label="Target Script" 
+                    value={config.target_script || 'Latin'} 
+                    onChange={(val) => handleChange('target_script', val)} 
+                    options={[
+                      { label: 'Latin (English/Romanized)', value: 'Latin' },
+                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
+                      { label: 'Telugu', value: 'Telugu' },
+                      { label: 'Tamil', value: 'Tamil' }
+                    ]} 
+                  />
+                </>
+              )}
+
+              {/* Code-Mix Cleaner */}
+              {nodeType === 'codemix_normalizer' && (
+                <Select 
+                  label="Target Formal Language" 
+                  value={config.target_language || 'Hindi'} 
+                  onChange={(val) => handleChange('target_language', val)} 
+                  options={[
+                    { label: 'Pure Hindi (शुद्ध हिंदी)', value: 'Hindi' },
+                    { label: 'Pure English', value: 'English' },
+                    { label: 'Pure Telugu (తెలుగు)', value: 'Telugu' },
+                    { label: 'Pure Tamil (தமிழ்)', value: 'Tamil' }
+                  ]} 
+                />
+              )}
+
+              {/* Webhook */}
+              {nodeType === 'webhook' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Webhook URL</label>
+                    <input 
+                      type="url" 
+                      value={config.webhook_url || ''} 
+                      onChange={(e) => handleChange('webhook_url', e.target.value)} 
+                      placeholder="https://api.example.com/endpoint" 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                  <Select 
+                    label="HTTP Method" 
+                    value={config.http_method || 'POST'} 
+                    onChange={(val) => handleChange('http_method', val)} 
+                    options={[
+                      { label: 'POST (JSON payload)', value: 'POST' },
+                      { label: 'GET (Query params)', value: 'GET' }
+                    ]} 
+                  />
+                </>
+              )}
+
+              {/* SMS Dispatcher */}
+              {nodeType === 'sms_sender' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Recipient Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={config.recipient_phone || ''} 
+                      onChange={(e) => handleChange('recipient_phone', e.target.value)} 
+                      placeholder="+919876543210" 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">SMS Message Template</label>
+                    <textarea 
+                      rows={3} 
+                      value={config.sms_message || ''} 
+                      onChange={(e) => handleChange('sms_message', e.target.value)} 
+                      placeholder="e.g. Translation update: {{translate}}" 
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                    />
+                  </div>
+                </>
+              )}
+
               {/* New Input Nodes */}
               {nodeType === 'audio_input' && (
                 <>

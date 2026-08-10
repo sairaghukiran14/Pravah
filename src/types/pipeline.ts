@@ -1,5 +1,6 @@
 export type NodeType = 
-  | 'stt' | 'translate' | 'tts'
+  | 'stt' | 'translate' | 'tts' | 'podcast' | 'router' | 'delay'
+  | 'pdf_splitter' | 'vector_search' | 'transliteration' | 'codemix_normalizer' | 'webhook' | 'sms_sender'
   // Inputs
   | 'audio_input' | 'text_input' | 'document_input' | 'image_input' | 'video_input' | 'url_input'
   // Processing
@@ -7,7 +8,7 @@ export type NodeType =
   // Outputs
   | 'text_output' | 'audio_output' | 'file_output';
 
-export type RunStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
 
 export interface STTConfig {
   language_code: string;

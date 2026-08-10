@@ -34,6 +34,15 @@ const nodeTypes = {
   text_output: GenericNode,
   audio_output: GenericNode,
   file_output: GenericNode,
+  podcast: GenericNode,
+  router: GenericNode,
+  delay: GenericNode,
+  pdf_splitter: GenericNode,
+  vector_search: GenericNode,
+  transliteration: GenericNode,
+  codemix_normalizer: GenericNode,
+  webhook: GenericNode,
+  sms_sender: GenericNode,
 };
 
 const edgeTypes = {
@@ -124,6 +133,12 @@ const FlowEditorContent: React.FC = () => {
             if (node.type === 'stt') return '#34d399';
             if (node.type === 'translate') return '#60a5fa';
             if (node.type === 'tts') return '#fb923c';
+            if (node.type === 'podcast') return '#f43f5e';
+            if (node.type === 'router') return '#a855f7';
+            if (node.type === 'delay') return '#6366f1';
+            if (node.type === 'pdf_splitter' || node.type === 'vector_search') return '#22d3ee';
+            if (node.type === 'transliteration' || node.type === 'codemix_normalizer') return '#059669';
+            if (node.type === 'webhook' || node.type === 'sms_sender') return '#db2777';
             return '#d1d5db';
           }}
           maskColor="rgba(255, 255, 255, 0.7)"

@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { ProjectData, PipelineData } from '@/types/pipeline';
-import { Plus, ArrowLeft, Workflow, Play, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, ArrowLeft, Workflow, Play, Trash2, Sparkles, Loader2, Search, ArrowDownUp, Filter } from 'lucide-react';
 
 export default function ProjectDetailsPage({
   params,
@@ -28,6 +28,9 @@ export default function ProjectDetailsPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPipeName, setNewPipeName] = useState('');
   const [newPipeDesc, setNewPipeDesc] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name-asc');
+  const [filterBy, setFilterBy] = useState('all');
 
   const fetchProjectDetails = async () => {
     setIsLoading(true);
@@ -98,6 +101,40 @@ export default function ProjectDetailsPage({
     }
   };
 
+  const filteredAndSortedPipelines = React.useMemo(() => {
+    let result = [...pipelines];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) => p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (filterBy === 'with-nodes') {
+      result = result.filter((p) => (p.nodes?.length || 0) > 0);
+    } else if (filterBy === 'empty') {
+      result = result.filter((p) => (p.nodes?.length || 0) === 0);
+    }
+
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'nodes-desc':
+          return (b.nodes?.length || 0) - (a.nodes?.length || 0);
+        case 'nodes-asc':
+          return (a.nodes?.length || 0) - (b.nodes?.length || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [pipelines, searchQuery, sortBy, filterBy]);
+
   return (
     <div className="min-h-screen bg-gray-50/40 flex flex-col font-sans relative overflow-hidden">
       {/* Soft background blurs */}
@@ -143,9 +180,51 @@ export default function ProjectDetailsPage({
 
         {/* Pipelines List */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Workflow className="h-4 w-4 text-gray-700" /> Visual Pipelines ({pipelines.length})
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Workflow className="h-4 w-4 text-gray-700" /> Visual Pipelines ({pipelines.length})
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search pipelines..."
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    className="w-full sm:w-auto appearance-none pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all cursor-pointer"
+                    value={filterBy}
+                    onChange={(e) => setFilterBy(e.target.value)}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="with-nodes">Configured</option>
+                    <option value="empty">Empty</option>
+                  </select>
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <ArrowDownUp className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    className="w-full sm:w-auto appearance-none pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all cursor-pointer"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="nodes-desc">Most Nodes</option>
+                    <option value="nodes-asc">Fewest Nodes</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,7 +260,28 @@ export default function ProjectDetailsPage({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pipelines.map((pipe) => {
+              {filteredAndSortedPipelines.length === 0 ? (
+                <div className="col-span-full py-16 text-center border border-dashed border-gray-200 rounded-xl bg-white/50">
+                  <Search className="mx-auto h-8 w-8 text-gray-300 mb-3" />
+                  <h3 className="text-sm font-medium text-gray-900">No matching pipelines found</h3>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                    We couldn't find any pipelines matching your current search and filter criteria.
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterBy('all');
+                      setSortBy('name-asc');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : (
+                filteredAndSortedPipelines.map((pipe) => {
                 const isDeletingThis = deletingPipelineId === pipe.id;
                 return (
                   <Link
@@ -235,7 +335,8 @@ export default function ProjectDetailsPage({
                     </div>
                   </Link>
                 );
-              })}
+              })
+              )}
             </div>
           )}
         </div>

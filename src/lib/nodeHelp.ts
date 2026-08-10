@@ -82,4 +82,40 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
     title: 'File Output',
     desc: 'Saves output payloads into a downloadable file format.',
   },
+  podcast: {
+    title: 'Podcast Generator',
+    desc: 'Generates a 2-speaker conversational dialogue script on a topic with distinct perspectives and synthesizes audio.',
+  },
+  router: {
+    title: 'Condition Router',
+    desc: 'Evaluates logical rules (e.g. contains, sentiment matches) on upstream text and routes execution down active output paths.',
+  },
+  delay: {
+    title: 'Delay Pause',
+    desc: 'Delays pipeline execution path by a configured amount of seconds.',
+  },
+  pdf_splitter: {
+    title: 'Document Chunker',
+    desc: 'Splits raw document text into smaller, overlapping chunks suitable for semantic query databases.',
+  },
+  vector_search: {
+    title: 'Vector Search Query',
+    desc: 'Performs semantic searches on a text dataset or document chunks to extract the top matching passages.',
+  },
+  transliteration: {
+    title: 'Script Transliteration',
+    desc: 'Converts text scripts based on phonetics (e.g. converting Hindi in Devanagari script to Latin characters).',
+  },
+  codemix_normalizer: {
+    title: 'Code-Mix Cleaner',
+    desc: 'Standardizes spoken code-mixed slang (such as Hinglish or Tenglish) into standard grammatical sentences.',
+  },
+  webhook: {
+    title: 'Outgoing Webhook API',
+    desc: 'Dispatches custom JSON HTTP payloads to external API URLs using POST or GET requests.',
+  },
+  sms_sender: {
+    title: 'SMS Dispatcher',
+    desc: 'Triggers automated outbound text messages with transcripts or alerts.',
+  },
 };

@@ -15,7 +15,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-gray-50/40 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
         {/* Background blurs */}
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-red-100/20 rounded-full blur-3xl opacity-60 pointer-events-none" />

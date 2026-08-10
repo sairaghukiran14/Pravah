@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HasaFlow × Sarvam AI — Tuesday Launch Playbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e;
+      --accent: #6C63FF;
+      --accent-light: #8B85FF;
+      --accent-bg: #F0EEFF;
+      --sarvam-orange: #FF6B35;
+      --sarvam-orange-light: #FFF3ED;
+      --emerald: #059669;
+      --emerald-light: #ECFDF5;
+      --rose: #E11D48;
+      --rose-light: #FFF1F2;
+      --blue: #2563EB;
+      --blue-light: #EFF6FF;
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--gray-800);
+      line-height: 1.6;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ─── COVER PAGE ─── */
+    .cover-page {
+      width: 100%;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+
+    .cover-page::before {
+      content: '';
+      position: absolute;
+      top: -150px;
+      right: -150px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .cover-page::after {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 100px;
+      padding: 8px 20px;
+      margin-bottom: 32px;
+      z-index: 1;
+    }
+
+    .cover-badge span {
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .cover-logo {
+      font-size: 72px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -2px;
+      margin-bottom: 8px;
+      z-index: 1;
+    }
+
+    .cover-logo .accent { color: var(--accent-light); }
+    .cover-logo .x { color: var(--gray-400); font-weight: 300; margin: 0 12px; font-size: 48px; }
+    .cover-logo .sarvam { color: var(--sarvam-orange); }
+
+    .cover-subtitle {
+      font-size: 20px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 400;
+      margin-bottom: 48px;
+      text-align: center;
+      max-width: 500px;
+      z-index: 1;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 32px;
+      z-index: 1;
+    }
+
+    .cover-meta-item {
+      text-align: center;
+    }
+
+    .cover-meta-item .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 4px;
+    }
+
+    .cover-meta-item .value {
+      font-size: 15px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 600;
+    }
+
+    .cover-footer {
+      position: absolute;
+      bottom: 40px;
+      left: 60px;
+      right: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cover-footer span {
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ─── CONTENT PAGES ─── */
+    .page {
+      width: 100%;
+      min-height: 100vh;
+      padding: 56px 60px;
+      page-break-after: always;
+      position: relative;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--gray-100);
+    }
+
+    .page-header .page-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gray-400);
+      font-weight: 600;
+    }
+
+    .page-header .page-number {
+      font-size: 11px;
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    /* ─── SECTION HEADERS ─── */
+    .section-number {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--gray-900);
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gray-900);
+      letter-spacing: -0.3px;
+      margin-bottom: 10px;
+      margin-top: 32px;
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 8px;
+      margin-top: 24px;
+    }
+
+    .section-desc {
+      font-size: 14px;
+      color: var(--gray-500);
+      max-width: 600px;
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+
+    p {
+      font-size: 13.5px;
+      color: var(--gray-600);
+      line-height: 1.75;
+      margin-bottom: 14px;
+    }
+
+    /* ─── TIMELINE ─── */
+    .timeline {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--sarvam-orange), var(--emerald));
+      border-radius: 2px;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 24px;
+      padding-bottom: 4px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -31px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--accent);
+      z-index: 1;
+    }
+
+    .timeline-item.orange::before { border-color: var(--sarvam-orange); }
+    .timeline-item.green::before { border-color: var(--emerald); }
+    .timeline-item.rose::before { border-color: var(--rose); }
+    .timeline-item.blue::before { border-color: var(--blue); }
+
+    .timeline-time {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .timeline-item.orange .timeline-time { color: var(--sarvam-orange); }
+    .timeline-item.green .timeline-time { color: var(--emerald); }
+    .timeline-item.rose .timeline-time { color: var(--rose); }
+    .timeline-item.blue .timeline-time { color: var(--blue); }
+
+    .timeline-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .timeline-desc {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      line-height: 1.6;
+    }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    .card.accent {
+      background: var(--accent-bg);
+      border-color: #D4D0FF;
+    }
+
+    .card.orange {
+      background: var(--sarvam-orange-light);
+      border-color: #FFD4BC;
+    }
+
+    .card.green {
+      background: var(--emerald-light);
+      border-color: #A7F3D0;
+    }
+
+    .card.rose {
+      background: var(--rose-light);
+      border-color: #FECDD3;
+    }
+
+    .card.blue {
+      background: var(--blue-light);
+      border-color: #BFDBFE;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-text {
+      font-size: 12.5px;
+      color: var(--gray-600);
+      line-height: 1.65;
+    }
+
+    /* ─── CODE BLOCK ─── */
+    .code-block {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-dot.red { background: #FF5F57; }
+    .code-dot.yellow { background: #FEBC2E; }
+    .code-dot.green { background: #28C840; }
+
+    .code-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      margin-left: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .code-block pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.82);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .code-block .comment { color: rgba(255,255,255,0.3); }
+    .code-block .highlight { color: var(--accent-light); }
+    .code-block .orange-text { color: var(--sarvam-orange); }
+    .code-block .green-text { color: #34D399; }
+
+    /* ─── TABLE ─── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 12.5px;
+    }
+
+    thead th {
+      background: var(--gray-900);
+      color: #fff;
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    thead th:first-child { border-radius: 8px 0 0 0; }
+    thead th:last-child { border-radius: 0 8px 0 0; }
+
+    tbody td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-600);
+      font-size: 12.5px;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background: var(--gray-50); }
+
+    /* ─── CHECKLIST ─── */
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+
+    .checklist li {
+      position: relative;
+      padding: 8px 0 8px 32px;
+      font-size: 13px;
+      color: var(--gray-700);
+      line-height: 1.5;
+    }
+
+    .checklist li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--gray-300);
+      background: #fff;
+    }
+
+    /* ─── CALLOUT ─── */
+    .callout {
+      display: flex;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 16px 0;
+      align-items: flex-start;
+    }
+
+    .callout.warning {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+    }
+
+    .callout.tip {
+      background: var(--emerald-light);
+      border: 1px solid #A7F3D0;
+    }
+
+    .callout.danger {
+      background: var(--rose-light);
+      border: 1px solid #FECDD3;
+    }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-text { font-size: 12.5px; color: var(--gray-700); line-height: 1.6; }
+
+    /* ─── TAGS / PILLS ─── */
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 14px;
+      border-radius: 100px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    .tag.purple { background: var(--accent-bg); color: var(--accent); }
+    .tag.orange { background: var(--sarvam-orange-light); color: var(--sarvam-orange); }
+    .tag.green { background: var(--emerald-light); color: var(--emerald); }
+    .tag.blue { background: var(--blue-light); color: var(--blue); }
+
+    /* ─── METRIC CARDS ─── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .metric-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 16px 20px;
+      text-align: center;
+    }
+
+    .metric-card .metric-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gray-400);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .metric-card .metric-good {
+      font-size: 11px;
+      color: var(--gray-500);
+      margin-top: 6px;
+    }
+
+    .metric-card .metric-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gray-900);
+    }
+
+    .metric-card .metric-value.green { color: var(--emerald); }
+    .metric-card .metric-value.orange { color: var(--sarvam-orange); }
+    .metric-card .metric-value.accent { color: var(--accent); }
+
+    /* ─── TWO COL ─── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ─── DIVIDER ─── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 28px 0;
+    }
+
+    /* ─── FOOTER ─── */
+    .page-footer {
+      position: absolute;
+      bottom: 32px;
+      left: 60px;
+      right: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--gray-400);
+    }
+
+    /* ─── PRINT OVERRIDES ─── */
+    @media print {
+      body { background: #fff; }
+      .page { padding: 48px 52px; }
+      .cover-page { padding: 52px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════ COVER PAGE ═══════════════════════════ -->
+  <div class="cover-page">
+    <div class="cover-badge">
+      <span>LinkedIn Launch Playbook</span>
+    </div>
+    <div class="cover-logo">
+      <span class="accent">HasaFlow</span>
+      <span class="x">×</span>
+      <span class="sarvam">Sarvam</span>
+    </div>
+    <div class="cover-subtitle">
+      A step-by-step strategy to pitch your Visual Indic AI Pipeline Studio on LinkedIn and gain traction from Sarvam AI.
+    </div>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">Launch Date</div>
+        <div class="value">Tuesday, Aug 12, 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Optimal Window</div>
+        <div class="value">8:15 AM IST</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Target</div>
+        <div class="value">Sarvam AI Team</div>
+      </div>
+    </div>
+    <div class="cover-footer">
+      <span>Prepared by Sai Raghu Kiran Avula</span>
+      <span>Confidential · Internal Use</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 2: WHY & WHAT ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">02</span>
+    </div>
+
+    <div class="section-number">Section 01</div>
+    <h1>Why This Pitch Matters</h1>
+    <p class="section-desc">
+      LinkedIn engagement for Indian tech audiences peaks Tuesday–Thursday, 8–10 AM IST. 
+      A well-timed, visually compelling post can put HasaFlow directly in front of Sarvam AI's leadership and thousands of builders in the Indic AI ecosystem.
+    </p>
+
+    <div class="two-col">
+      <div class="card accent">
+        <div class="card-title">🎯 Primary Goal</div>
+        <div class="card-text">
+          Get Sarvam AI's team (Vivek Raghavan, Pratyush Kumar) to <strong>engage</strong> with the post — like, comment, or reshare. This validates HasaFlow as a community showcase project and opens doors for collaboration, DevRel features, or startup programs.
+        </div>
+      </div>
+      <div class="card orange">
+        <div class="card-title">🌍 Secondary Goal</div>
+        <div class="card-text">
+          Establish yourself as a <strong>builder in the Indic AI space</strong>. The post should position you as someone who doesn't just use APIs — you build production-grade tools on top of them. This attracts recruiters, collaborators, and users.
+        </div>
+      </div>
+    </div>
+
+    <h2>What is HasaFlow?</h2>
+    <p>
+      HasaFlow is a full-stack visual pipeline builder that lets users design, connect, and execute AI-powered workflows through an intuitive drag-and-drop node editor. Built for multilingual AI processing, it deeply integrates Sarvam AI's sovereign Indic models.
+    </p>
+
+    <h3>Sarvam AI APIs Integrated</h3>
+    <div class="tag-row">
+      <span class="tag orange">🎙️ Saaras:v3 (STT)</span>
+      <span class="tag orange">🗣️ Bulbul:v3 (TTS)</span>
+      <span class="tag orange">🌐 Sarvam Translate</span>
+      <span class="tag orange">🧠 sarvam-105b LLM</span>
+      <span class="tag orange">📄 Document AI</span>
+    </div>
+
+    <h3>Tech Stack Highlights</h3>
+    <div class="tag-row">
+      <span class="tag purple">Next.js 16</span>
+      <span class="tag purple">React 19</span>
+      <span class="tag purple">React Flow (DAG Editor)</span>
+      <span class="tag green">Neon PostgreSQL</span>
+      <span class="tag green">Prisma 6</span>
+      <span class="tag blue">Cloudflare R2</span>
+      <span class="tag blue">Razorpay Billing</span>
+    </div>
+
+    <h3>20+ Node Types Available</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Nodes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Inputs</strong></td><td>Audio, Text, Document, Image, Video, URL</td></tr>
+        <tr><td><strong>Processing</strong></td><td>STT, Translate, TTS, Podcast, OCR, Vision, LLM, Summarize, Sentiment, Keywords, Classify</td></tr>
+        <tr><td><strong>Regional</strong></td><td>Transliteration, Code-Mix Cleaner (Hinglish/Tenglish)</td></tr>
+        <tr><td><strong>Logic</strong></td><td>Router, Delay</td></tr>
+        <tr><td><strong>RAG</strong></td><td>Chunker, Vector Query</td></tr>
+        <tr><td><strong>Connectors</strong></td><td>Webhook, SMS Sender</td></tr>
+        <tr><td><strong>Outputs</strong></td><td>Text Out, Audio Out, File Out</td></tr>
+      </tbody>
+    </table>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 2</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 3: MONDAY NIGHT PREP ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">03</span>
+    </div>
+
+    <div class="section-number">Section 02</div>
+    <h1>Monday Night Preparation</h1>
+    <p class="section-desc">
+      Everything you need to prepare the evening before launch. Get these done so Tuesday morning is pure execution.
+    </p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">9:00 PM — Record the Demo Video</div>
+        <div class="timeline-title">Screen Recording (40–60 seconds)</div>
+        <div class="timeline-desc">
+          Use QuickTime (macOS) or OBS to record a smooth walkthrough. Show: drag an Audio Input node → connect to STT (Saaras:v3) → connect to Translate (Hindi→Telugu) → connect to TTS (Bulbul:v3) → hit Run → show green success animation → play the synthesized audio output. Export as .mp4, 1080p, 16:9.
+        </div>
+      </div>
+
+      <div class="timeline-item orange">
+        <div class="timeline-time">9:30 PM — Prepare GitHub & Assets</div>
+        <div class="timeline-title">Polish the Repository</div>
+        <div class="timeline-desc">
+          Ensure the GitHub repo (github.com/sairaghukiran14/hasaflow) is public. Add a demo GIF or screenshot to the README header. Verify the live demo link (if deployed on Vercel) loads correctly. Take a clean screenshot of a completed pipeline canvas as a fallback thumbnail.
+        </div>
+      </div>
+
+      <div class="timeline-item green">
+        <div class="timeline-time">10:00 PM — Draft the Post</div>
+        <div class="timeline-title">Write & Save as LinkedIn Draft</div>
+        <div class="timeline-desc">
+          Copy the post from Page 4 into LinkedIn's composer. Do NOT publish — save as draft. Also prepare the first comment text separately (links + shoutout to Sarvam founders). Find and save LinkedIn profiles for Vivek Raghavan, Pratyush Kumar, and the Sarvam AI company page.
+        </div>
+      </div>
+
+      <div class="timeline-item blue">
+        <div class="timeline-time">10:45 PM — Sleep</div>
+        <div class="timeline-title">You're Fully Prepared</div>
+        <div class="timeline-desc">
+          Get rest. Tomorrow's first 90 minutes of engagement are the most critical factor in the post's success. You need to be alert and responsive.
+        </div>
+      </div>
+    </div>
+
+    <h2>Monday Night Checklist</h2>
+    <ul class="checklist">
+      <li>40–60s screen recording of HasaFlow pipeline execution (.mp4, 1080p)</li>
+      <li>Clean canvas screenshot as fallback thumbnail</li>
+      <li>GitHub repo set to Public with polished README</li>
+      <li>Live demo URL verified (if deployed)</li>
+      <li>LinkedIn post drafted and saved (NOT published)</li>
+      <li>First comment text prepared (links + Sarvam shoutout)</li>
+      <li>LinkedIn profiles saved: Vivek Raghavan, Pratyush Kumar, Sarvam AI page</li>
+    </ul>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 3</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 4: THE POST ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">04</span>
+    </div>
+
+    <div class="section-number">Section 03</div>
+    <h1>The LinkedIn Post</h1>
+    <p class="section-desc">
+      Copy this post exactly into your LinkedIn composer. Upload your demo video as a native LinkedIn video (not a YouTube link). Use @mentions to tag people where indicated.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="code-label">linkedin-post.txt — Copy & Paste</span>
+      </div>
+      <pre>I spent the last few weeks building something I'm genuinely
+excited about. 🔀
+
+Meet <span class="highlight">HasaFlow</span> — a visual AI pipeline studio for Indic languages.
+
+The problem is simple: building a multilingual voicebot or
+document processor for Indian languages means chaining
+Speech-to-Text, Translation, LLM reasoning, and Text-to-Speech
+together. Doing this in code means days of API plumbing, retry
+logic, and latency debugging.
+
+HasaFlow turns all of that into a drag-and-drop canvas.
+
+Each node is an AI capability. Each edge is a live data stream.
+You design your pipeline visually, hit Run, and watch it execute
+node-by-node in real time.
+
+What powers it under the hood? <span class="orange-text">Sarvam AI</span>'s sovereign Indic models:
+
+🎙️ Saaras:v3 — Regional language Speech-to-Text
+🌐 Sarvam Translate — Hindi, Telugu, Tamil, Bengali & more
+🗣️ Bulbul:v3 — Natural, human-like Text-to-Speech
+🧠 sarvam-105b — India's sovereign reasoning LLM
+📄 Document AI — OCR & document digitization
+
+Some real pipelines you can build in under 2 minutes:
+→ Voice call (Hindi) → Transcribe → Translate to English → Summary
+→ Patient audio (Tamil) → Medical transcription → Clinical report
+→ Hinglish query → Code-mix cleaning → LLM response → Voice reply
+
+The tech stack:
+• Next.js 16 + React 19
+• React Flow (visual DAG editor)
+• Topological execution engine
+• Neon PostgreSQL + Prisma ORM
+• Cloudflare R2 for audio storage
+• Razorpay credit-based billing
+
+I'd love your feedback — what pipelines would you build?
+
+🔗 Links in the first comment 👇
+
+<span class="comment">#BuildInPublic #SarvamAI #IndicAI #NextJS #ReactFlow
+#AIForIndia #GenerativeAI #OpenSource</span></pre>
+    </div>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-text">
+        <strong>Do NOT put any external links (GitHub, demo URL) in the main post body.</strong> LinkedIn's algorithm penalizes posts containing outbound links. All links go in the first comment only.
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 4</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 5: FIRST COMMENT + DM ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">05</span>
+    </div>
+
+    <div class="section-number">Section 04</div>
+    <h1>First Comment & DM Templates</h1>
+    <p class="section-desc">
+      Post the first comment within 60 seconds of publishing. Send the DM at 10:00 AM after the post has accumulated social proof.
+    </p>
+
+    <h2>First Comment (Post within 60 seconds)</h2>
+    <div class="code-block">
+      <div class="code-block-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="code-label">first-comment.txt</span>
+      </div>
+      <pre>🔗 Resources:
+→ GitHub: https://github.com/sairaghukiran14/hasaflow
+→ Live Demo: <span class="comment">[your-deployed-url-here]</span>
+
+Built with <span class="orange-text">@Sarvam AI</span> APIs — shoutout to <span class="highlight">Vivek Raghavan</span>
+and <span class="highlight">Pratyush Kumar</span> for making sovereign Indic AI
+accessible to indie developers.
+
+Would love to hear what use cases resonate with you! 🙏</pre>
+    </div>
+
+    <h2>DM to Sarvam AI Founders (Send at 10:00 AM)</h2>
+    <div class="code-block">
+      <div class="code-block-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="code-label">dm-template.txt</span>
+      </div>
+      <pre>Hi <span class="comment">[Vivek / Pratyush]</span>,
+
+I built HasaFlow — a visual pipeline builder powered entirely
+by Sarvam AI's API suite (Saaras, Bulbul, Translate,
+sarvam-105b, Document AI).
+
+Just published a post about it on LinkedIn and tagged you.
+Would love your feedback on the integration and would be happy
+to discuss how I can contribute to the ecosystem.
+
+Post: <span class="comment">[LinkedIn post URL]</span>
+GitHub: https://github.com/sairaghukiran14/hasaflow
+
+Thanks for building such amazing APIs! 🙏</pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-text">
+        <strong>Timing matters for the DM.</strong> Wait until 10 AM so the post already has likes and comments when they click through. A post with engagement looks legitimate; a ghost town looks like spam.
+      </div>
+    </div>
+
+    <h2>Follow-Up Comment (Post at 1:00 PM)</h2>
+    <div class="card green">
+      <div class="card-title">🧠 Bump the Post with a Technical Insight</div>
+      <div class="card-text">
+        <em>"Fun fact: The topological execution engine resolves the entire visual DAG in under 200ms, meaning a 6-node pipeline (Audio → STT → Translate → LLM → TTS → Output) starts executing almost instantly. Sarvam's API latency is the bottleneck, not the orchestration. 🚀"</em>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 5</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 6: TUESDAY TIMELINE ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">06</span>
+    </div>
+
+    <div class="section-number">Section 05</div>
+    <h1>Tuesday Hour-by-Hour Timeline</h1>
+    <p class="section-desc">
+      Your minute-by-minute execution plan. The first 90 minutes after publishing are the most critical window.
+    </p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">8:00 AM — Final Checks</div>
+        <div class="timeline-title">Open LinkedIn on Phone + Laptop</div>
+        <div class="timeline-desc">
+          Open the saved draft. Have the first comment text ready to paste. Have the screen recording video ready to upload. Silence all other notifications.
+        </div>
+      </div>
+
+      <div class="timeline-item rose">
+        <div class="timeline-time">8:15 AM — 🚀 PUBLISH</div>
+        <div class="timeline-title">Upload Video + Paste Post + Tag People</div>
+        <div class="timeline-desc">
+          Upload the native .mp4 video. Paste the post. @mention Vivek Raghavan, Pratyush Kumar, and Sarvam AI company page. Hit Publish.
+        </div>
+      </div>
+
+      <div class="timeline-item rose">
+        <div class="timeline-time">8:16 AM — First Comment</div>
+        <div class="timeline-title">Post Links & Shoutout Immediately</div>
+        <div class="timeline-desc">
+          Paste the first comment with GitHub link, demo URL, and the Sarvam founder shoutout within 60 seconds.
+        </div>
+      </div>
+
+      <div class="timeline-item orange">
+        <div class="timeline-time">8:20 AM — Seed Engagement</div>
+        <div class="timeline-title">WhatsApp Groups + DMs to Friends</div>
+        <div class="timeline-desc">
+          Share the post link to 3–5 developer WhatsApp groups. DM 5–10 close friends on LinkedIn asking them to check it out and comment. Share a shorter version on X (Twitter).
+        </div>
+      </div>
+
+      <div class="timeline-item green">
+        <div class="timeline-time">8:30 – 10:00 AM — The Golden 90 Minutes</div>
+        <div class="timeline-title">Reply to Every Comment Within 5 Minutes</div>
+        <div class="timeline-desc">
+          This window determines whether the post reaches 500 views or 50,000. Reply to every comment. Ask follow-up questions in your replies. Like every comment. If someone reshares, comment on their share thanking them.
+        </div>
+      </div>
+
+      <div class="timeline-item blue">
+        <div class="timeline-time">10:00 AM — DM Sarvam AI Team</div>
+        <div class="timeline-title">Send Polite, Concise Direct Message</div>
+        <div class="timeline-desc">
+          Use the DM template from Page 5. Send to Vivek Raghavan and/or Pratyush Kumar. Include the post link and GitHub URL.
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-time">1:00 PM — Second Wave</div>
+        <div class="timeline-title">Post Follow-Up Technical Comment</div>
+        <div class="timeline-desc">
+          Drop a technical fun fact comment on your post. This bumps it back into feeds and attracts engineering-minded viewers.
+        </div>
+      </div>
+
+      <div class="timeline-item orange">
+        <div class="timeline-time">6:00 PM — Evening Round</div>
+        <div class="timeline-title">Reply to Afternoon Comments</div>
+        <div class="timeline-desc">
+          Reply to any new comments from the afternoon. If post is above 500 impressions, share it to your LinkedIn story with a quick note.
+        </div>
+      </div>
+
+      <div class="timeline-item green">
+        <div class="timeline-time">9:00 PM — Review & Reflect</div>
+        <div class="timeline-title">Check Analytics, Screenshot Results</div>
+        <div class="timeline-desc">
+          Review impressions, reactions, comments, shares, and profile view spikes. If Sarvam's team engaged, reply gratefully. If not, don't worry — the DM is pending.
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 6</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 7: METRICS & DONT'S ═══════════════════════════ -->
+  <div class="page">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">07</span>
+    </div>
+
+    <div class="section-number">Section 06</div>
+    <h1>Success Metrics & Rules</h1>
+    <p class="section-desc">
+      Track these numbers Tuesday night to measure the success of your launch. Use the "Do NOT" list to avoid common mistakes that kill LinkedIn reach.
+    </p>
+
+    <h2>Target Metrics</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Good ✓</th>
+          <th>Great ✦</th>
+          <th>Viral 🔥</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Impressions</strong></td><td>2,000+</td><td>10,000+</td><td>50,000+</td></tr>
+        <tr><td><strong>Reactions</strong></td><td>50+</td><td>200+</td><td>500+</td></tr>
+        <tr><td><strong>Comments</strong></td><td>15+</td><td>40+</td><td>100+</td></tr>
+        <tr><td><strong>Shares / Reposts</strong></td><td>5+</td><td>20+</td><td>50+</td></tr>
+        <tr><td><strong>Sarvam Team</strong></td><td>Like</td><td>Comment</td><td>Reshare</td></tr>
+        <tr><td><strong>Profile View Spike</strong></td><td>2× normal</td><td>5× normal</td><td>10×+ normal</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Critical Rules</h2>
+
+    <div class="callout danger">
+      <span class="callout-icon">🚫</span>
+      <div class="callout-text">
+        <strong>Do NOT</strong> put external links (GitHub, demo URL, YouTube) in the main post body. LinkedIn's algorithm aggressively suppresses posts with outbound links. Always use the first comment.
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🚫</span>
+      <div class="callout-text">
+        <strong>Do NOT</strong> tag more than 3–4 people. Over-tagging looks spammy and can trigger LinkedIn's spam filters, reducing your reach dramatically.
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🚫</span>
+      <div class="callout-text">
+        <strong>Do NOT</strong> publish and disappear. The first 90 minutes of engagement velocity are everything. If you don't reply to comments, the algorithm deprioritizes your post.
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🚫</span>
+      <div class="callout-text">
+        <strong>Do NOT</strong> send a desperate or overly long DM to Sarvam's team. Keep it professional, concise, and genuine. One short paragraph + links.
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>Stretch Goals (Wednesday Onwards)</h2>
+    <div class="two-col">
+      <div class="card accent">
+        <div class="card-title">📝 Thursday Follow-Up Post</div>
+        <div class="card-text">Write a deeper architectural post about the topological DAG engine, Code-Mix Cleaner, and how you handle multi-language STT→TTS chains.</div>
+      </div>
+      <div class="card orange">
+        <div class="card-title">📰 Technical Article</div>
+        <div class="card-text">Publish a full technical breakdown on dev.to or Hashnode. Link back to the LinkedIn post for cross-traffic.</div>
+      </div>
+      <div class="card green">
+        <div class="card-title">🏆 Community Showcase</div>
+        <div class="card-text">Submit HasaFlow to Sarvam AI's community showcase or developer program (check their website / Discord for submission channels).</div>
+      </div>
+      <div class="card blue">
+        <div class="card-title">🤝 Startup Program</div>
+        <div class="card-text">Apply to Sarvam AI's startup or developer program if available. Your project is a perfect case study for their ecosystem.</div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 7</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PAGE 8: QUICK REFERENCE ═══════════════════════════ -->
+  <div class="page" style="page-break-after: avoid;">
+    <div class="page-header">
+      <span class="page-title">HasaFlow × Sarvam AI — Launch Playbook</span>
+      <span class="page-number">08</span>
+    </div>
+
+    <div class="section-number">Section 07</div>
+    <h1>Quick Reference Cheat Sheet</h1>
+    <p class="section-desc">
+      Print this page and keep it on your desk Tuesday morning.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 140px;">Time (IST)</th>
+          <th>Action</th>
+          <th style="width: 100px;">Priority</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Mon 9:00 PM</strong></td><td>Record 40–60s demo video of pipeline execution</td><td>🔴 Critical</td></tr>
+        <tr><td><strong>Mon 9:30 PM</strong></td><td>Polish GitHub repo, verify live demo link, take canvas screenshot</td><td>🔴 Critical</td></tr>
+        <tr><td><strong>Mon 10:00 PM</strong></td><td>Draft LinkedIn post + first comment, save as draft</td><td>🔴 Critical</td></tr>
+        <tr><td><strong>Mon 10:30 PM</strong></td><td>Find & save Sarvam founders' LinkedIn profiles</td><td>🟡 Important</td></tr>
+        <tr><td><strong>Mon 10:45 PM</strong></td><td>Sleep</td><td>🟢 Self-care</td></tr>
+        <tr style="background: #FFF1F2;"><td><strong>Tue 8:00 AM</strong></td><td>Final checks — open LinkedIn on phone + laptop, prep everything</td><td>🔴 Critical</td></tr>
+        <tr style="background: #FFF1F2;"><td><strong>Tue 8:15 AM</strong></td><td>🚀 PUBLISH — upload video + paste post + @mention Sarvam team</td><td>🔴 Critical</td></tr>
+        <tr style="background: #FFF1F2;"><td><strong>Tue 8:16 AM</strong></td><td>Post first comment with links + shoutout (within 60 seconds)</td><td>🔴 Critical</td></tr>
+        <tr style="background: #FFF3ED;"><td><strong>Tue 8:20 AM</strong></td><td>Share to WhatsApp groups, DM 5–10 close friends on LinkedIn</td><td>🔴 Critical</td></tr>
+        <tr style="background: #ECFDF5;"><td><strong>Tue 8:30–10 AM</strong></td><td>Reply to EVERY comment within 5 mins — the golden 90 minutes</td><td>🔴 Critical</td></tr>
+        <tr><td><strong>Tue 10:00 AM</strong></td><td>DM Sarvam AI founders (Vivek / Pratyush) with post link</td><td>🟡 Important</td></tr>
+        <tr><td><strong>Tue 1:00 PM</strong></td><td>Post follow-up technical comment to bump post in feeds</td><td>🟡 Important</td></tr>
+        <tr><td><strong>Tue 6:00 PM</strong></td><td>Reply to afternoon comments, share to LinkedIn story if going well</td><td>🟢 Nice-to-do</td></tr>
+        <tr><td><strong>Tue 9:00 PM</strong></td><td>Check analytics, screenshot results, reply to Sarvam if they engaged</td><td>🟡 Important</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <div class="callout tip">
+      <span class="callout-icon">✅</span>
+      <div class="callout-text">
+        <strong>You've got this.</strong> HasaFlow is a genuinely impressive project with deep Sarvam API integration across 5+ models, 20+ node types, a topological execution engine, and a beautiful visual canvas. The product speaks for itself — your job on Tuesday is just to put it in front of the right eyes at the right time.
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 48px; padding-top: 32px; border-top: 2px solid var(--gray-100);">
+      <div style="font-size: 28px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.5px; margin-bottom: 4px;">
+        Good luck on Tuesday! 🚀
+      </div>
+      <div style="font-size: 13px; color: var(--gray-400);">
+        HasaFlow × Sarvam AI — Launch Playbook · Prepared Aug 2026
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>HasaFlow × Sarvam AI</span>
+      <span>Page 8</span>
+    </div>
+  </div>
+
+</body>
+</html>
