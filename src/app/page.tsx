@@ -145,17 +145,14 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
 
-            {/* Brand Logo & Indic AI Badge (Matching reference image) */}
+            {/* Brand Logo */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group shrink-0">
-                <img src="/logo.png" alt="hasaflow logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain" />
-                <span className="text-lg sm:text-xl font-normal tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors leading-none">
-                  hasaflow
+                <img src="/logo.png" alt="pravah logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain rounded-[20%]" />
+                <span className="text-lg sm:text-xl font-normal tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors leading-none -mt-[5px]">
+                  pravah
                 </span>
               </Link>
-              <span className="inline-flex items-center px-2 sm:px-2.5 h-5 sm:h-5.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs whitespace-nowrap shrink-0">
-                Indic AI
-              </span>
             </div>
 
             {/* Desktop Navigation Links */}
@@ -321,7 +318,7 @@ export default function LandingPage() {
               Watch Multi-Node AI Pipelines Execute Live
             </h2>
             <p className="text-sm text-slate-600">
-              HasaFlow chains speech recognition, machine translation, and speech synthesis into a single stream.
+              Pravah chains speech recognition, machine translation, and speech synthesis into a single stream.
             </p>
           </div>
 
@@ -362,10 +359,10 @@ export default function LandingPage() {
 
               {/* Node 1: Saaras Speech to Text */}
               <div className={`relative z-10 rounded-xl border p-4 transition-all space-y-3 bg-white ${demoStep === 1
-                  ? 'border-blue-400 ring-2 ring-blue-500/20 shadow-md'
-                  : demoStep > 1
-                    ? 'border-emerald-300 bg-emerald-50/20'
-                    : 'border-slate-200 shadow-2xs'
+                ? 'border-blue-400 ring-2 ring-blue-500/20 shadow-md'
+                : demoStep > 1
+                  ? 'border-emerald-300 bg-emerald-50/20'
+                  : 'border-slate-200 shadow-2xs'
                 }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -375,10 +372,10 @@ export default function LandingPage() {
                     <span className="text-xs font-normal text-slate-900">1. Speech-to-Text</span>
                   </div>
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${demoStep === 1
-                      ? 'bg-blue-100 text-blue-700 animate-pulse'
-                      : demoStep > 1
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                    ? 'bg-blue-100 text-blue-700 animate-pulse'
+                    : demoStep > 1
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-500'
                     }`}>
                     {demoStep === 1 ? 'Transcribing...' : demoStep > 1 ? 'Completed' : 'Idle'}
                   </span>
@@ -394,10 +391,10 @@ export default function LandingPage() {
 
               {/* Node 2: Indic Translation */}
               <div className={`relative z-10 rounded-xl border p-4 transition-all space-y-3 bg-white ${demoStep === 2
-                  ? 'border-purple-400 ring-2 ring-purple-500/20 shadow-md'
-                  : demoStep > 2
-                    ? 'border-emerald-300 bg-emerald-50/20'
-                    : 'border-slate-200 shadow-2xs'
+                ? 'border-purple-400 ring-2 ring-purple-500/20 shadow-md'
+                : demoStep > 2
+                  ? 'border-emerald-300 bg-emerald-50/20'
+                  : 'border-slate-200 shadow-2xs'
                 }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -407,10 +404,10 @@ export default function LandingPage() {
                     <span className="text-xs font-normal text-slate-900">2. Indic Translate</span>
                   </div>
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${demoStep === 2
-                      ? 'bg-purple-100 text-purple-700 animate-pulse'
-                      : demoStep > 2
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                    ? 'bg-purple-100 text-purple-700 animate-pulse'
+                    : demoStep > 2
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-500'
                     }`}>
                     {demoStep === 2 ? 'Translating...' : demoStep > 2 ? 'Completed' : 'Pending'}
                   </span>
@@ -426,10 +423,10 @@ export default function LandingPage() {
 
               {/* Node 3: Bulbul Text-to-Speech */}
               <div className={`relative z-10 rounded-xl border p-4 transition-all space-y-3 bg-white ${demoStep === 3
-                  ? 'border-amber-400 ring-2 ring-amber-500/20 shadow-md'
-                  : demoStep > 3
-                    ? 'border-emerald-300 bg-emerald-50/20'
-                    : 'border-slate-200 shadow-2xs'
+                ? 'border-amber-400 ring-2 ring-amber-500/20 shadow-md'
+                : demoStep > 3
+                  ? 'border-emerald-300 bg-emerald-50/20'
+                  : 'border-slate-200 shadow-2xs'
                 }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -439,10 +436,10 @@ export default function LandingPage() {
                     <span className="text-xs font-normal text-slate-900">3. Bulbul TTS</span>
                   </div>
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${demoStep === 3
-                      ? 'bg-amber-100 text-amber-700 animate-pulse'
-                      : demoStep > 3
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                    ? 'bg-amber-100 text-amber-700 animate-pulse'
+                    : demoStep > 3
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-500'
                     }`}>
                     {demoStep === 3 ? 'Synthesizing Voice...' : demoStep > 3 ? 'Completed' : 'Pending'}
                   </span>
@@ -489,7 +486,7 @@ export default function LandingPage() {
               Solving Population-Scale Language Challenges
             </h2>
             <p className="text-sm text-slate-600">
-              Discover how developers, startups, and enterprises leverage HasaFlow visual pipelines across key industries in Bharat.
+              Discover how developers, startups, and enterprises leverage Pravah visual pipelines across key industries in Bharat.
             </p>
           </div>
 
@@ -503,8 +500,8 @@ export default function LandingPage() {
                   key={uc.id}
                   onClick={() => setActiveUseCase(index)}
                   className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${activeUseCase === index
-                      ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                 >
                   <div className={`p-2 rounded-lg shrink-0 ${activeUseCase === index ? 'bg-slate-800' : uc.iconBg}`}>
@@ -636,17 +633,17 @@ export default function LandingPage() {
               Developer-First Transparent Billing
             </span>
             <h2 className="text-3xl sm:text-5xl font-normal text-slate-900 tracking-tight">
-              Pay-As-You-Go with ₹50 Free Credits
+              Pay-As-You-Go with ₹20 Free Credits
             </h2>
             <p className="text-sm sm:text-base text-slate-600">
-              No monthly lock-ins or recurring subscription fees. Sign up, get ₹50 free credits instantly, and top up starting at just ₹50.
+              No monthly lock-ins or recurring subscription fees. Sign up, get ₹20 free credits instantly, and top up starting at just ₹20.
             </p>
           </div>
 
           {/* Pricing Architecture & Top-Up Perspective Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
-            {/* Left Card: Starter Pack with ₹50 Free Credits */}
+            {/* Left Card: Starter Pack with ₹20 Free Credits */}
             <div className="lg:col-span-5 rounded-3xl border border-slate-200 bg-slate-50/60 p-6 sm:p-8 space-y-6 flex flex-col justify-between shadow-xs">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -659,7 +656,7 @@ export default function LandingPage() {
 
                 <div className="space-y-1">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-4xl sm:text-5xl font-normal text-slate-900">₹50</span>
+                    <span className="text-4xl sm:text-5xl font-normal text-slate-900">₹20</span>
                     <span className="text-sm font-normal text-slate-600">Free Bonus Credit</span>
                   </div>
                   <p className="text-xs text-slate-500">
@@ -672,7 +669,7 @@ export default function LandingPage() {
                   <ul className="space-y-2.5 text-xs text-slate-700">
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>~500 minutes of Speech-to-Text or Translation</span>
+                      <span>~200 minutes of Speech-to-Text or Translation</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -694,7 +691,7 @@ export default function LandingPage() {
                 href="/login"
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-normal py-3.5 text-sm transition-all shadow-md mt-6"
               >
-                <span>Claim Free ₹50 Credits</span>
+                <span>Claim Free ₹20 Credits</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -725,8 +722,8 @@ export default function LandingPage() {
                         key={amount}
                         onClick={() => setSelectedTopup(amount)}
                         className={`py-3 px-2 rounded-xl border text-center transition-all cursor-pointer ${selectedTopup === amount
-                            ? 'border-blue-600 bg-blue-50/80 text-blue-900 ring-2 ring-blue-500/20 font-normal shadow-2xs'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-medium'
+                          ? 'border-blue-600 bg-blue-50/80 text-blue-900 ring-2 ring-blue-500/20 font-normal shadow-2xs'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-medium'
                           }`}
                       >
                         <span className="text-sm block font-normal">₹{amount}</span>
@@ -785,7 +782,7 @@ export default function LandingPage() {
                 Why Pay-As-You-Go is Better for Developers & AI Teams
               </h3>
               <p className="text-xs text-slate-500">
-                Compare rigid SaaS monthly tiers vs. HasaFlow's flexible credit model.
+                Compare rigid SaaS monthly tiers vs. Pravah's flexible credit model.
               </p>
             </div>
 
@@ -796,7 +793,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="font-normal text-slate-900 text-sm">No Unused Monthly Waste</h4>
                 <p className="text-slate-500 leading-relaxed">
-                  Traditional plans charge $49/mo regardless of whether you make 1 call or 10,000. With HasaFlow, you only pay when pipelines run.
+                  Traditional plans charge $49/mo regardless of whether you make 1 call or 10,000. With Pravah, you only pay when pipelines run.
                 </p>
               </div>
 
@@ -806,7 +803,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="font-normal text-slate-900 text-sm">Credits Never Expire</h4>
                 <p className="text-slate-500 leading-relaxed">
-                  Your ₹50 bonus and top-up credits stay in your account forever. Build at your own pace without end-of-month expiration pressure.
+                  Your ₹20 bonus and top-up credits stay in your account forever. Build at your own pace without end-of-month expiration pressure.
                 </p>
               </div>
 
@@ -816,7 +813,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="font-normal text-slate-900 text-sm">Scale On-Demand</h4>
                 <p className="text-slate-500 leading-relaxed">
-                  Need to run 50,000 voice audio files tomorrow? Top up ₹500 instantly with Razorpay and scale without tier upgrade delays.
+                  Need to run 5,000 voice audio files tomorrow? Top up ₹500 instantly with Razorpay and scale without tier upgrade delays.
                 </p>
               </div>
             </div>
@@ -829,7 +826,7 @@ export default function LandingPage() {
       <section className="py-20 bg-white relative">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="rounded-[2.5rem] bg-slate-50 border border-slate-200/60 p-10 sm:p-16 text-center space-y-8 relative overflow-hidden shadow-sm">
-            
+
             {/* Subtle Gradient Background for Premium Feel */}
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-60 pointer-events-none" />
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-pink-100 rounded-full blur-3xl opacity-60 pointer-events-none" />
@@ -839,7 +836,7 @@ export default function LandingPage() {
                 Start Building Indic AI Flows Today
               </h2>
               <p className="text-sm sm:text-base text-slate-500 max-w-xl mx-auto font-normal">
-                Join developers and enterprises building population-scale speech and translation pipelines with HasaFlow.
+                Join developers and enterprises building population-scale speech and translation pipelines with Pravah.
               </p>
             </div>
 
@@ -848,18 +845,14 @@ export default function LandingPage() {
                 href="/dashboard"
                 className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-3.5 text-sm font-normal text-white hover:bg-slate-800 transition-all shadow-md hover:shadow-lg hover:scale-[1.02]"
               >
-                <span>Launch HasaFlow Studio</span>
+                <span>Launch Pravah Studio</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-
           </div>
         </div>
       </section>
-
       {/* ━━━ FOOTER (Matching exact footer branding & version tag from reference image) ━━━ */}
-
-
     </div>
   );
 }

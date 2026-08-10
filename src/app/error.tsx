@@ -27,7 +27,7 @@ export default function Error({
         </div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Something went wrong!</h2>
         <p className="text-sm text-gray-500 mb-6">
-          An unexpected error occurred in HasaFlow. We have logged this error and are looking into it.
+          An unexpected error occurred in Pravah. We have logged this error and are looking into it.
         </p>
 
         {error.message && (

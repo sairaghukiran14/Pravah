@@ -4,7 +4,7 @@ import { SessionProvider } from 'next-auth/react';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'HasaFlow — Visual Indic AI Pipeline Studio',
+  title: 'Pravah — Visual Indic AI Pipeline Studio',
   description:
     'Build, execute, and monitor visual multi-node Indic speech and language pipelines using Sarvam AI APIs.',
 };

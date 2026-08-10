@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   // Self-heal: If key is a full URL, extract the filename key
   if (key.startsWith('http://') || key.startsWith('https://')) {
-    const bucketMarker = key.includes('/pravah-assets/') ? '/pravah-assets/' : '/hasaflow-storage/';
+    const bucketMarker = key.includes('/pravah-assets/') ? '/pravah-assets/' : '/pravah-storage/';
     if (key.includes(bucketMarker)) {
       key = key.substring(key.indexOf(bucketMarker) + bucketMarker.length);
     } else {

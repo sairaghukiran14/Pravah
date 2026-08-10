@@ -41,7 +41,7 @@ function LoginContent() {
         router.push('/onboarding');
       }
     } else if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hasaflow_user_onboarding');
+      const saved = localStorage.getItem('pravah_user_onboarding');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -90,10 +90,9 @@ function LoginContent() {
           {/* Brand header */}
           <div className="flex items-center gap-2">
             <Link href="/" className="hover:opacity-85 transition-opacity flex items-center gap-1.5 sm:gap-2">
-              <img src="/logo.png" alt="hasaflow logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain" />
-              <span className="text-lg sm:text-xl font-normal tracking-tight text-gray-900 leading-none">hasaflow</span>
+              <img src="/logo.png" alt="pravah logo" className="h-5 w-5 sm:h-5.5 sm:w-5.5 object-contain rounded-[20%]" />
+              <span className="text-lg sm:text-xl font-normal tracking-tight text-gray-900 leading-none -mt-[5px]">pravah</span>
             </Link>
-            <span className="inline-flex items-center px-2 h-5 sm:h-5.5 rounded-full text-xs font-normal bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs whitespace-nowrap">Indic AI</span>
           </div>
         </div>
 
@@ -182,8 +181,8 @@ function LoginContent() {
           <div className="text-center mb-10">
             <div className="lg:hidden mb-6">
               <Link href="/" className="hover:opacity-85 transition-opacity flex items-center justify-center gap-1.5">
-                <img src="/logo.png" alt="hasaflow logo" className="h-6 w-6 object-contain" />
-                <h1 className="text-3xl font-normal tracking-tight text-gray-900 leading-none">hasaflow</h1>
+                <img src="/logo.png" alt="pravah logo" className="h-6 w-6 object-contain rounded-[20%]" />
+                <h1 className="text-3xl font-normal tracking-tight text-gray-900 leading-none -mt-[5px]">pravah</h1>
               </Link>
               <p className="text-xs text-gray-500 mt-1 font-normal">Visual AI Pipeline Builder for Indic Speech & Language</p>
             </div>

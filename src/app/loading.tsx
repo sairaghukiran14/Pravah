@@ -12,7 +12,7 @@ export default function Loading() {
 
       <div className="flex flex-col items-center z-10">
         <Loader2 className="h-8 w-8 animate-spin text-gray-900 mb-2" />
-        <span className="text-sm font-semibold text-gray-800">Loading HasaFlow Studio...</span>
+        <span className="text-sm font-semibold text-gray-800">Loading Pravah Studio...</span>
         <span className="text-xs text-gray-400 mt-1">Preparing your workspace</span>
       </div>
     </div>

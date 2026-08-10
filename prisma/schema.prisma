@@ -17,7 +17,7 @@ model User {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   onboardingCompleted Boolean        @default(false)
-  credits             Float          @default(50.00)
+  credits             Float          @default(20.00)
   accounts            Account[]
   orders              PaymentOrder[]
   projects            Project[]

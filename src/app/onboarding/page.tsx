@@ -68,7 +68,7 @@ export default function OnboardingPage() {
       // Save onboarding preferences to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem(
-          'hasaflow_user_onboarding',
+          'pravah_user_onboarding',
           JSON.stringify({
             role: selectedRole,
             useCases: selectedUseCases,
@@ -114,7 +114,7 @@ export default function OnboardingPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="hover:opacity-85 transition-opacity">
             <span className="text-xl font-normal tracking-tight text-gray-900">
-              hasaflow
+              pravah
             </span>
           </Link>
           <span className="text-xs text-gray-500 font-medium">
@@ -167,7 +167,7 @@ export default function OnboardingPage() {
                   What is your primary role?
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Help us personalize your HasaFlow node editor canvas and default templates.
+                  Help us personalize your Pravah node editor canvas and default templates.
                 </p>
               </div>
 
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
                   QUESTION 2 OF 3
                 </span>
                 <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-gray-900">
-                  What are you planning to build with HasaFlow?
+                  What are you planning to build with Pravah?
                 </h1>
                 <p className="text-sm text-gray-500">
                   Select all use cases that apply to your project scope.
