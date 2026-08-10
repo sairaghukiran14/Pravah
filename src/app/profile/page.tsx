@@ -535,7 +535,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-2 mt-2">
-                      {[100, 200, 500, 1000].map((amt) => {
+                      {[50, 200, 500, 1000].map((amt) => {
                         const loading = isTopupLoading === amt;
                         return (
                           <button

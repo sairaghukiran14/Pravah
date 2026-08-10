@@ -659,7 +659,7 @@ export default function LandingPage() {
 
                 <div className="space-y-1">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-4xl sm:text-5xl font-normal text-slate-900">₹50</span>
+                    <span className="text-4xl sm:text-5xl font-normal text-slate-900">₹20</span>
                     <span className="text-sm font-normal text-slate-600">Free Bonus Credit</span>
                   </div>
                   <p className="text-xs text-slate-500">
@@ -672,7 +672,7 @@ export default function LandingPage() {
                   <ul className="space-y-2.5 text-xs text-slate-700">
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>~500 minutes of Speech-to-Text or Translation</span>
+                      <span>~200 minutes of Speech-to-Text or Translation</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -806,7 +806,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="font-normal text-slate-900 text-sm">Credits Never Expire</h4>
                 <p className="text-slate-500 leading-relaxed">
-                  Your ₹50 bonus and top-up credits stay in your account forever. Build at your own pace without end-of-month expiration pressure.
+                  Your ₹20 bonus and top-up credits stay in your account forever. Build at your own pace without end-of-month expiration pressure.
                 </p>
               </div>
 
