@@ -258,6 +258,9 @@ export default function PipelineEditorPage({
           } else if (eventType === 'node_failed') {
             setNodeStatus(eventData.nodeId, 'failed');
             addExecutionLog(`❌ Node Failed: ${eventData.error}`, 'error');
+          } else if (eventType === 'node_skipped') {
+            setNodeStatus(eventData.nodeId, 'skipped');
+            addExecutionLog(`◽ Node Skipped: ${eventData.nodeId} (${eventData.reason})`, 'info');
           } else if (eventType === 'run_completed') {
             finishExecution(eventData.runId, eventData.status);
           }

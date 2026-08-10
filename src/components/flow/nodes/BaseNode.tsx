@@ -33,6 +33,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
   if (status === 'running') statusAnimationClass = 'node-status-running';
   else if (status === 'completed') statusAnimationClass = 'node-status-completed';
   else if (status === 'failed') statusAnimationClass = 'node-status-failed';
+  else if (status === 'skipped') statusAnimationClass = 'node-status-skipped';
 
   return (
     <div
@@ -86,6 +87,11 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
         {status === 'failed' && (
           <span className="flex items-center gap-1 text-[11px] font-medium text-red-600">
             <AlertCircle className="h-3.5 w-3.5" /> Failed
+          </span>
+        )}
+        {status === 'skipped' && (
+          <span className="flex items-center gap-1 text-[11px] font-medium text-gray-400">
+            <AlertCircle className="h-3.5 w-3.5 text-gray-400" /> Skipped
           </span>
         )}
       </div>

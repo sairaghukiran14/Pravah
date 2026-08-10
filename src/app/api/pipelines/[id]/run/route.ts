@@ -170,10 +170,30 @@ export async function POST(
       const nodeOutputs: Record<string, any> = {};
       let isPipelineFailed = false;
       let totalCost = 0;
+      const skippedNodes = new Set<string>();
 
       for (const node of sortedNodes) {
         if (isPipelineFailed) {
           sendEvent('node_skipped', { nodeId: node.id, reason: 'Upstream node failed' });
+          continue;
+        }
+
+        if (skippedNodes.has(node.id)) {
+          // Propagate skip downstream topologically
+          edges.filter((e) => e.source === node.id).forEach((e) => skippedNodes.add(e.target));
+          
+          try {
+            await prisma.nodeRun.updateMany({
+              where: { runId, nodeId: node.id },
+              data: {
+                status: 'failed',
+                error: 'Skipped by conditional router',
+                finishedAt: new Date(),
+              },
+            });
+          } catch (e) {}
+
+          sendEvent('node_skipped', { nodeId: node.id, reason: 'Skipped by conditional router' });
           continue;
         }
 
@@ -197,6 +217,18 @@ export async function POST(
 
         if (result.status === 'completed') {
           nodeOutputs[node.id] = result.output;
+
+          // If this is a conditional router, add inactive branch targets to skippedNodes
+          if (node.type === 'router' && result.output && result.output.activeHandle) {
+            const activeHandle = result.output.activeHandle;
+            edges
+              .filter((e) => e.source === node.id)
+              .forEach((e) => {
+                if (e.sourceHandle !== activeHandle) {
+                  skippedNodes.add(e.target);
+                }
+              });
+          }
 
           // Calculate node execution cost
           let nodeCost = 0;

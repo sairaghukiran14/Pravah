@@ -32,6 +32,7 @@ const processingNodes: ToolbarItem[] = [
   { type: 'stt', title: 'STT', desc: 'Transcribe spoken regional language audio to text using Sarvam AI Saaras:v3.', icon: <Mic className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
   { type: 'translate', title: 'Translate', desc: 'Translate text between supported Indic languages (Hindi, Telugu, Tamil, etc.).', icon: <Languages className="h-3.5 w-3.5 text-blue-600" />, bg: 'bg-blue-50', hover: 'hover:border-blue-200 hover:bg-blue-50/50' },
   { type: 'tts', title: 'TTS', desc: 'Synthesize natural voice audio from text using Sarvam AI Bulbul:v3.', icon: <Volume2 className="h-3.5 w-3.5 text-orange-600" />, bg: 'bg-orange-50', hover: 'hover:border-orange-200 hover:bg-orange-50/50' },
+  { type: 'podcast', title: 'Podcast', desc: 'Generates a 2-speaker conversational dialogue on a topic with distinct perspectives.', icon: <PlayCircle className="h-3.5 w-3.5 text-rose-600" />, bg: 'bg-rose-50', hover: 'hover:border-rose-200 hover:bg-rose-50/50' },
   { type: 'ocr', title: 'OCR', desc: 'Perform Optical Character Recognition to extract text from images.', icon: <FileText className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
   { type: 'vision', title: 'Vision', desc: 'Object detection and visual feature extraction.', icon: <Eye className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
   { type: 'llm', title: 'LLM', desc: 'Query a large language model (e.g. Gemini) for generative responses.', icon: <Brain className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
@@ -45,6 +46,26 @@ const outputNodes: ToolbarItem[] = [
   { type: 'text_output', title: 'Text Out', desc: 'Display translated or transcribed text directly on the visual dashboard.', icon: <Monitor className="h-3.5 w-3.5 text-indigo-600" />, bg: 'bg-indigo-50', hover: 'hover:border-indigo-200 hover:bg-indigo-50/50' },
   { type: 'audio_output', title: 'Audio Out', desc: 'Stream synthesized voice recordings and play them back on screen.', icon: <PlayCircle className="h-3.5 w-3.5 text-indigo-600" />, bg: 'bg-indigo-50', hover: 'hover:border-indigo-200 hover:bg-indigo-50/50' },
   { type: 'file_output', title: 'File Out', desc: 'Save output results to a downloadable text or audio file.', icon: <Download className="h-3.5 w-3.5 text-indigo-600" />, bg: 'bg-indigo-50', hover: 'hover:border-indigo-200 hover:bg-indigo-50/50' },
+];
+
+const logicNodes: ToolbarItem[] = [
+  { type: 'router', title: 'Router', desc: 'Directs the execution flow down a specific path based on condition values.', icon: <Brain className="h-3.5 w-3.5 text-rose-600" />, bg: 'bg-rose-50', hover: 'hover:border-rose-200 hover:bg-rose-50/50' },
+  { type: 'delay', title: 'Delay', desc: 'Pauses pipeline execution for a configured duration in seconds.', icon: <PlayCircle className="h-3.5 w-3.5 text-rose-600" />, bg: 'bg-rose-50', hover: 'hover:border-rose-200 hover:bg-rose-50/50' },
+];
+
+const ragNodes: ToolbarItem[] = [
+  { type: 'pdf_splitter', title: 'Chunker', desc: 'Splits raw text or document outputs into smaller chunks.', icon: <FileText className="h-3.5 w-3.5 text-cyan-600" />, bg: 'bg-cyan-50', hover: 'hover:border-cyan-200 hover:bg-cyan-50/50' },
+  { type: 'vector_search', title: 'Vector Query', desc: 'Retrieves relevant semantic text chunks matching a query.', icon: <Key className="h-3.5 w-3.5 text-cyan-600" />, bg: 'bg-cyan-50', hover: 'hover:border-cyan-200 hover:bg-cyan-50/50' },
+];
+
+const regionalNodes: ToolbarItem[] = [
+  { type: 'transliteration', title: 'Transliterate', desc: 'Converts text scripts phonetically (e.g. Devanagari to Latin).', icon: <Languages className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
+  { type: 'codemix_normalizer', title: 'Code-Mix Cleaner', desc: 'Cleans up multi-lingual spoken slang (like Hinglish/Tenglish) into formal language.', icon: <Smile className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
+];
+
+const connectorNodes: ToolbarItem[] = [
+  { type: 'webhook', title: 'Webhook', desc: 'Triggers external API webhook endpoints with execution results.', icon: <LinkIcon className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
+  { type: 'sms_sender', title: 'SMS Sender', desc: 'Sends outbound text messages with transcripts or alerts.', icon: <Mail className="h-3.5 w-3.5 text-pink-600" />, bg: 'bg-pink-50', hover: 'hover:border-pink-200 hover:bg-pink-50/50' },
 ];
 
 interface HoveredTooltip {
@@ -125,6 +146,10 @@ export const Toolbar: React.FC = () => {
     <div className="w-full h-14 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 flex items-center overflow-x-auto px-2 shrink-0 z-20">
       {renderNodeGroup('Inputs', inputNodes)}
       {renderNodeGroup('Processing', processingNodes)}
+      {renderNodeGroup('Logic', logicNodes)}
+      {renderNodeGroup('RAG', ragNodes)}
+      {renderNodeGroup('Regional', regionalNodes)}
+      {renderNodeGroup('Connectors', connectorNodes)}
       {renderNodeGroup('Outputs', outputNodes)}
 
       {/* Viewport Fixed Tooltip Overlay */}

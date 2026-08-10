@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { ProjectData } from '@/types/pipeline';
-import { Plus, Folder, ArrowRight, Trash2, Layers, Loader2, ShieldAlert, Zap, ChevronRight } from 'lucide-react';
+import { Plus, Folder, ArrowRight, Trash2, Layers, Loader2, ShieldAlert, Zap, ChevronRight, Search, Filter, ArrowDownUp } from 'lucide-react';
 
 const CARD_GRADIENTS = [
   'from-blue-50 to-indigo-50/50 text-gray-900 border-indigo-100/80',
@@ -32,6 +32,9 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name-asc');
+  const [filterBy, setFilterBy] = useState('all');
 
   // 1. AUTHENTICATION & AUTHORIZATION GUARD & ONBOARDING ROUTER
   useEffect(() => {
@@ -113,6 +116,40 @@ export default function DashboardPage() {
     }
   };
 
+  const filteredAndSortedProjects = React.useMemo(() => {
+    let result = [...projects];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) => p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (filterBy === 'with-pipelines') {
+      result = result.filter((p) => (p._count?.pipelines || 0) > 0);
+    } else if (filterBy === 'empty') {
+      result = result.filter((p) => (p._count?.pipelines || 0) === 0);
+    }
+
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'pipelines-desc':
+          return (b._count?.pipelines || 0) - (a._count?.pipelines || 0);
+        case 'pipelines-asc':
+          return (a._count?.pipelines || 0) - (b._count?.pipelines || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [projects, searchQuery, sortBy, filterBy]);
+
   // Full Screen Auth Loader while verifying session
   if (status === 'loading') {
     return (
@@ -151,48 +188,52 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        {/* Quick Navigation for Sample Project Pipelines */}
-        {!isLoading && projects.find(p => p.name === 'Sample Project') && (
-          <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
-              <Zap className="h-4 w-4 text-amber-500" />
-              Quick Access: Sample Pipelines
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {projects.find(p => p.name === 'Sample Project')?.pipelines?.map((pipe, index) => {
-                const gradientClass = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
-                return (
-                  <Link
-                    key={pipe.id}
-                    href={`/pipeline/${pipe.id}`}
-                    className={`group relative overflow-hidden rounded-xl border p-4 hover:shadow-md transition-all flex flex-col justify-between h-28 bg-gradient-to-br ${gradientClass}`}
-                  >
-                    {/* Noise texture layer */}
-                    <div className="noisy-grain" />
-
-                    <div className="space-y-1 relative z-10">
-                      <h3 className="text-xs font-semibold line-clamp-1">
-                        {pipe.name}
-                      </h3>
-                      <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">
-                        {pipe.description || 'No description'}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-gray-600 pt-2 border-t border-gray-900/5 mt-1 relative z-10">
-                      <span>Open Editor</span>
-                      <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform text-gray-400" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
 
         {/* Projects Grid */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Your Projects</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900">Your Projects</h2>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    className="w-full sm:w-auto appearance-none pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all cursor-pointer"
+                    value={filterBy}
+                    onChange={(e) => setFilterBy(e.target.value)}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="with-pipelines">Configured</option>
+                    <option value="empty">Empty</option>
+                  </select>
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <ArrowDownUp className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    className="w-full sm:w-auto appearance-none pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all cursor-pointer"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="pipelines-desc">Most Pipelines</option>
+                    <option value="pipelines-asc">Fewest Pipelines</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -220,7 +261,28 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project) => {
+              {filteredAndSortedProjects.length === 0 ? (
+                <div className="col-span-full py-16 text-center border border-dashed border-gray-200 rounded-xl bg-white/50">
+                  <Search className="mx-auto h-8 w-8 text-gray-300 mb-3" />
+                  <h3 className="text-sm font-medium text-gray-900">No matching projects found</h3>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                    We couldn't find any projects matching your current search and filter criteria.
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterBy('all');
+                      setSortBy('name-asc');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : (
+                filteredAndSortedProjects.map((project) => {
                 const isDeletingThis = deletingId === project.id;
                 return (
                   <Link
@@ -268,10 +330,56 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                 );
-              })}
+              })
+              )}
             </div>
           )}
         </div>
+
+        {/* Quick Navigation for Library Project Pipelines */}
+        {!isLoading && projects.find(p => p.name === 'Library') && (
+          <div className="space-y-4 pt-4">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+              <Zap className="h-4 w-4 text-amber-500" />
+              Quick Access: Library Pipelines
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-y-auto max-h-[368px] scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent pr-2">
+              {[...(projects.find(p => p.name === 'Library')?.pipelines || [])]
+                .sort((a, b) => {
+                  const numA = parseInt(a.name.match(/^\d+/)?.[0] || '999', 10);
+                  const numB = parseInt(b.name.match(/^\d+/)?.[0] || '999', 10);
+                  if (numA === numB) return a.name.localeCompare(b.name);
+                  return numA - numB;
+                })
+                .map((pipe) => {
+                const gradientClass = CARD_GRADIENTS[0]; // Always use the first blue gradient
+                return (
+                  <Link
+                    key={pipe.id}
+                    href={`/pipeline/${pipe.id}`}
+                    className={`group relative overflow-hidden rounded-xl border p-4 hover:shadow-md transition-all flex flex-col justify-between h-28 bg-gradient-to-br ${gradientClass}`}
+                  >
+                    {/* Noise texture layer */}
+                    <div className="noisy-grain" />
+
+                    <div className="space-y-1 relative z-10">
+                      <h3 className="text-xs font-semibold line-clamp-1">
+                        {pipe.name}
+                      </h3>
+                      <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">
+                        {pipe.description || 'No description'}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-gray-600 pt-2 border-t border-gray-900/5 mt-1 relative z-10">
+                      <span>Open Editor</span>
+                      <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform text-gray-400" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Create Project Modal */}
