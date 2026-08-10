@@ -33,6 +33,8 @@ export default function PipelineEditorPage({
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isCreditsDialogOpen, setIsCreditsDialogOpen] = useState(false);
+  const [isSarvamCreditsDialogOpen, setIsSarvamCreditsDialogOpen] = useState(false);
+  const [isUnconnectedNodeWarningOpen, setIsUnconnectedNodeWarningOpen] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
   const [pipelineCost, setPipelineCost] = useState(0);
 
@@ -258,6 +260,11 @@ export default function PipelineEditorPage({
           } else if (eventType === 'node_failed') {
             setNodeStatus(eventData.nodeId, 'failed');
             addExecutionLog(`❌ Node Failed: ${eventData.error}`, 'error');
+            
+            const errStr = String(eventData.error).toLowerCase();
+            if (errStr.includes('sarvam') && (errStr.includes('402') || errStr.includes('insufficient') || errStr.includes('quota') || errStr.includes('credit'))) {
+              setIsSarvamCreditsDialogOpen(true);
+            }
           } else if (eventType === 'node_skipped') {
             setNodeStatus(eventData.nodeId, 'skipped');
             addExecutionLog(`◽ Node Skipped: ${eventData.nodeId} (${eventData.reason})`, 'info');
@@ -283,6 +290,18 @@ export default function PipelineEditorPage({
   // Run Pipeline Auto-Bypass Logic
   const handleRunPipelineClick = () => {
     const { nodes, edges } = usePipelineStore.getState();
+    
+    // Validate if there are unconnected (free) nodes
+    if (nodes.length > 1) {
+      const connectedNodeIds = new Set(edges.flatMap(e => [e.source, e.target]));
+      const freeNodes = nodes.filter(n => !connectedNodeIds.has(n.id));
+      
+      if (freeNodes.length > 0) {
+        setIsUnconnectedNodeWarningOpen(true);
+        return; // Halt execution
+      }
+    }
+
     const targetIds = new Set(edges.map((e) => e.target));
     const entryNodes = nodes.filter((n) => !targetIds.has(n.id));
     
@@ -487,6 +506,58 @@ export default function PipelineEditorPage({
                 Top Up Wallet
               </Button>
             </Link>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Sarvam API Insufficient Credits Dialog */}
+      <Modal
+        isOpen={isSarvamCreditsDialogOpen}
+        onClose={() => setIsSarvamCreditsDialogOpen(false)}
+        title="Service Unavailable"
+      >
+        <div className="flex flex-col gap-4 text-center py-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700 font-medium">
+              The AI provider (Sarvam API) has insufficient credits.
+            </p>
+            <p className="text-sm text-gray-500 font-normal">
+              Please contact the administrator to resolve this issue.
+            </p>
+          </div>
+          <div className="flex justify-center mt-4">
+            <Button variant="primary" onClick={() => setIsSarvamCreditsDialogOpen(false)}>
+              Okay
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Unconnected Nodes Warning Dialog */}
+      <Modal
+        isOpen={isUnconnectedNodeWarningOpen}
+        onClose={() => setIsUnconnectedNodeWarningOpen(false)}
+        title="Unconnected Nodes Detected"
+      >
+        <div className="flex flex-col gap-4 text-center py-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 mb-2">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700 font-medium">
+              There are free/unconnected nodes on the canvas.
+            </p>
+            <p className="text-sm text-gray-500 font-normal">
+              Only connected nodes can run in a pipeline. Please connect or remove the loose nodes before running.
+            </p>
+          </div>
+          <div className="flex justify-center mt-4">
+            <Button variant="primary" onClick={() => setIsUnconnectedNodeWarningOpen(false)}>
+              Understood
+            </Button>
           </div>
         </div>
       </Modal>
