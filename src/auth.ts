@@ -71,8 +71,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      const { seedSampleProject } = await import('@/lib/seedSampleProject');
-      await seedSampleProject(user.id);
+      // Every account starts with its own copy of the shipped pipeline library,
+      // which is what the dashboard's Quick Access section surfaces.
+      try {
+        const { seedLibrary } = await import('@/lib/seedLibrary');
+        await seedLibrary(user.id);
+      } catch (e) {
+        // A seeding failure must not block sign-up; the library can be repaired
+        // later by re-running seedLibrary, which only adds what is missing.
+        console.error('[auth] Failed to seed pipeline library:', e);
+      }
     }
   },
   pages: {

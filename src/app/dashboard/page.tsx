@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { ProjectData } from '@/types/pipeline';
+import { LIBRARY_PROJECT_NAME, LEGACY_LIBRARY_PROJECT_NAME } from '@/lib/libraryConstants';
 import { Plus, Folder, ArrowRight, Trash2, Layers, Loader2, ShieldAlert, Zap, ChevronRight, Search, Filter, ArrowDownUp } from 'lucide-react';
 
 const CARD_GRADIENTS = [
@@ -115,6 +116,16 @@ export default function DashboardPage() {
       setDeletingId(null);
     }
   };
+
+  // The shipped pipeline library. Accounts created before the library was
+  // seeded under its current name may still have it as "Sample Project", so
+  // fall back to that rather than hiding Quick Access from them.
+  const libraryProject = React.useMemo(
+    () =>
+      projects.find((p) => p.name === LIBRARY_PROJECT_NAME) ||
+      projects.find((p) => p.name === LEGACY_LIBRARY_PROJECT_NAME),
+    [projects]
+  );
 
   const filteredAndSortedProjects = React.useMemo(() => {
     let result = [...projects];
@@ -337,14 +348,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Navigation for Library Project Pipelines */}
-        {!isLoading && projects.find(p => p.name === 'Library') && (
+        {!isLoading && (libraryProject?.pipelines?.length ?? 0) > 0 && (
           <div className="space-y-4 pt-4">
             <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-amber-500" />
               Quick Access: Library Pipelines
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-y-auto max-h-[368px] scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent pr-2">
-              {[...(projects.find(p => p.name === 'Library')?.pipelines || [])]
+              {[...(libraryProject?.pipelines || [])]
                 .sort((a, b) => {
                   const numA = parseInt(a.name.match(/^\d+/)?.[0] || '999', 10);
                   const numB = parseInt(b.name.match(/^\d+/)?.[0] || '999', 10);
