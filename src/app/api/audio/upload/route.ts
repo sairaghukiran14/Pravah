@@ -1,49 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import { rateLimit } from '@/middleware/rateLimit';
 import { uploadToR2 } from '@/lib/r2';
+import { route } from '@/lib/api/route';
+import { badRequest } from '@/lib/api/errors';
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const MAX_AUDIO_SIZE_MB = Number(process.env.SARVAM_MAX_AUDIO_SIZE_MB || 10);
+const ALLOWED_PREFIXES = ['audio/', 'video/'];
+
+export const POST = route({ cost: 5 }, async ({ req, userId }) => {
+  const formData = await req.formData();
+  const file = formData.get('file');
+
+  if (!file || typeof file !== 'object' || !('arrayBuffer' in file)) {
+    throw badRequest('No file provided');
   }
 
-  if (await rateLimit(req)) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  const blob = file as File;
+
+  if (blob.size > MAX_AUDIO_SIZE_MB * 1024 * 1024) {
+    throw badRequest(`File exceeds the ${MAX_AUDIO_SIZE_MB}MB limit`);
   }
 
-  try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const fileName = `audio_input_${session.user.id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-
-    const result = await uploadToR2({
-      fileBuffer: buffer,
-      fileName,
-      contentType: file.type || 'audio/wav',
-    });
-
-    return NextResponse.json({
-      success: true,
-      key: fileName,
-      url: `/api/audio/file?key=${fileName}`,
-      name: file.name,
-      size: buffer.length,
-      contentType: file.type,
-    });
-  } catch (error: any) {
-    console.error('Audio upload error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Audio upload failed' },
-      { status: 500 }
-    );
+  const contentType = blob.type || 'audio/wav';
+  if (!ALLOWED_PREFIXES.some((p) => contentType.startsWith(p))) {
+    throw badRequest('Only audio files can be uploaded');
   }
-}
+
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const safeName = blob.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100);
+  const fileName = `audio_input_${userId}_${Date.now()}_${safeName}`;
+
+  await uploadToR2({ fileBuffer: buffer, fileName, contentType });
+
+  return {
+    success: true,
+    key: fileName,
+    url: `/api/audio/file?key=${encodeURIComponent(fileName)}`,
+    name: blob.name,
+    size: buffer.length,
+    contentType,
+  };
+});

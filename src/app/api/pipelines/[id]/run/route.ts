@@ -1,332 +1,322 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { sortNodesTopologically, executeSingleNode } from '@/lib/execution';
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
-import { auth } from '@/auth';
+import { route } from '@/lib/api/route';
+import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
+import {
+  reserveCredits,
+  settleCredits,
+  releaseReservation,
+  countActiveRuns,
+  RUN_RESERVATION,
+  MAX_CONCURRENT_RUNS,
+} from '@/lib/api/credits';
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  const userId = session?.user?.id;
+type Params = { id: string };
 
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
+const nodeSchema = z.object({
+  id: z.string(),
+  type: z.string().optional(),
+  label: z.string().optional(),
+  positionX: z.coerce.number().optional(),
+  positionY: z.coerce.number().optional(),
+  position: z.object({ x: z.coerce.number(), y: z.coerce.number() }).partial().optional(),
+  config: z.record(z.string(), z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
+});
 
-  // Pre-execution insufficient credits check
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { credits: true }
-  });
+const edgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+  sourceHandle: z.string().nullable().optional(),
+  targetHandle: z.string().nullable().optional(),
+});
 
-  if (!user || user.credits <= 0) {
-    return new Response(
-      JSON.stringify({ error: 'Insufficient credits. Please top up your wallet.' }),
-      { status: 402, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+const bodySchema = z
+  .object({
+    inputs: z.record(z.string(), z.any()).optional(),
+    nodes: z.array(nodeSchema).max(500).optional(),
+    edges: z.array(edgeSchema).max(1000).optional(),
+  })
+  .default({});
 
-  const { id: pipelineId } = await params;
+const INITIAL_INPUT_TEXT = 'नमस्ते! भारत की कृत्रिम बुद्धिमत्ता सर्वम एआई।';
 
-  const initialInputText = 'नमस्ते! भारत की कृत्रिम बुद्धिमत्ता सर्वम एआई।';
-  const initialInputs: Record<string, any> = {};
-  
-  // Fetch pipeline structure
-  let pipelineData: { nodes: SerializedNode[]; edges: SerializedEdge[] } = {
-    nodes: [],
-    edges: [],
-  };
+export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
+  // cost 25: a single run can fan out into many paid Sarvam calls.
+  { cost: 25, body: bodySchema },
+  async ({ userId, params, body }) => {
+    const pipelineId = params.id;
 
-  try {
-    const body = await req.json();
-    if (body.inputs) {
-      Object.assign(initialInputs, body.inputs);
+    // Ownership is checked before any credit is held.
+    const owned = await prisma.pipeline.findFirst({
+      where: { id: pipelineId, project: { userId } },
+      select: { id: true },
+    });
+    if (!owned) throw forbidden('Pipeline not found or unauthorized');
+
+    if ((await countActiveRuns(userId)) >= MAX_CONCURRENT_RUNS) {
+      throw tooManyRequests(
+        `You already have ${MAX_CONCURRENT_RUNS} runs in progress. Wait for one to finish before starting another.`
+      );
     }
-    if (body.nodes && Array.isArray(body.nodes) && body.nodes.length > 0) {
-      pipelineData.nodes = body.nodes.map((n: any) => ({
+
+    // Hold credit up front. If this fails the user cannot afford the run and no
+    // paid API call is made.
+    const reserved = RUN_RESERVATION;
+    if (!(await reserveCredits(userId, reserved))) {
+      throw paymentRequired('Insufficient credits. Please top up your wallet.');
+    }
+
+    try {
+      const pipelineData = await resolvePipelineData(pipelineId, userId, body);
+
+      if (pipelineData.nodes.length === 0) {
+        await releaseReservation(userId, reserved);
+        throw badRequest('Pipeline contains no nodes to execute.');
+      }
+
+      return streamRun({ pipelineId, userId, reserved, pipelineData, inputs: body.inputs || {} });
+    } catch (error) {
+      // Any failure before the stream starts must return the held credit.
+      await releaseReservation(userId, reserved);
+      throw error;
+    }
+  }
+);
+
+async function resolvePipelineData(
+  pipelineId: string,
+  userId: string,
+  body: z.infer<typeof bodySchema>
+): Promise<{ nodes: SerializedNode[]; edges: SerializedEdge[] }> {
+  // Client-supplied graph (unsaved editor state) — ownership already verified.
+  if (body.nodes?.length) {
+    return {
+      nodes: body.nodes.map((n) => ({
         id: n.id,
-        type: n.type || n.data?.type,
-        label: n.label || n.data?.label || n.type,
-        positionX: n.positionX || n.position?.x || 0,
-        positionY: n.positionY || n.position?.y || 0,
-        config: n.config || n.data?.config || {},
-      }));
-    }
-    if (body.edges && Array.isArray(body.edges)) {
-      pipelineData.edges = body.edges.map((e: any) => ({
+        type: (n.type || (n.data?.type as string)) as any,
+        label: n.label || (n.data?.label as string) || n.type || '',
+        positionX: Number(n.positionX ?? n.position?.x ?? 0),
+        positionY: Number(n.positionY ?? n.position?.y ?? 0),
+        config: (n.config || n.data?.config || {}) as any,
+      })),
+      edges: (body.edges || []).map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
         sourceHandle: e.sourceHandle || null,
         targetHandle: e.targetHandle || null,
-      }));
-    }
-  } catch (e) {
-    // optional body
+      })),
+    };
   }
 
-  // Only fetch from DB if the client did NOT send live nodes
-  if (pipelineData.nodes.length === 0) {
-    try {
-      const dbPipeline = await prisma.pipeline.findFirst({
-        where: { 
-          id: pipelineId,
-          project: { userId }
-        },
-        include: { nodes: true, edges: true },
-      });
+  const dbPipeline = await prisma.pipeline.findFirst({
+    where: { id: pipelineId, project: { userId } },
+    include: { nodes: true, edges: true },
+  });
 
-      if (!dbPipeline) {
-        return new Response(JSON.stringify({ error: 'Pipeline not found or unauthorized' }), { status: 403 });
-      }
+  if (!dbPipeline) throw forbidden('Pipeline not found or unauthorized');
 
-      if (dbPipeline.nodes.length > 0) {
-        pipelineData = {
-          nodes: dbPipeline.nodes.map((n) => ({
-            id: n.id,
-            type: n.type as any,
-            label: n.label,
-            positionX: n.positionX,
-            positionY: n.positionY,
-            config: (n.config as any) || {},
-          })),
-          edges: dbPipeline.edges.map((e) => ({
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            sourceHandle: e.sourceHandle,
-            targetHandle: e.targetHandle,
-          })),
-        };
-      }
-    } catch (e) {
-      console.warn('Prisma run fetch error:', e);
-    }
-  } else {
-    // Verify pipeline ownership even when using client-provided nodes
-    try {
-      const dbPipeline = await prisma.pipeline.findFirst({
-        where: { id: pipelineId, project: { userId } },
-        select: { id: true },
-      });
-      if (!dbPipeline) {
-        return new Response(JSON.stringify({ error: 'Pipeline not found or unauthorized' }), { status: 403 });
-      }
-    } catch (e) {
-      console.warn('Prisma ownership check error:', e);
-    }
-  }
+  return {
+    nodes: dbPipeline.nodes.map((n) => ({
+      id: n.id,
+      type: n.type as any,
+      label: n.label,
+      positionX: n.positionX,
+      positionY: n.positionY,
+      config: (n.config as any) || {},
+    })),
+    edges: dbPipeline.edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    })),
+  };
+}
 
-  // Create real-time Server-Sent Events response stream
+function nodeCost(nodeType: string, inputText: string): number {
+  if (nodeType === 'stt') return 0.375; // baseline 30s of audio
+  if (nodeType === 'translate') return inputText.length * 0.003; // ₹3.00 / 1k chars
+  if (nodeType === 'tts') return inputText.length * 0.00225; // ₹2.25 / 1k chars
+  const free = ['audio_input', 'audio_output', 'text_input', 'text_output'];
+  return free.includes(nodeType) ? 0 : 0.5;
+}
+
+function streamRun({
+  pipelineId,
+  userId,
+  reserved,
+  pipelineData,
+  inputs,
+}: {
+  pipelineId: string;
+  userId: string;
+  reserved: number;
+  pipelineData: { nodes: SerializedNode[]; edges: SerializedEdge[] };
+  inputs: Record<string, any>;
+}): Response {
   const responseStream = new ReadableStream({
     async start(controller) {
       const sendEvent = (event: string, data: any) => {
-        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(new TextEncoder().encode(payload));
+        controller.enqueue(
+          new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        );
       };
 
-      const nodes = pipelineData.nodes;
-      const edges = pipelineData.edges;
+      const { nodes, edges } = pipelineData;
+      let runId = '';
+      let totalCost = 0;
 
-      if (nodes.length === 0) {
-        sendEvent('error', { message: 'Pipeline contains no nodes to execute.' });
-        controller.close();
-        return;
-      }
-
-      // Create Run Record in DB if available
-      let runId = `run_${Math.random().toString(36).substring(7)}`;
       try {
         const dbRun = await prisma.pipelineRun.create({
           data: {
             pipelineId,
             status: 'running',
-            input: { text: initialInputText },
+            input: { text: INITIAL_INPUT_TEXT },
             nodeRuns: {
-              create: nodes.map((n) => ({
-                nodeId: n.id,
-                nodeType: n.type,
-                status: 'pending',
-              })),
+              create: nodes.map((n) => ({ nodeId: n.id, nodeType: n.type, status: 'pending' })),
             },
           },
         });
         runId = dbRun.id;
-      } catch (e) {
-        console.warn('DB run creation skipped:', e);
-      }
 
-      sendEvent('run_started', {
-        runId,
-        pipelineId,
-        nodeCount: nodes.length,
-        initialInputText,
-      });
-
-      // Topological Sort to execute in exact DAG dependency order
-      const sortedNodes = sortNodesTopologically(nodes, edges);
-      const nodeOutputs: Record<string, any> = {};
-      let isPipelineFailed = false;
-      let totalCost = 0;
-      const skippedNodes = new Set<string>();
-
-      for (const node of sortedNodes) {
-        if (isPipelineFailed) {
-          sendEvent('node_skipped', { nodeId: node.id, reason: 'Upstream node failed' });
-          continue;
-        }
-
-        if (skippedNodes.has(node.id)) {
-          // Propagate skip downstream topologically
-          edges.filter((e) => e.source === node.id).forEach((e) => skippedNodes.add(e.target));
-          
-          try {
-            await prisma.nodeRun.updateMany({
-              where: { runId, nodeId: node.id },
-              data: {
-                status: 'failed',
-                error: 'Skipped by conditional router',
-                finishedAt: new Date(),
-              },
-            });
-          } catch (e) {}
-
-          sendEvent('node_skipped', { nodeId: node.id, reason: 'Skipped by conditional router' });
-          continue;
-        }
-
-        // Notify client node execution started
-        sendEvent('node_started', {
-          nodeId: node.id,
-          nodeType: node.type,
-          label: node.label,
+        sendEvent('run_started', {
+          runId,
+          pipelineId,
+          nodeCount: nodes.length,
+          initialInputText: INITIAL_INPUT_TEXT,
         });
 
-        // Update DB node run status to running
-        try {
-          await prisma.nodeRun.updateMany({
-            where: { runId, nodeId: node.id },
-            data: { status: 'running', startedAt: new Date() },
-          });
-        } catch (e) {}
+        const sortedNodes = sortNodesTopologically(nodes, edges);
+        const nodeOutputs: Record<string, any> = {};
+        const skippedNodes = new Set<string>();
+        let isPipelineFailed = false;
 
-        // Execute node step
-        const result = await executeSingleNode(node, edges, nodeOutputs, initialInputText, initialInputs);
-
-        if (result.status === 'completed') {
-          nodeOutputs[node.id] = result.output;
-
-          // If this is a conditional router, add inactive branch targets to skippedNodes
-          if (node.type === 'router' && result.output && result.output.activeHandle) {
-            const activeHandle = result.output.activeHandle;
-            edges
-              .filter((e) => e.source === node.id)
-              .forEach((e) => {
-                if (e.sourceHandle !== activeHandle) {
-                  skippedNodes.add(e.target);
-                }
-              });
+        for (const node of sortedNodes) {
+          if (isPipelineFailed) {
+            sendEvent('node_skipped', { nodeId: node.id, reason: 'Upstream node failed' });
+            continue;
           }
 
-          // Calculate node execution cost
-          let nodeCost = 0;
-          if (node.type === 'stt') {
-            nodeCost = 0.375; // Baseline ₹0.375 (30s)
-          } else if (node.type === 'translate') {
-            const charCount = (result.input?.text || '').length;
-            nodeCost = charCount * 0.003; // ₹3.00 per 1,000 characters
-          } else if (node.type === 'tts') {
-            const charCount = (result.input?.text || '').length;
-            nodeCost = charCount * 0.00225; // ₹2.25 per 1,000 characters
-          } else if (node.type !== 'audio_input' && node.type !== 'audio_output' && node.type !== 'text_input' && node.type !== 'text_output') {
-            nodeCost = 0.50; // flat rate for other AI processing nodes
+          if (skippedNodes.has(node.id)) {
+            edges.filter((e) => e.source === node.id).forEach((e) => skippedNodes.add(e.target));
+            await prisma.nodeRun
+              .updateMany({
+                where: { runId, nodeId: node.id },
+                data: {
+                  status: 'failed',
+                  error: 'Skipped by conditional router',
+                  finishedAt: new Date(),
+                },
+              })
+              .catch(() => {});
+            sendEvent('node_skipped', { nodeId: node.id, reason: 'Skipped by conditional router' });
+            continue;
           }
-          totalCost += nodeCost;
 
-          // Update DB node run
-          try {
-            await prisma.nodeRun.updateMany({
+          sendEvent('node_started', { nodeId: node.id, nodeType: node.type, label: node.label });
+
+          await prisma.nodeRun
+            .updateMany({
               where: { runId, nodeId: node.id },
-              data: {
-                status: 'completed',
-                input: result.input,
-                output: result.output,
-                finishedAt: new Date(),
-              },
+              data: { status: 'running', startedAt: new Date() },
+            })
+            .catch(() => {});
+
+          const result = await executeSingleNode(
+            node,
+            edges,
+            nodeOutputs,
+            INITIAL_INPUT_TEXT,
+            inputs
+          );
+
+          if (result.status === 'completed') {
+            nodeOutputs[node.id] = result.output;
+
+            if (node.type === 'router' && result.output?.activeHandle) {
+              edges
+                .filter((e) => e.source === node.id)
+                .forEach((e) => {
+                  if (e.sourceHandle !== result.output.activeHandle) skippedNodes.add(e.target);
+                });
+            }
+
+            totalCost += nodeCost(node.type, result.input?.text || '');
+
+            await prisma.nodeRun
+              .updateMany({
+                where: { runId, nodeId: node.id },
+                data: {
+                  status: 'completed',
+                  input: result.input,
+                  output: result.output,
+                  finishedAt: new Date(),
+                },
+              })
+              .catch(() => {});
+
+            sendEvent('node_completed', {
+              nodeId: node.id,
+              nodeType: node.type,
+              output: result.output,
+              durationMs: result.durationMs,
             });
-          } catch (e) {}
-
-          sendEvent('node_completed', {
-            nodeId: node.id,
-            nodeType: node.type,
-            output: result.output,
-            durationMs: result.durationMs,
-          });
-        } else {
-          isPipelineFailed = true;
-
-          try {
-            await prisma.nodeRun.updateMany({
-              where: { runId, nodeId: node.id },
-              data: {
-                status: 'failed',
-                input: result.input || {},
-                error: result.error,
-                finishedAt: new Date(),
-              },
-            });
-          } catch (e) {}
-
-          sendEvent('node_failed', {
-            nodeId: node.id,
-            error: result.error,
-          });
+          } else {
+            isPipelineFailed = true;
+            await prisma.nodeRun
+              .updateMany({
+                where: { runId, nodeId: node.id },
+                data: {
+                  status: 'failed',
+                  input: result.input || {},
+                  error: result.error,
+                  finishedAt: new Date(),
+                },
+              })
+              .catch(() => {});
+            sendEvent('node_failed', { nodeId: node.id, error: result.error });
+          }
         }
-      }
 
-      // Finalize Run record and deduct wallet balance
-      const finalStatus = isPipelineFailed ? 'failed' : 'completed';
-      try {
-        await prisma.$transaction(async (tx) => {
-          // Deduct credits if cost accumulated
-          if (totalCost > 0) {
-            await tx.user.update({
-              where: { id: userId },
-              data: {
-                credits: { decrement: totalCost }
-              }
-            });
+        const finalStatus = isPipelineFailed ? 'failed' : 'completed';
 
-            // Log Transaction
-            await tx.creditTransaction.create({
-              data: {
-                userId,
-                amount: -totalCost,
-                type: 'deduction',
-                description: `Pipeline run execution cost (Run ID: ${runId.substring(0, 8)})`
-              }
-            });
-          }
-
-          // Update Run status
-          await tx.pipelineRun.update({
+        await prisma.pipelineRun
+          .update({
             where: { id: runId },
             data: { status: finalStatus, finishedAt: new Date() },
+          })
+          .catch((e) => console.warn('Run status update failed:', e));
+
+        sendEvent('run_completed', { runId, status: finalStatus, outputs: nodeOutputs });
+      } catch (error: any) {
+        console.error('[run] Execution failed:', error);
+        sendEvent('error', { message: 'Pipeline execution failed.' });
+        if (runId) {
+          await prisma.pipelineRun
+            .update({ where: { id: runId }, data: { status: 'failed', finishedAt: new Date() } })
+            .catch(() => {});
+        }
+      } finally {
+        // Always settle: refund the unused portion of the reservation, or take
+        // the excess if the run cost more than was held.
+        try {
+          await settleCredits({
+            userId,
+            reserved,
+            actualCost: Math.min(totalCost, reserved),
+            runId: runId || 'unknown',
           });
-        });
-      } catch (e) {
-        console.warn('DB run finalization failed:', e);
+        } catch (e) {
+          console.error('[run] Credit settlement failed:', e);
+        }
+        controller.close();
       }
-
-      sendEvent('run_completed', {
-        runId,
-        status: finalStatus,
-        outputs: nodeOutputs,
-      });
-
-      controller.close();
     },
   });
 

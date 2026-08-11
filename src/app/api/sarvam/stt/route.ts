@@ -1,43 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { executeSarvamSTT } from '@/lib/sarvam';
-import { auth } from '@/auth';
-import { rateLimit } from '@/middleware/rateLimit';
+import { route } from '@/lib/api/route';
+import { badRequest } from '@/lib/api/errors';
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+const MAX_AUDIO_SIZE_MB = Number(process.env.SARVAM_MAX_AUDIO_SIZE_MB || 10);
 
-  if (await rateLimit(req)) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
+// multipart/form-data, so the body is read here rather than via a Zod schema.
+export const POST = route({ cost: 10 }, async ({ req }) => {
+  const formData = await req.formData();
+  const fileItem = formData.get('file');
+  let filePayload: string | undefined;
 
-  try {
-    const formData = await req.formData();
-    const fileItem = formData.get('file');
-    let filePayload: string | undefined = undefined;
-
-    if (fileItem && typeof fileItem === 'object' && 'arrayBuffer' in fileItem) {
-      const arrayBuf = await (fileItem as Blob).arrayBuffer();
-      const base64 = Buffer.from(arrayBuf).toString('base64');
-      filePayload = `data:${(fileItem as Blob).type || 'audio/wav'};base64,${base64}`;
-    } else if (typeof fileItem === 'string') {
-      filePayload = fileItem;
+  if (fileItem && typeof fileItem === 'object' && 'arrayBuffer' in fileItem) {
+    const blob = fileItem as Blob;
+    if (blob.size > MAX_AUDIO_SIZE_MB * 1024 * 1024) {
+      throw badRequest(`Audio file exceeds the ${MAX_AUDIO_SIZE_MB}MB limit`);
     }
-
-    const result = await executeSarvamSTT({
-      text_input: (formData.get('text_input') as string) || undefined,
-      language_code: (formData.get('language_code') as string) || undefined,
-      model: (formData.get('model') as string) || undefined,
-      mode: (formData.get('mode') as string) || undefined,
-      file: filePayload,
-    });
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'STT Execution Failed' },
-      { status: 500 }
-    );
+    const arrayBuf = await blob.arrayBuffer();
+    filePayload = `data:${blob.type || 'audio/wav'};base64,${Buffer.from(arrayBuf).toString('base64')}`;
+  } else if (typeof fileItem === 'string') {
+    filePayload = fileItem;
   }
-}
+
+  return executeSarvamSTT({
+    text_input: (formData.get('text_input') as string) || undefined,
+    language_code: (formData.get('language_code') as string) || undefined,
+    model: (formData.get('model') as string) || undefined,
+    mode: (formData.get('mode') as string) || undefined,
+    file: filePayload,
+  });
+});

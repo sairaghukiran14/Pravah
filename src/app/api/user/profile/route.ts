@@ -1,75 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { auth } from '@/auth';
+import { route } from '@/lib/api/route';
+import { notFound } from '@/lib/api/errors';
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export const GET = route({}, async ({ userId }) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      credits: true,
+      createdAt: true,
+      _count: { select: { projects: true } },
+    },
+  });
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        credits: true,
-        createdAt: true,
-        _count: {
-          select: {
-            projects: true,
-          },
-        },
-      },
-    });
+  if (!user) throw notFound('User not found');
+  return user;
+});
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+const updateSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+});
 
-    return NextResponse.json(user);
-  } catch (error: any) {
-    console.error('Error fetching user profile:', error);
-    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
-  }
-}
-
-export async function PUT(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const { name } = await req.json();
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-    }
-
-    if (name.trim().length > 100) {
-      return NextResponse.json({ error: 'Name must be 100 characters or less' }, { status: 400 });
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
-      data: { name: name.trim() },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        credits: true,
-        createdAt: true,
-      },
-    });
-
-    return NextResponse.json(updatedUser);
-  } catch (error: any) {
-    console.error('Error updating user profile:', error);
-    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
-  }
-}
+export const PUT = route({ body: updateSchema }, async ({ userId, body }) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { name: body.name },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      credits: true,
+      createdAt: true,
+    },
+  });
+});

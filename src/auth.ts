@@ -43,10 +43,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   events: {
     async createUser({ user }) {
-      if (user.id) {
-        const { seedSampleProject } = await import('@/lib/seedSampleProject');
-        await seedSampleProject(user.id);
+      if (!user.id) return;
+
+      // Record the joining credit as a ledger entry. The balance itself comes
+      // from the schema default, which means without this the wallet starts at
+      // a non-zero value that no CreditTransaction accounts for — the ledger
+      // and the balance would not reconcile.
+      const signupGrant = Number(process.env.SIGNUP_CREDIT_GRANT ?? 20);
+      if (signupGrant > 0) {
+        try {
+          await prisma.$transaction([
+            prisma.user.update({
+              where: { id: user.id },
+              data: { credits: signupGrant },
+            }),
+            prisma.creditTransaction.create({
+              data: {
+                userId: user.id,
+                amount: signupGrant,
+                type: 'signup_bonus',
+                description: 'Welcome credit on account creation',
+              },
+            }),
+          ]);
+        } catch (e) {
+          console.error('[auth] Failed to record signup credit grant:', e);
+        }
       }
+
+      const { seedSampleProject } = await import('@/lib/seedSampleProject');
+      await seedSampleProject(user.id);
     }
   },
   pages: {

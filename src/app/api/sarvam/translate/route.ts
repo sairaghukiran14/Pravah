@@ -1,26 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { executeSarvamTranslate } from '@/lib/sarvam';
-import { auth } from '@/auth';
-import { rateLimit } from '@/middleware/rateLimit';
+import { route } from '@/lib/api/route';
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+const MAX_TEXT_LENGTH = Number(process.env.SARVAM_MAX_TEXT_LENGTH || 5000);
 
-  if (await rateLimit(req)) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
+const bodySchema = z.object({
+  input: z.string().max(MAX_TEXT_LENGTH).optional(),
+  input_text: z.string().max(MAX_TEXT_LENGTH).optional(),
+  source_language_code: z.string().max(16).optional(),
+  target_language_code: z.string().max(16).optional(),
+  mode: z.string().max(32).optional(),
+});
 
-  try {
-    const body = await req.json();
-    const result = await executeSarvamTranslate(body);
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Translation Execution Failed' },
-      { status: 500 }
-    );
-  }
-}
+export const POST = route({ cost: 5, body: bodySchema }, async ({ body }) => {
+  return executeSarvamTranslate({
+    input: body.input ?? body.input_text ?? '',
+    source_language_code: body.source_language_code ?? 'auto',
+    target_language_code: body.target_language_code ?? 'hi-IN',
+    mode: body.mode,
+  });
+});

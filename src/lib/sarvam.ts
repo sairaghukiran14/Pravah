@@ -7,6 +7,7 @@ import {
   SarvamTTSResponse,
 } from '@/types/sarvam';
 import { downloadFromR2, R2_BUCKET_NAME } from './r2';
+import { safeFetch } from './api/safeFetch';
 
 const SARVAM_BASE_URL = 'https://api.sarvam.ai';
 
@@ -103,6 +104,7 @@ function createValidWavBuffer(seconds = 1): Buffer {
 export async function executeSarvamSTT(
   payload: SarvamSTTRequest
 ): Promise<SarvamSTTResponse> {
+  validateSarvamLimits('stt', payload);
   const apiKey = getApiKey();
 
   // If mock key or missing key, return realistic simulated response
@@ -174,8 +176,11 @@ export async function executeSarvamSTT(
             else if (detectedMime.includes('ogg')) detectedExt = 'ogg';
             else detectedExt = 'wav';
           } else {
-            const audioFetch = await fetch(payload.file);
-            const contentType = audioFetch.headers.get('content-type');
+            // Arbitrary user-supplied URL — must go through the egress guard.
+            const audioFetch = await safeFetch(payload.file, {
+              maxBytes: MAX_AUDIO_SIZE_MB * 1024 * 1024,
+            });
+            const contentType = audioFetch.contentType;
             if (contentType) {
               detectedMime = contentType;
               if (contentType.includes('webm')) detectedExt = 'webm';
@@ -187,8 +192,7 @@ export async function executeSarvamSTT(
               detectedMime = parsed.mime;
               detectedExt = parsed.ext;
             }
-            const arrayBuf = await audioFetch.arrayBuffer();
-            audioBuffer = Buffer.from(arrayBuf);
+            audioBuffer = audioFetch.body;
           }
         } catch (e) {
           console.warn('Failed to fetch audio from URL, fallback to silent buffer', e);
@@ -240,10 +244,81 @@ export async function executeSarvamSTT(
 /**
  * Text Translation via Sarvam AI API (/translate)
  */
+function splitTextIntoChunks(text: string, maxLength: number = 900): string[] {
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  // Split by common delimiters like sentence endings, newlines, etc.
+  const sentences = text.match(/[^.!?।\n]+[.!?।\n]*/g) || [text];
+  
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > maxLength) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = sentence;
+    } else {
+      currentChunk += sentence;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  // Fallback if a single sentence is longer than maxLength
+  const finalChunks: string[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length > maxLength) {
+      let temp = chunk;
+      while (temp.length > maxLength) {
+        finalChunks.push(temp.substring(0, maxLength));
+        temp = temp.substring(maxLength);
+      }
+      if (temp) {
+        finalChunks.push(temp);
+      }
+    } else {
+      finalChunks.push(chunk);
+    }
+  }
+  
+  return finalChunks;
+}
+
 export async function executeSarvamTranslate(
   payload: SarvamTranslateRequest
 ): Promise<SarvamTranslateResponse> {
+  validateSarvamLimits('translate', payload);
   const apiKey = getApiKey();
+  const rawInput = payload.input || (payload as any).input_text || '';
+
+  if (!rawInput.trim()) {
+    return {
+      request_id: 'empty',
+      translated_text: '',
+      source_language_code: payload.source_language_code,
+      target_language_code: payload.target_language_code,
+    };
+  }
+
+  // If text exceeds 1000 characters, partition it and translate chunks in parallel
+  if (rawInput.length > 1000) {
+    const chunks = splitTextIntoChunks(rawInput, 900);
+    const translationPromises = chunks.map(chunk =>
+      executeSarvamTranslate({
+        ...payload,
+        input: chunk,
+      })
+    );
+    const results = await Promise.all(translationPromises);
+    return {
+      request_id: results[0]?.request_id || 'batch',
+      translated_text: results.map(r => r.translated_text).join(' '),
+      source_language_code: payload.source_language_code,
+      target_language_code: payload.target_language_code,
+    };
+  }
 
   if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
     await new Promise((res) => setTimeout(res, 1000));
@@ -276,7 +351,7 @@ export async function executeSarvamTranslate(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        input: payload.input || (payload as any).input_text || '',
+        input: rawInput,
         source_language_code: payload.source_language_code || 'auto',
         target_language_code: payload.target_language_code,
         mode: payload.mode || 'formal',
@@ -301,7 +376,30 @@ export async function executeSarvamTranslate(
 export async function executeSarvamTTS(
   payload: SarvamTTSRequest
 ): Promise<SarvamTTSResponse> {
+  validateSarvamLimits('tts', payload);
   const apiKey = getApiKey();
+  const rawText = payload.text || '';
+
+  // If text exceeds 500 characters, partition it and run TTS on chunks in parallel
+  if (rawText.length > 500) {
+    const chunks = splitTextIntoChunks(rawText, 450);
+    const ttsPromises = chunks.map(chunk =>
+      executeSarvamTTS({
+        ...payload,
+        text: chunk,
+      })
+    );
+    const results = await Promise.all(ttsPromises);
+    const allAudios: string[] = [];
+    for (const r of results) {
+      allAudios.push(...r.audios);
+    }
+    return {
+      request_id: results[0]?.request_id || 'batch_tts',
+      audios: allAudios,
+      format: 'wav',
+    };
+  }
 
   if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
     await new Promise((res) => setTimeout(res, 1400));
@@ -320,7 +418,7 @@ export async function executeSarvamTTS(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: [payload.text],
+        inputs: [rawText],
         target_language_code: payload.target_language_code || 'hi-IN',
         speaker: payload.speaker || 'aditya',
         pace: payload.pace || 0.95, // Tune default speed slightly slower for human-like flow
@@ -454,9 +552,10 @@ export async function executeSarvamVision(payload: SarvamVisionRequest): Promise
         fileBuffer = downloadRes.buffer;
         detectedMime = downloadRes.contentType;
       } else {
-        const fileFetch = await fetch(payload.file);
-        detectedMime = fileFetch.headers.get('content-type') || 'image/png';
-        fileBuffer = Buffer.from(await fileFetch.arrayBuffer());
+        // Arbitrary user-supplied URL — must go through the egress guard.
+        const fileFetch = await safeFetch(payload.file);
+        detectedMime = fileFetch.contentType || 'image/png';
+        fileBuffer = fileFetch.body;
       }
     } catch (err: any) {
       console.error('Failed to download visual document from URL:', err);

@@ -1,30 +1,22 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { route } from '@/lib/api/route';
 
-export async function POST(req: Request) {
-  try {
-    const session = await auth();
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const bodySchema = z.object({
+  role: z.string().max(120).optional(),
+  useCases: z.array(z.string().max(120)).max(20).optional(),
+  languages: z.array(z.string().max(32)).max(30).optional(),
+  scale: z.string().max(60).optional(),
+});
 
-    const { role, useCases, languages, scale } = await req.json();
+export const POST = route({ body: bodySchema }, async ({ userId }) => {
+  // Note: the survey answers above are accepted but not persisted — there are
+  // no columns for them on User. Only the completion flag is stored.
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { onboardingCompleted: true },
+    select: { id: true, onboardingCompleted: true },
+  });
 
-    // Update user in DB
-    const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        onboardingCompleted: true,
-      },
-    });
-
-    return NextResponse.json({ success: true, user: updatedUser });
-  } catch (error) {
-    console.error('Error saving onboarding data:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
-  }
-}
+  return { success: true, user };
+});

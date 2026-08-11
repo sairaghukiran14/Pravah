@@ -1,33 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import { rateLimit } from '@/middleware/rateLimit';
+import { z } from 'zod';
 import { downloadFromR2 } from '@/lib/r2';
+import { route } from '@/lib/api/route';
+import { notFound } from '@/lib/api/errors';
 
-export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+const querySchema = z.object({
+  key: z.string().min(1, 'Missing key parameter'),
+});
 
-  if (await rateLimit(req)) {
-    return new Response('Too many requests', { status: 429 });
-  }
+export const GET = route({ cost: 2, query: querySchema }, async ({ query }) => {
+  let key = query.key;
 
-  const { searchParams } = new URL(req.url);
-  let key = searchParams.get('key');
-
-  if (!key) {
-    return new Response('Missing key parameter', { status: 400 });
-  }
-
-  // Self-heal: If key is a full URL, extract the filename key
+  // Self-heal: accept a full URL and reduce it to the object key.
   if (key.startsWith('http://') || key.startsWith('https://')) {
     const bucketMarker = key.includes('/pravah-assets/') ? '/pravah-assets/' : '/pravah-storage/';
-    if (key.includes(bucketMarker)) {
-      key = key.substring(key.indexOf(bucketMarker) + bucketMarker.length);
-    } else {
-      key = key.substring(key.lastIndexOf('/') + 1);
-    }
+    key = key.includes(bucketMarker)
+      ? key.substring(key.indexOf(bucketMarker) + bucketMarker.length)
+      : key.substring(key.lastIndexOf('/') + 1);
   }
 
   try {
@@ -38,11 +26,13 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': contentType || 'audio/wav',
         'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        // Private: these objects are user content served behind auth, so they
+        // must not be retained by shared caches.
+        'Cache-Control': 'private, max-age=31536000, immutable',
       },
     });
   } catch (error: any) {
     console.error('Error fetching file from R2:', error);
-    return new Response(error.message || 'File not found', { status: 404 });
+    throw notFound('File not found');
   }
-}
+});

@@ -164,7 +164,10 @@ model PaymentOrder {
   amount            Float
   currency          String   @default("INR")
   status            String
-  razorpayPaymentId String?
+  // Unique: the database refuses to record the same Razorpay payment against
+  // two orders, so a replayed payment cannot be credited twice even if the
+  // application logic is wrong.
+  razorpayPaymentId String?  @unique
   razorpaySignature String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

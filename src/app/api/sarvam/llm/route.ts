@@ -1,32 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { executeSarvamLLM } from '@/lib/sarvam';
-import { auth } from '@/auth';
-import { rateLimit } from '@/middleware/rateLimit';
+import { route } from '@/lib/api/route';
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+const MAX_TEXT_LENGTH = Number(process.env.SARVAM_MAX_TEXT_LENGTH || 5000);
 
-  if (await rateLimit(req)) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
+const bodySchema = z.object({
+  prompt: z.string().max(MAX_TEXT_LENGTH).optional(),
+  system_prompt: z.string().max(MAX_TEXT_LENGTH).optional(),
+  input: z.string().max(MAX_TEXT_LENGTH).optional(),
+  text: z.string().max(MAX_TEXT_LENGTH).optional(),
+  model: z.string().max(64).optional(),
+  temperature: z.coerce.number().min(0).max(2).optional(),
+});
 
-  try {
-    const body = await req.json();
-    const result = await executeSarvamLLM({
-      prompt: body.prompt,
-      system_prompt: body.system_prompt,
-      input: body.input || body.text,
-      model: body.model || 'sarvam-105b',
-      temperature: body.temperature,
-    });
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Sarvam LLM Execution Failed' },
-      { status: 500 }
-    );
-  }
-}
+export const POST = route({ cost: 10, body: bodySchema }, async ({ body }) => {
+  return executeSarvamLLM({
+    prompt: body.prompt,
+    system_prompt: body.system_prompt,
+    input: body.input || body.text,
+    model: body.model || 'sarvam-105b',
+    temperature: body.temperature,
+  });
+});
