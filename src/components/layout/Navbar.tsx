@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FolderGit2, LogOut, User, Wallet } from 'lucide-react';
+import { FolderGit2, LogOut, User, Wallet, HelpCircle } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
 export const Navbar: React.FC = () => {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -48,16 +50,6 @@ export const Navbar: React.FC = () => {
               pravah
             </span>
           </Link>
-
-          <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-gray-500">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-            >
-              <FolderGit2 className="h-4 w-4" />
-              <span>Projects</span>
-            </Link>
-          </nav>
         </div>
 
         {/* Profile Section (No Sign In button on dashboard header) */}
@@ -68,7 +60,33 @@ export const Navbar: React.FC = () => {
               <div className="h-3 w-20 bg-gray-200 rounded" />
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Navigation segmented control on the right */}
+              <nav className="flex items-center gap-1 bg-gray-50/80 border border-gray-200/60 p-0.5 rounded-xl text-xs font-semibold mr-1">
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg border transition-all duration-200 ease-in-out ${
+                    pathname === '/dashboard' || pathname.startsWith('/dashboard/') || pathname.startsWith('/pipeline/') || pathname.startsWith('/project/')
+                      ? 'bg-white text-gray-900 shadow-2xs border-gray-200/50'
+                      : 'text-gray-500 hover:text-gray-950 border-transparent'
+                  }`}
+                >
+                  <FolderGit2 className={`h-3.5 w-3.5 transition-colors duration-200 ${pathname === '/dashboard' || pathname.startsWith('/dashboard/') || pathname.startsWith('/pipeline/') || pathname.startsWith('/project/') ? 'text-blue-500' : 'text-gray-400'}`} />
+                  <span className="hidden sm:inline">Projects</span>
+                </Link>
+                <Link
+                  href="/nodes"
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg border transition-all duration-200 ease-in-out ${
+                    pathname === '/nodes'
+                      ? 'bg-white text-gray-900 shadow-2xs border-gray-200/50'
+                      : 'text-gray-500 hover:text-gray-950 border-transparent'
+                  }`}
+                >
+                  <HelpCircle className={`h-3.5 w-3.5 transition-colors duration-200 ${pathname === '/nodes' ? 'text-blue-500' : 'text-gray-400'}`} />
+                  <span className="hidden sm:inline">Node Guide</span>
+                </Link>
+              </nav>
+
               {/* Credit Wallet Badge */}
               {credits !== null && (
                 <Link

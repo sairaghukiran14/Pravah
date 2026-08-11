@@ -88,12 +88,18 @@ export const GenericNode: React.FC<NodeProps> = ({ id, data }) => {
     );
   };
 
+  const nodeType = String(data.type || '');
+  const isInput = nodeType.endsWith('_input');
+  const isOutput = nodeType.endsWith('_output');
+
   return (
     <BaseNode 
       id={id} 
       typeLabel={String(data.label) || 'Node'} 
       icon={meta.icon} 
       iconBgClass={meta.bg}
+      showInputHandle={!isInput}
+      showOutputHandle={!isOutput}
     >
       {renderConfig()}
     </BaseNode>

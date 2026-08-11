@@ -342,10 +342,10 @@ export default function ProfilePage() {
             </div>
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs text-gray-600 hover:text-gray-900 transition-colors cursor-pointer font-normal"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs text-gray-600 hover:text-gray-900 transition-colors cursor-pointer font-normal whitespace-nowrap shrink-0"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Dashboard
+              <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+              <span>Back to Dashboard</span>
             </button>
           </div>
 
@@ -542,7 +542,7 @@ export default function ProfilePage() {
                             key={amt}
                             onClick={() => handleTopup(amt)}
                             disabled={isTopupLoading !== null}
-                            className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl border border-gray-200 hover:border-gray-900 bg-white text-xs text-gray-700 hover:text-gray-900 hover:bg-gray-50/50 transition-all font-normal disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                            className="flex items-center justify-center gap-1 py-2 px-1 sm:px-2 rounded-xl border border-gray-200 hover:border-gray-900 bg-white text-xs text-gray-700 hover:text-gray-900 hover:bg-gray-50/50 transition-all font-normal disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap"
                           >
                             {loading ? (
                               <Loader2 className="h-3 w-3 animate-spin text-gray-900" />

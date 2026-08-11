@@ -161,6 +161,23 @@ const FlowEditorContent: React.FC = () => {
           onCancel={() => setEdgeToDeleteId(null)}
         />
       )}
+
+      {hoveredNode && NODE_DESCRIPTIONS[hoveredNode.type as NodeType] && (
+        <div 
+          className="fixed z-50 pointer-events-none px-3 py-2 bg-slate-900/95 backdrop-blur-[2px] text-white rounded-lg text-[11px] shadow-lg flex flex-col gap-0.5 max-w-xs transition-all duration-75 ease-out border border-slate-800"
+          style={{
+            left: hoveredNode.x + 15,
+            top: hoveredNode.y + 15,
+          }}
+        >
+          <span className="font-semibold text-slate-100">
+            {NODE_DESCRIPTIONS[hoveredNode.type as NodeType].title}
+          </span>
+          <span className="text-slate-300 leading-normal">
+            {NODE_DESCRIPTIONS[hoveredNode.type as NodeType].desc}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

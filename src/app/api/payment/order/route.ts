@@ -1,104 +1,66 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { z } from 'zod';
 import Razorpay from 'razorpay';
 import prisma from '@/lib/prisma';
+import { route } from '@/lib/api/route';
+import { ApiError } from '@/lib/api/errors';
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 100_000);
 
-    const { amount } = await req.json();
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json({ error: 'Invalid top-up amount' }, { status: 400 });
-    }
+const bodySchema = z.object({
+  amount: z
+    .number()
+    .positive('Enter a top-up amount greater than zero')
+    .max(MAX_TOPUP, `Top-up amount cannot exceed ${MAX_TOPUP}`),
+});
 
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }) => {
+  const { amount } = body;
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-    // Developer experience: Fallback to mock order if key is not configured
-    if (!keyId || !keySecret || keyId === 'mock_key_id') {
-      const mockOrder = {
-        id: `order_mock_${Math.random().toString(36).substring(7)}`,
-        amount: amount * 100,
-        currency: 'INR',
-        receipt: `receipt_${Date.now()}`,
-        status: 'created',
-        notes: { mock: true, userId: session.user.id, amount }
-      };
-
-      // Save mock order to DB
-      await prisma.paymentOrder.create({
-        data: {
-          id: mockOrder.id,
-          userId: session.user.id,
-          amount: amount,
-          currency: 'INR',
-          status: 'created',
-        }
-      });
-
-      return NextResponse.json({ success: true, isMock: true, order: mockOrder, keyId: 'mock_key_id' });
-    }
-
-    console.log(`[Razorpay] Creating order: ₹${amount}, key prefix: ${keyId.substring(0, 12)}...`);
-
-    const razorpay = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
-
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // amount in paise
+  // Development convenience: without configured keys, create a mock order so the
+  // checkout flow can be exercised locally.
+  if (!keyId || !keySecret || keyId === 'mock_key_id') {
+    const mockOrder = {
+      id: `order_mock_${Math.random().toString(36).substring(7)}`,
+      amount: Math.round(amount * 100),
       currency: 'INR',
-      receipt: `receipt_topup_${session.user.id.substring(0, 8)}_${Date.now()}`,
-      notes: {
-        userId: session.user.id,
-        amount: String(amount),
-      },
-    });
+      receipt: `receipt_${Date.now()}`,
+      status: 'created',
+      notes: { mock: true, userId, amount },
+    };
 
-    // Save real Razorpay order to DB
     await prisma.paymentOrder.create({
-      data: {
-        id: order.id,
-        userId: session.user.id,
-        amount: amount,
-        currency: 'INR',
-        status: 'created',
-      }
+      data: { id: mockOrder.id, userId, amount, currency: 'INR', status: 'created' },
     });
 
-    return NextResponse.json({ success: true, isMock: false, order, keyId });
-  } catch (error: any) {
-    // Razorpay SDK wraps errors with statusCode and error fields
-    const razorpayError = error?.error || error;
-    const statusCode = razorpayError?.statusCode || error?.statusCode || 500;
-    const description =
-      razorpayError?.description ||
-      razorpayError?.message ||
-      error?.message ||
-      'Failed to create payment order';
-
-    console.error('[Razorpay] Order creation failed:', {
-      statusCode,
-      description,
-      code: razorpayError?.code,
-      reason: razorpayError?.reason,
-      source: razorpayError?.source,
-      field: razorpayError?.field,
-      raw: JSON.stringify(error).substring(0, 500),
-    });
-
-    return NextResponse.json(
-      {
-        error: description,
-        code: razorpayError?.code,
-        reason: razorpayError?.reason,
-      },
-      { status: typeof statusCode === 'number' ? statusCode : 500 }
-    );
+    return { success: true, isMock: true, order: mockOrder, keyId: 'mock_key_id' };
   }
-}
+
+  const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+  let order;
+  try {
+    order = await razorpay.orders.create({
+      amount: Math.round(amount * 100), // paise
+      currency: 'INR',
+      receipt: `receipt_topup_${userId.substring(0, 8)}_${Date.now()}`,
+      notes: { userId, amount: String(amount) },
+    });
+  } catch (error: any) {
+    const rzp = error?.error || error;
+    console.error('[Razorpay] Order creation failed:', {
+      statusCode: rzp?.statusCode ?? error?.statusCode,
+      description: rzp?.description,
+      code: rzp?.code,
+    });
+    throw new ApiError(502, 'Could not start the payment. Please try again.');
+  }
+
+  // The stored amount is what /api/payment/verify credits — never a client value.
+  await prisma.paymentOrder.create({
+    data: { id: order.id, userId, amount, currency: 'INR', status: 'created' },
+  });
+
+  return { success: true, isMock: false, order, keyId };
+});

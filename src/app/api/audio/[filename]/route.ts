@@ -1,50 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getR2PresignedUrl } from '@/lib/r2';
+import { route } from '@/lib/api/route';
+import { badRequest, notFound } from '@/lib/api/errors';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ filename: string }> }
-) {
-  try {
-    const { filename } = await params;
-    
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
+type Params = { filename: string };
+
+const CONTENT_TYPES: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  ogg: 'audio/ogg',
+  webm: 'audio/webm',
+  flac: 'audio/flac',
+  mp4: 'audio/mp4',
+  m4a: 'audio/mp4',
+  wav: 'audio/wav',
+};
+
+export const GET = route<undefined, undefined, Params>(
+  { cost: 2 },
+  async ({ params }) => {
+    const { filename } = params;
+    if (!filename) throw badRequest('Filename is required');
+
+    // Keep the key confined to a single object name — no traversal into other
+    // prefixes of the bucket.
+    if (filename.includes('/') || filename.includes('..')) {
+      throw badRequest('Invalid filename');
     }
 
-    // Generate a presigned URL valid for 1 hour (3600 seconds)
     const presignedUrl = await getR2PresignedUrl(filename, 3600);
-
-    // Fetch the audio from R2 and proxy it to avoid CORS issues in WaveSurfer
     const audioResponse = await fetch(presignedUrl);
-    
+
     if (!audioResponse.ok) {
-      throw new Error(`R2 fetch failed: ${audioResponse.statusText}`);
+      throw notFound('Audio file not found');
     }
 
-    // Determine content type based on extension to avoid browser MediaErrors
-    const ext = filename.split('.').pop()?.toLowerCase();
-    let contentType = 'audio/wav'; // default
-    if (ext === 'mp3') contentType = 'audio/mpeg';
-    else if (ext === 'ogg') contentType = 'audio/ogg';
-    else if (ext === 'webm') contentType = 'audio/webm';
-    else if (ext === 'flac') contentType = 'audio/flac';
-    else if (ext === 'mp4' || ext === 'm4a') contentType = 'audio/mp4';
+    const ext = filename.split('.').pop()?.toLowerCase() || 'wav';
 
-    // Stream the audio back to the client
-    return new NextResponse(audioResponse.body, {
+    return new Response(audioResponse.body, {
       status: audioResponse.status,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': CONTENT_TYPES[ext] || 'audio/wav',
         'Content-Length': audioResponse.headers.get('Content-Length') || '',
         'Accept-Ranges': 'bytes',
+        'Cache-Control': 'private, max-age=3600',
       },
     });
-  } catch (error: any) {
-    console.error('Error serving audio proxy:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate audio URL' },
-      { status: 500 }
-    );
   }
-}
+);

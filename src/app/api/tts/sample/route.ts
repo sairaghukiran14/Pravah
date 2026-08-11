@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { executeSarvamTTS } from '@/lib/sarvam';
-import { auth } from '@/auth';
+import { route } from '@/lib/api/route';
+import { ApiError } from '@/lib/api/errors';
 
 const sampleTexts: Record<string, string> = {
   'hi-IN': 'नमस्ते, यह मेरी आवाज़ का एक छोटा सा नमूना है।',
@@ -16,32 +17,28 @@ const sampleTexts: Record<string, string> = {
   'od-IN': 'ନମସ୍କାର, ଏହା ମୋର ସ୍ୱରର ଏକ ଛୋଟ ନମୁନା |',
 };
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const bodySchema = z.object({
+  speaker: z.string().max(64).optional(),
+  target_language_code: z.string().max(16).optional(),
+});
+
+// cost 10: this calls the paid Sarvam TTS API on every request, so it is
+// throttled like the other synthesis endpoints rather than left open.
+export const POST = route({ cost: 10, body: bodySchema }, async ({ body }) => {
+  const lang = body.target_language_code || 'hi-IN';
+  const text = sampleTexts[lang] || sampleTexts['en-IN'];
+
+  const response = await executeSarvamTTS({
+    text,
+    target_language_code: lang,
+    speaker: body.speaker || 'aditya',
+    pace: 1.0,
+    model: 'bulbul:v3',
+  });
+
+  if (!response.audios?.length) {
+    throw new ApiError(502, 'Voice sample could not be generated. Please try again.');
   }
 
-  try {
-    const { speaker, target_language_code } = await req.json();
-    const lang = target_language_code || 'hi-IN';
-    const text = sampleTexts[lang] || sampleTexts['en-IN'];
-
-    const response = await executeSarvamTTS({
-      text,
-      target_language_code: lang,
-      speaker: speaker || 'aditya',
-      pace: 1.0,
-      model: 'bulbul:v3',
-    });
-
-    if (response.audios && response.audios.length > 0) {
-      return NextResponse.json({ audioBase64: response.audios[0] });
-    } else {
-      throw new Error('No audio returned from Sarvam API');
-    }
-  } catch (err: any) {
-    console.error('TTS Sample generation error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+  return { audioBase64: response.audios[0] };
+});

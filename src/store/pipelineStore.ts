@@ -174,6 +174,10 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   onConnect: (connection) => {
+    const filteredEdges = get().edges.filter(
+      (edge) => !(edge.target === connection.target && edge.targetHandle === connection.targetHandle)
+    );
+
     set({
       edges: addEdge(
         {
@@ -182,7 +186,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
           animated: true,
           style: { stroke: '#6366f1', strokeWidth: 2 },
         },
-        get().edges
+        filteredEdges
       ),
       isDirty: true,
     });

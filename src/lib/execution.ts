@@ -1,5 +1,6 @@
 import { SerializedEdge, SerializedNode } from '@/types/pipeline';
 import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate, executeSarvamLLM, executeSarvamVision } from './sarvam';
+import { safeFetch } from './api/safeFetch';
 
 /**
  * Utility function to replace dynamic variables formatted as {{expression}}
@@ -666,8 +667,10 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
             variables: initialInputs.variables || {}
           });
         }
-        const res = await fetch(resolvedUrl, fetchOptions);
-        responseText = await res.text();
+        // Guarded: the URL is fully user-controlled, so it must not be able to
+        // reach loopback/private/link-local addresses on the deployment network.
+        const res = await safeFetch(resolvedUrl, fetchOptions);
+        responseText = res.body.toString('utf8');
       } catch (err: any) {
         responseText = `Webhook Dispatch Failed: ${err.message}`;
       }

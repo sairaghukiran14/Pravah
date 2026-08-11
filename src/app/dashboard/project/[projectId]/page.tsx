@@ -31,6 +31,8 @@ export default function ProjectDetailsPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name-asc');
   const [filterBy, setFilterBy] = useState('all');
+  const [libraryPipelines, setLibraryPipelines] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const fetchProjectDetails = async () => {
     setIsLoading(true);
@@ -52,6 +54,24 @@ export default function ProjectDetailsPage({
     fetchProjectDetails();
   }, [projectId]);
 
+  useEffect(() => {
+    async function fetchTemplates() {
+      try {
+        const res = await fetch('/api/projects');
+        if (res.ok) {
+          const allProjects = await res.json();
+          const libraryProj = allProjects.find((p: any) => p.name === 'Library');
+          if (libraryProj) {
+            setLibraryPipelines(libraryProj.pipelines || []);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching library templates:', err);
+      }
+    }
+    fetchTemplates();
+  }, []);
+
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPipeName.trim() || isCreating) return;
@@ -65,6 +85,7 @@ export default function ProjectDetailsPage({
           name: newPipeName,
           description: newPipeDesc,
           projectId,
+          cloneFromId: selectedTemplateId || undefined,
         }),
       });
 
@@ -370,6 +391,36 @@ export default function ProjectDetailsPage({
               disabled={isCreating}
             />
           </div>
+
+          {libraryPipelines.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Start from Template (Optional)
+              </label>
+              <select
+                className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none disabled:opacity-50"
+                value={selectedTemplateId}
+                onChange={(e) => {
+                  setSelectedTemplateId(e.target.value);
+                  const template = libraryPipelines.find(p => p.id === e.target.value);
+                  if (template) {
+                    if (!newPipeName || newPipeName.startsWith('Clone of ') || newPipeName === '') {
+                      setNewPipeName(`Clone of ${template.name}`);
+                    }
+                    setNewPipeDesc(template.description || '');
+                  }
+                }}
+                disabled={isCreating}
+              >
+                <option value="">Start with an Empty Canvas</option>
+                {libraryPipelines.map((pipe) => (
+                  <option key={pipe.id} value={pipe.id}>
+                    {pipe.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"

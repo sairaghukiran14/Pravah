@@ -12,9 +12,19 @@ interface BaseNodeProps {
   icon: React.ReactNode;
   iconBgClass: string;
   children: React.ReactNode;
+  showInputHandle?: boolean;
+  showOutputHandle?: boolean;
 }
 
-export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgClass, children }) => {
+export const BaseNode: React.FC<BaseNodeProps> = ({ 
+  id, 
+  typeLabel, 
+  icon, 
+  iconBgClass, 
+  children,
+  showInputHandle = true,
+  showOutputHandle = true,
+}) => {
   const selectedNodeId = usePipelineStore((s) => s.selectedNodeId);
   const selectNode = usePipelineStore((s) => s.selectNode);
   const status: RunStatus = usePipelineStore((s) => s.nodeStatuses[id] || 'pending');
@@ -44,10 +54,14 @@ export const BaseNode: React.FC<BaseNodeProps> = ({ id, typeLabel, icon, iconBgC
           : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
       } ${statusAnimationClass}`}
     >
-      <Handle type="target" position={Position.Left} id="input"
-        className="!w-3 !h-3 !bg-gray-900 !border-2 !border-white hover:!scale-125 transition-transform" />
-      <Handle type="source" position={Position.Right} id="output"
-        className="!w-3 !h-3 !bg-gray-900 !border-2 !border-white hover:!scale-125 transition-transform" />
+      {showInputHandle && (
+        <Handle type="target" position={Position.Left} id="input"
+          className="!w-3 !h-3 !bg-gray-900 !border-2 !border-white hover:!scale-125 transition-transform" />
+      )}
+      {showOutputHandle && (
+        <Handle type="source" position={Position.Right} id="output"
+          className="!w-3 !h-3 !bg-gray-900 !border-2 !border-white hover:!scale-125 transition-transform" />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-gray-100">
