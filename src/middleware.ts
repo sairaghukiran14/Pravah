@@ -13,7 +13,9 @@ export function middleware(request: NextRequest) {
 
   const isOnProtected =
     nextUrl.pathname.startsWith('/dashboard') ||
-    nextUrl.pathname.startsWith('/pipeline');
+    nextUrl.pathname.startsWith('/pipeline') ||
+    nextUrl.pathname.startsWith('/profile') ||
+    nextUrl.pathname.startsWith('/onboarding');
 
   if (isOnProtected && !hasSessionToken) {
     const loginUrl = new URL('/login', request.url);
@@ -25,5 +27,13 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/pipeline/:path*'],
+  // Signed-in-only pages. These render as empty shells without a session (the
+  // APIs behind them return 401 either way), but they should send the visitor
+  // to the login screen rather than a blank page.
+  matcher: [
+    '/dashboard/:path*',
+    '/pipeline/:path*',
+    '/profile/:path*',
+    '/onboarding/:path*',
+  ],
 };

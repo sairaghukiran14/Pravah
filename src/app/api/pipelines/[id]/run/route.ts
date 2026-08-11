@@ -139,10 +139,37 @@ async function resolvePipelineData(
   };
 }
 
-function nodeCost(nodeType: string, inputText: string): number {
+/**
+ * The text a node actually processed, used to meter per-character pricing.
+ *
+ * executeSingleNode records `{ text }` for entry nodes but `{ payload }` when
+ * the input came from an upstream node — and payload may be a string or the
+ * previous node's output object. Reading only `.text` silently yielded an empty
+ * string for any node with an incoming edge, which is the normal case, so
+ * translate and TTS were billed as zero.
+ */
+function billableText(input: any): string {
+  if (!input) return '';
+  if (typeof input.text === 'string') return input.text;
+
+  const payload = input.payload;
+  if (typeof payload === 'string') return payload;
+  if (payload && typeof payload === 'object') {
+    return (
+      payload.translated_text ||
+      payload.transcript ||
+      payload.response ||
+      payload.text ||
+      ''
+    );
+  }
+  return '';
+}
+
+function nodeCost(nodeType: string, input: any): number {
   if (nodeType === 'stt') return 0.375; // baseline 30s of audio
-  if (nodeType === 'translate') return inputText.length * 0.003; // ₹3.00 / 1k chars
-  if (nodeType === 'tts') return inputText.length * 0.00225; // ₹2.25 / 1k chars
+  if (nodeType === 'translate') return billableText(input).length * 0.003; // ₹3.00 / 1k chars
+  if (nodeType === 'tts') return billableText(input).length * 0.00225; // ₹2.25 / 1k chars
   const free = ['audio_input', 'audio_output', 'text_input', 'text_output'];
   return free.includes(nodeType) ? 0 : 0.5;
 }
@@ -247,7 +274,7 @@ function streamRun({
                 });
             }
 
-            totalCost += nodeCost(node.type, result.input?.text || '');
+            totalCost += nodeCost(node.type, result.input);
 
             await prisma.nodeRun
               .updateMany({

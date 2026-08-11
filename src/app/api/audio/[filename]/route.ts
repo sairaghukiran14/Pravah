@@ -1,6 +1,7 @@
 import { getR2PresignedUrl } from '@/lib/r2';
 import { route } from '@/lib/api/route';
 import { badRequest, notFound } from '@/lib/api/errors';
+import { assertObjectAccess } from '@/lib/api/objectAccess';
 
 type Params = { filename: string };
 
@@ -16,7 +17,7 @@ const CONTENT_TYPES: Record<string, string> = {
 
 export const GET = route<undefined, undefined, Params>(
   { cost: 2 },
-  async ({ params }) => {
+  async ({ params, userId }) => {
     const { filename } = params;
     if (!filename) throw badRequest('Filename is required');
 
@@ -25,6 +26,9 @@ export const GET = route<undefined, undefined, Params>(
     if (filename.includes('/') || filename.includes('..')) {
       throw badRequest('Invalid filename');
     }
+
+    // Being signed in is not enough — the object must belong to this user.
+    await assertObjectAccess(filename, userId);
 
     const presignedUrl = await getR2PresignedUrl(filename, 3600);
     const audioResponse = await fetch(presignedUrl);
@@ -41,7 +45,7 @@ export const GET = route<undefined, undefined, Params>(
         'Content-Type': CONTENT_TYPES[ext] || 'audio/wav',
         'Content-Length': audioResponse.headers.get('Content-Length') || '',
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'private, max-age=3600',
+        'Cache-Control': 'private, max-age=300, must-revalidate',
       },
     });
   }
