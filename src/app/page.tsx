@@ -636,7 +636,7 @@ export default function LandingPage() {
               Pay-As-You-Go with ₹20 Free Credits
             </h2>
             <p className="text-sm sm:text-base text-slate-600">
-              No monthly lock-ins or recurring subscription fees. Sign up, get ₹20 free credits instantly, and top up starting at just ₹20.
+              No monthly lock-ins or recurring subscription fees. Sign up, get ₹20 free credits instantly, and top up starting at just ₹50.
             </p>
           </div>
 

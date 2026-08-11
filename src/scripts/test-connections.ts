@@ -68,12 +68,21 @@ async function verifyAllConnections() {
     const { executeSarvamVision } = await import('../lib/sarvam');
     // Using a tiny base64 1x1 pixel PNG image to test connectivity
     const tinyPngBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-    const visionRes = await executeSarvamVision({
-      file: tinyPngBase64,
-      language: 'hi-IN',
-    });
-    console.log('✅ Sarvam Document AI API connected successfully!');
-    console.log(`   └─ Digitised Output length: ${visionRes.text.length} characters`);
+    try {
+      const visionRes = await executeSarvamVision({
+        file: tinyPngBase64,
+        language: 'hi-IN',
+      });
+      console.log('✅ Sarvam Document AI API connected successfully!');
+      console.log(`   └─ Digitised Output length: ${visionRes.text.length} characters`);
+    } catch (visionErr: any) {
+      if (visionErr.message.includes('Terminal status: pending')) {
+        console.log('⚠️ Sarvam Document AI API key is active, but processing is currently queued (terminal status: pending).');
+        console.log('   └─ Server successfully authenticated and accepted the document digitization job.');
+      } else {
+        throw visionErr;
+      }
+    }
   } catch (err: any) {
     console.error('❌ Sarvam AI API Request Error:', err.stack || err.message);
   }

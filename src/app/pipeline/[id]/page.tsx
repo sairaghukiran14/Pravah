@@ -362,7 +362,7 @@ export default function PipelineEditorPage({
               value={pipelineName}
               onChange={(e) => setPipelineName(e.target.value)}
               disabled={isSaving || isRunning}
-              className="bg-transparent font-semibold text-xs sm:text-sm text-gray-900 focus:outline-none focus:bg-gray-50 px-1 sm:px-2 py-1 rounded transition-colors disabled:opacity-50 max-w-[80px] sm:max-w-[150px] md:max-w-none"
+              className="bg-transparent font-semibold text-xs sm:text-sm text-gray-900 focus:outline-none focus:bg-gray-50 px-1 sm:px-2 py-1 rounded transition-colors disabled:opacity-50 max-w-[120px] xs:max-w-[180px] sm:max-w-[280px] md:max-w-[380px] lg:max-w-[500px]"
             />
             {isDirty && (
               <span className="text-[9px] sm:text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 sm:px-2 py-0.5 rounded-full font-medium shrink-0">
