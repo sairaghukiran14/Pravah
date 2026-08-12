@@ -98,6 +98,43 @@ export function splitTextIntoSentenceChunks(text: string, maxLen: number = 400):
 }
 
 
+/**
+ * Splits a document into overlapping chunks for retrieval.
+ *
+ * Chunk boundaries follow sentences rather than raw character offsets. Slicing
+ * on offsets cut words in half, and in Indic scripts it can cut between a base
+ * character and its combining mark, leaving a broken grapheme at both edges of
+ * the seam. The overlap is carried over from the end of the previous chunk and
+ * re-aligned to a word boundary for the same reason.
+ */
+export function chunkDocument(
+  text: string,
+  chunkSize: number,
+  chunkOverlap: number
+): string[] {
+  if (!text.trim()) return [];
+
+  const size = Math.max(1, Math.floor(chunkSize));
+  // The overlap has to leave forward progress. The editor's sliders allow an
+  // overlap larger than the chunk size, which produced a negative step and
+  // silently truncated the document to a single chunk.
+  const overlap = Math.min(Math.max(0, Math.floor(chunkOverlap)), size - 1);
+
+  const base = splitTextIntoSentenceChunks(text, size);
+  if (overlap === 0 || base.length <= 1) return base;
+
+  return base.map((chunk, i) => {
+    if (i === 0) return chunk;
+    const prev = base[i - 1];
+    const rawTail = prev.slice(Math.max(0, prev.length - overlap));
+    // Start the carried-over text at a word boundary so the tail never begins
+    // mid-word — and so it cannot begin inside a grapheme cluster.
+    const boundary = rawTail.search(/\s/);
+    const tail = boundary >= 0 ? rawTail.slice(boundary + 1) : rawTail;
+    return tail ? `${tail.trim()} ${chunk}`.trim() : chunk;
+  });
+}
+
 export interface NodeExecutionResult {
   nodeId: string;
   nodeType: string;
@@ -563,17 +600,18 @@ Return ONLY a valid JSON object matching the following structure:
       };
     } else if (node.type === 'pdf_splitter') {
       const text = upstreamInputText || '';
-      const chunkSize = Number(node.config?.chunk_size || 500);
-      const chunkOverlap = Number(node.config?.chunk_overlap || 50);
-      
-      const chunks: string[] = [];
-      let i = 0;
-      while (i < text.length) {
-        const chunk = text.substring(i, i + chunkSize);
-        chunks.push(chunk);
-        i += (chunkSize - chunkOverlap);
-        if (chunkSize <= chunkOverlap) break;
+      const chunks = chunkDocument(
+        text,
+        Number(node.config?.chunk_size || 500),
+        Number(node.config?.chunk_overlap || 50)
+      );
+
+      if (chunks.length === 0) {
+        throw new Error(
+          'Document Chunker received no text. Connect a Vision / Document AI node upstream to digitise the file before chunking.'
+        );
       }
+
       output = {
         chunks,
         response: `Text successfully divided into ${chunks.length} chunks.`,
@@ -584,7 +622,10 @@ Return ONLY a valid JSON object matching the following structure:
       const query = replaceVariables(rawQuery, nodeOutputs, initialInputs).trim().toLowerCase();
       
       let searchPool: string[] = [];
-      if (dynamicInputPayload && Array.isArray(dynamicInputPayload.chunks)) {
+      // An upstream chunker that produced nothing must fall through to the
+      // configured context rather than searching an empty pool and reporting
+      // "no matching contexts" for every query.
+      if (dynamicInputPayload && Array.isArray(dynamicInputPayload.chunks) && dynamicInputPayload.chunks.length > 0) {
         searchPool = dynamicInputPayload.chunks;
       } else {
         const rawFallback = node.config?.fallback_context || '';
