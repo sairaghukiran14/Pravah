@@ -8,7 +8,15 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { X, Trash2, Mic, Languages, Volume2, Play, Square, Upload } from 'lucide-react';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
-const INDIC_LANGUAGES = [
+/**
+ * Language coverage differs by model, so these are two lists rather than one.
+ *
+ * Speech-to-text (Saaras v3), translation and Document AI cover the full
+ * 23-language set; speech synthesis (Bulbul v3) and the Sarvam-105B text models
+ * cover 11. Offering the wider list everywhere would let someone pick Assamese
+ * for a voice node and only discover it is unsupported when the run fails.
+ */
+const SPEECH_TEXT_LANGUAGES = [
   { label: 'Hindi (hi-IN)', value: 'hi-IN' },
   { label: 'English (en-IN)', value: 'en-IN' },
   { label: 'Telugu (te-IN)', value: 'te-IN' },
@@ -20,9 +28,24 @@ const INDIC_LANGUAGES = [
   { label: 'Gujarati (gu-IN)', value: 'gu-IN' },
   { label: 'Punjabi (pa-IN)', value: 'pa-IN' },
   { label: 'Odia (od-IN)', value: 'od-IN' },
+  { label: 'Assamese (as-IN)', value: 'as-IN' },
+  { label: 'Urdu (ur-IN)', value: 'ur-IN' },
+  { label: 'Nepali (ne-IN)', value: 'ne-IN' },
+  { label: 'Konkani (kok-IN)', value: 'kok-IN' },
+  { label: 'Kashmiri (ks-IN)', value: 'ks-IN' },
+  { label: 'Sindhi (sd-IN)', value: 'sd-IN' },
+  { label: 'Sanskrit (sa-IN)', value: 'sa-IN' },
+  { label: 'Santali (sat-IN)', value: 'sat-IN' },
+  { label: 'Manipuri (mni-IN)', value: 'mni-IN' },
+  { label: 'Bodo (brx-IN)', value: 'brx-IN' },
+  { label: 'Maithili (mai-IN)', value: 'mai-IN' },
+  { label: 'Dogri (doi-IN)', value: 'doi-IN' },
 ];
 
-const SOURCE_LANGUAGES = [{ label: 'Auto Detect', value: 'auto' }, ...INDIC_LANGUAGES];
+/** Bulbul v3 and the Sarvam-105B text models. */
+const VOICE_LANGUAGES = SPEECH_TEXT_LANGUAGES.slice(0, 11);
+
+const SOURCE_LANGUAGES = [{ label: 'Auto Detect', value: 'auto' }, ...SPEECH_TEXT_LANGUAGES];
 
 const SPEAKER_VOICES = [
   { label: 'Aditya', value: 'aditya' },
@@ -185,7 +208,7 @@ export const ConfigPanel: React.FC = () => {
               {/* STT */}
               {nodeType === 'stt' && (
                 <>
-                  <Select label="Audio Language" value={config.language_code || 'hi-IN'} onChange={(val) => handleChange('language_code', val)} options={INDIC_LANGUAGES} />
+                  <Select label="Audio Language" value={config.language_code || 'hi-IN'} onChange={(val) => handleChange('language_code', val)} options={SPEECH_TEXT_LANGUAGES} />
                   <Select label="Model" value={config.model || 'saaras:v3'} onChange={(val) => handleChange('model', val)} options={[{ label: 'Saaras v3 (Recommended)', value: 'saaras:v3' }, { label: 'Saaras v2.5 (Legacy)', value: 'saaras:v2.5' }]} />
                   <Select label="Mode" value={config.mode || 'transcribe'} onChange={(val) => handleChange('mode', val)} options={[{ label: 'Transcribe', value: 'transcribe' }, { label: 'Translate to English', value: 'translate' }, { label: 'Verbatim', value: 'verbatim' }, { label: 'Transliterate', value: 'translit' }, { label: 'Code-Mixed', value: 'codemix' }]} />
                 </>
@@ -195,7 +218,7 @@ export const ConfigPanel: React.FC = () => {
               {nodeType === 'translate' && (
                 <>
                   <Select label="Source Language" value={config.source_language_code || 'auto'} onChange={(val) => handleChange('source_language_code', val)} options={SOURCE_LANGUAGES} />
-                  <Select label="Target Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={INDIC_LANGUAGES} />
+                  <Select label="Target Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={SPEECH_TEXT_LANGUAGES} />
                   <Select label="Translation Mode" value={config.mode || 'formal'} onChange={(val) => handleChange('mode', val)} options={[{ label: 'Formal', value: 'formal' }, { label: 'Classic Colloquial', value: 'classic-colloquial' }, { label: 'Modern Colloquial', value: 'modern-colloquial' }]} />
                 </>
               )}
@@ -203,7 +226,7 @@ export const ConfigPanel: React.FC = () => {
               {/* TTS */}
               {nodeType === 'tts' && (
                 <>
-                  <Select label="Target Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={INDIC_LANGUAGES} />
+                  <Select label="Target Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={VOICE_LANGUAGES} />
                   <div>
                     <Select label="Speaker Voice" value={config.speaker || 'aditya'} onChange={(val) => handleChange('speaker', val)} options={SPEAKER_VOICES} />
                     <button
@@ -231,7 +254,7 @@ export const ConfigPanel: React.FC = () => {
                 <>
                   <Select label="Speaker A Voice" value={config.speaker_a || 'aditya'} onChange={(val) => handleChange('speaker_a', val)} options={SPEAKER_VOICES} />
                   <Select label="Speaker B Voice" value={config.speaker_b || 'ritu'} onChange={(val) => handleChange('speaker_b', val)} options={SPEAKER_VOICES} />
-                  <Select label="Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={INDIC_LANGUAGES} />
+                  <Select label="Language" value={config.target_language_code || 'hi-IN'} onChange={(val) => handleChange('target_language_code', val)} options={VOICE_LANGUAGES} />
                   
                   <Select 
                     label="Conversation Style" 
@@ -303,16 +326,35 @@ export const ConfigPanel: React.FC = () => {
                       { label: 'Text Equals', value: 'equals' },
                       { label: 'Text Starts With', value: 'starts_with' },
                       { label: 'Sentiment Equals', value: 'sentiment' },
-                      { label: 'Category Equals', value: 'classification' }
-                    ]} 
+                      { label: 'Category Equals', value: 'classification' },
+                      { label: 'Number Greater Than', value: 'gt' },
+                      { label: 'Number Greater Than or Equal', value: 'gte' },
+                      { label: 'Number Less Than', value: 'lt' },
+                      { label: 'Number Less Than or Equal', value: 'lte' }
+                    ]}
                   />
+                  {['gt', 'gte', 'lt', 'lte'].includes(config.condition_type) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
+                      <input
+                        type="text"
+                        value={config.condition_field || ''}
+                        onChange={(e) => handleChange('condition_field', e.target.value)}
+                        placeholder="confidence"
+                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition Value</label>
-                    <input 
-                      type="text" 
-                      value={config.condition_value || ''} 
-                      onChange={(e) => handleChange('condition_value', e.target.value)} 
-                      placeholder="e.g. billing, POSITIVE, etc." 
+                    <input
+                      type="text"
+                      value={config.condition_value || ''}
+                      onChange={(e) => handleChange('condition_value', e.target.value)}
+                      placeholder="e.g. billing, POSITIVE, 0.8"
                       className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
                     />
                   </div>

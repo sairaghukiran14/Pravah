@@ -93,12 +93,23 @@ describe('settleCredits', () => {
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('claims the hold before refunding it', async () => {
+  it('claims the hold before refunding it, scoped to the owner', async () => {
     await settleCredits({ userId: 'u1', reserved: 10, actualCost: 4, runId: 'run_1' });
     expect(db.pipelineRun.updateMany).toHaveBeenCalledWith({
-      where: { id: 'run_1', reservedCredits: { not: null } },
+      where: {
+        id: 'run_1',
+        reservedCredits: { not: null },
+        pipeline: { project: { userId: 'u1' } },
+      },
       data: { reservedCredits: null },
     });
+  });
+
+  // Ownership belongs in the query, not in the discipline of the caller.
+  it('does not release a hold belonging to another account', async () => {
+    db.pipelineRun.updateMany.mockResolvedValue({ count: 0 }); // owner predicate matched nothing
+    await settleCredits({ userId: 'attacker', reserved: 10, actualCost: 0, runId: 'victim_run' });
+    expect(db.user.update).not.toHaveBeenCalled();
   });
 
   // Settlement and the reaper can both reach the same run. Only one may refund.

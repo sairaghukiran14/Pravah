@@ -128,6 +128,19 @@ const getDefaultLabel = (type: NodeType) => {
   }
 };
 
+/**
+ * Whether a canvas change alters something we actually store.
+ *
+ * React Flow emits `dimensions` changes while it measures nodes on mount, and
+ * `select` changes as the user clicks around. Neither is persisted — only
+ * position, structure and config are — so treating every change as an edit
+ * marked a pipeline "Unsaved" the instant it opened, before the user had
+ * touched anything, which teaches people to ignore the indicator entirely.
+ */
+export function isPersistedChange(change: { type?: string }): boolean {
+  return change.type !== 'dimensions' && change.type !== 'select';
+}
+
 export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   nodes: [],
   edges: [],
@@ -162,14 +175,14 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   onNodesChange: (changes) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
-      isDirty: true,
+      isDirty: get().isDirty || changes.some(isPersistedChange),
     });
   },
 
   onEdgesChange: (changes) => {
     set({
       edges: applyEdgeChanges(changes, get().edges),
-      isDirty: true,
+      isDirty: get().isDirty || changes.some(isPersistedChange),
     });
   },
 

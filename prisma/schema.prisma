@@ -81,6 +81,11 @@ model Pipeline {
   projectId   String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  // Shape of this pipeline when it was seeded from the shipped library, if it
+  // was. If the pipeline still hashes to this, the user has not edited it and a
+  // corrected template may safely replace it. Null for user-created pipelines,
+  // which are never touched by seeding.
+  seedFingerprint String?
   project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   edges       PipelineEdge[]
   nodes       PipelineNode[]

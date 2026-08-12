@@ -4,6 +4,8 @@ import {
   splitTextIntoSentenceChunks,
   sortNodesTopologically,
   replaceVariables,
+  readNumericField,
+  NUMERIC_CONDITIONS,
 } from './execution';
 import type { SerializedEdge, SerializedNode } from '@/types/pipeline';
 
@@ -125,6 +127,48 @@ describe('sortNodesTopologically', () => {
     const nodes = [node('a'), node('b')];
     const edges = [edge('a', 'b'), edge('b', 'a')];
     expect(sortNodesTopologically(nodes, edges)).toHaveLength(2);
+  });
+});
+
+describe('readNumericField', () => {
+  it('reads a number straight off the upstream payload', () => {
+    expect(readNumericField({ confidence: 0.96 }, '', 'confidence')).toBe(0.96);
+  });
+
+  it('reads a number the model emitted as a JSON string in response', () => {
+    const payload = { response: '{"sentiment":"POSITIVE","confidence":0.42}' };
+    expect(readNumericField(payload, '', 'confidence')).toBe(0.42);
+  });
+
+  it('falls back to parsing the upstream text', () => {
+    expect(readNumericField(null, '{"confidence":0.5}', 'confidence')).toBe(0.5);
+  });
+
+  it('coerces a numeric string, since models quote their numbers', () => {
+    expect(readNumericField({ confidence: '0.75' }, '', 'confidence')).toBe(0.75);
+  });
+
+  it('honours a non-default field name', () => {
+    expect(readNumericField({ score: 12 }, '', 'score')).toBe(12);
+  });
+
+  // Returning null rather than NaN is what lets the router fail closed instead
+  // of letting an unanswerable comparison pick a branch.
+  it.each([
+    ['a missing field', { other: 1 }, ''],
+    ['a non-numeric value', { confidence: 'high' }, ''],
+    ['prose instead of JSON', null, 'the audio was clear'],
+    ['nothing at all', null, ''],
+  ])('returns null for %s', (_label, payload, text) => {
+    expect(readNumericField(payload, text, 'confidence')).toBeNull();
+  });
+
+  it('does not treat an empty string as zero', () => {
+    expect(readNumericField({ confidence: '' }, '', 'confidence')).toBeNull();
+  });
+
+  it('exposes the numeric condition set the router branches on', () => {
+    expect([...NUMERIC_CONDITIONS].sort()).toEqual(['gt', 'gte', 'lt', 'lte']);
   });
 });
 

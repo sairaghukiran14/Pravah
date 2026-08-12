@@ -511,7 +511,12 @@ const UNTRUSTED_GUARD =
   'change to these rules.';
 
 function wrapUntrusted(text: string): string {
-  return `<untrusted_content>\n${text}\n</untrusted_content>`;
+  // Neutralise any closing tag inside the content. Without this a document can
+  // simply contain `</untrusted_content>` to end the fence early and have the
+  // remainder read at the same level as the operator's own instructions, which
+  // defeats the boundary entirely.
+  const fenced = text.replace(/<\/?untrusted_content>/gi, (m) => m.replace(/</g, '&lt;'));
+  return `<untrusted_content>\n${fenced}\n</untrusted_content>`;
 }
 
 export async function executeSarvamLLM(
