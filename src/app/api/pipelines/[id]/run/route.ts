@@ -4,6 +4,7 @@ import { sortNodesTopologically, executeSingleNode } from '@/lib/execution';
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
 import { nodeCost } from '@/lib/api/pricing';
+import { parseNodeConfig, type NodeConfigIssue } from '@/lib/api/nodeConfig';
 import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
 import {
   reserveCredits,
@@ -108,15 +109,33 @@ async function resolvePipelineData(
 ): Promise<{ nodes: SerializedNode[]; edges: SerializedEdge[] }> {
   // Client-supplied graph (unsaved editor state) — ownership already verified.
   if (body.nodes?.length) {
-    return {
-      nodes: body.nodes.map((n) => ({
+    // Config is validated per node type here rather than in the body schema,
+    // because the type is only known after resolving it from `type` or `data`.
+    const issues: NodeConfigIssue[] = [];
+    const nodes = body.nodes.map((n) => {
+      const type = (n.type || (n.data?.type as string) || '') as string;
+      const parsed = parseNodeConfig(n.id, type, n.config || n.data?.config || {});
+      if (!parsed.ok) issues.push(...parsed.issues);
+
+      return {
         id: n.id,
-        type: (n.type || (n.data?.type as string)) as any,
+        type: type as any,
         label: n.label || (n.data?.label as string) || n.type || '',
         positionX: Number(n.positionX ?? n.position?.x ?? 0),
         positionY: Number(n.positionY ?? n.position?.y ?? 0),
-        config: (n.config || n.data?.config || {}) as any,
-      })),
+        config: (parsed.ok ? parsed.config : {}) as any,
+      };
+    });
+
+    if (issues.length > 0) {
+      throw badRequest(
+        `Invalid configuration on ${issues.length} node field(s).`,
+        issues.map((i) => ({ node: i.nodeId, type: i.nodeType, field: i.path, message: i.message }))
+      );
+    }
+
+    return {
+      nodes,
       edges: (body.edges || []).map((e) => ({
         id: e.id,
         source: e.source,

@@ -326,16 +326,35 @@ export const ConfigPanel: React.FC = () => {
                       { label: 'Text Equals', value: 'equals' },
                       { label: 'Text Starts With', value: 'starts_with' },
                       { label: 'Sentiment Equals', value: 'sentiment' },
-                      { label: 'Category Equals', value: 'classification' }
-                    ]} 
+                      { label: 'Category Equals', value: 'classification' },
+                      { label: 'Number Greater Than', value: 'gt' },
+                      { label: 'Number Greater Than or Equal', value: 'gte' },
+                      { label: 'Number Less Than', value: 'lt' },
+                      { label: 'Number Less Than or Equal', value: 'lte' }
+                    ]}
                   />
+                  {['gt', 'gte', 'lt', 'lte'].includes(config.condition_type) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
+                      <input
+                        type="text"
+                        value={config.condition_field || ''}
+                        onChange={(e) => handleChange('condition_field', e.target.value)}
+                        placeholder="confidence"
+                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition Value</label>
-                    <input 
-                      type="text" 
-                      value={config.condition_value || ''} 
-                      onChange={(e) => handleChange('condition_value', e.target.value)} 
-                      placeholder="e.g. billing, POSITIVE, etc." 
+                    <input
+                      type="text"
+                      value={config.condition_value || ''}
+                      onChange={(e) => handleChange('condition_value', e.target.value)}
+                      placeholder="e.g. billing, POSITIVE, 0.8"
                       className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
                     />
                   </div>

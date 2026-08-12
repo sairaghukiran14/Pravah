@@ -6,6 +6,11 @@ import {
   LEGACY_LIBRARY_PROJECT_NAME,
   normalizeLibraryPipelineName,
 } from '@/lib/libraryConstants';
+import {
+  fingerprintTemplate,
+  fingerprintPipeline,
+  userDataFrom,
+} from '@/lib/libraryFingerprint';
 
 /**
  * Gives an account its own copy of the shipped pipeline library.
@@ -19,13 +24,14 @@ export async function seedLibrary(userId: string): Promise<{
   projectId: string;
   created: number;
   renamed: number;
+  upgraded: number;
   skipped: number;
 }> {
   const project = await ensureLibraryProject(userId);
 
   const existing = await prisma.pipeline.findMany({
     where: { projectId: project.id },
-    select: { id: true, name: true },
+    include: { nodes: true, edges: true },
   });
 
   // Compared by normalized name so a pipeline seeded under older numbering is
@@ -36,12 +42,24 @@ export async function seedLibrary(userId: string): Promise<{
 
   const missing: LibraryPipelineTemplate[] = [];
   const renames: { id: string; name: string }[] = [];
+  const upgrades: { pipeline: (typeof existing)[number]; template: LibraryPipelineTemplate }[] = [];
 
   for (const template of LIBRARY_PIPELINES) {
     const match = byNormalized.get(normalizeLibraryPipelineName(template.name));
 
     if (!match) {
       missing.push(template);
+      continue;
+    }
+
+    // A corrected template reaches an existing account only when that account's
+    // copy is provably untouched: its current shape still hashes to what was
+    // seeded. Anything the user edited stops matching and is left alone.
+    const shipped = fingerprintTemplate(template);
+    const current = fingerprintPipeline(match.nodes, match.edges);
+
+    if (match.seedFingerprint && match.seedFingerprint === current && current !== shipped) {
+      upgrades.push({ pipeline: match, template });
     } else if (match.name.trim() !== template.name) {
       // Same workflow under an old label — align the name only. Nodes, edges
       // and any customisation the user made are left untouched.
@@ -57,12 +75,70 @@ export async function seedLibrary(userId: string): Promise<{
     await prisma.pipeline.update({ where: { id: r.id }, data: { name: r.name } });
   }
 
+  for (const u of upgrades) {
+    await upgradePipelineToTemplate(u.pipeline, u.template);
+  }
+
   return {
     projectId: project.id,
     created: missing.length,
     renamed: renames.length,
-    skipped: LIBRARY_PIPELINES.length - missing.length - renames.length,
+    upgraded: upgrades.length,
+    skipped:
+      LIBRARY_PIPELINES.length - missing.length - renames.length - upgrades.length,
   };
+}
+
+/**
+ * Rebuilds an untouched library pipeline from the current template.
+ *
+ * Uploads are carried over: a pipeline holding a file is still the stock
+ * workflow, so correcting the workflow must not silently detach the document
+ * the user attached to it.
+ */
+async function upgradePipelineToTemplate(
+  pipeline: { id: string; nodes: { type: string; config: any }[] },
+  template: LibraryPipelineTemplate
+): Promise<void> {
+  const nodeIds = template.nodes.map((n, i) => `node_${n.type}_${i}_${rid()}`);
+
+  const nodes = template.nodes.map((n, i) => {
+    const previous = pipeline.nodes.filter((o) => o.type === n.type);
+    const carried = previous.length === 1 ? userDataFrom(previous[0].config) : {};
+    return {
+      id: nodeIds[i],
+      pipelineId: pipeline.id,
+      type: n.type,
+      label: n.label,
+      positionX: n.x,
+      positionY: n.y,
+      config: { ...n.config, ...carried } as any,
+    };
+  });
+
+  await prisma.$transaction([
+    prisma.pipelineEdge.deleteMany({ where: { pipelineId: pipeline.id } }),
+    prisma.pipelineNode.deleteMany({ where: { pipelineId: pipeline.id } }),
+    prisma.pipelineNode.createMany({ data: nodes }),
+    prisma.pipelineEdge.createMany({
+      data: template.edges.map((e) => ({
+        id: `edge_${rid()}`,
+        pipelineId: pipeline.id,
+        source: nodeIds[e.source],
+        target: nodeIds[e.target],
+        sourceHandle: e.sourceHandle ?? null,
+        targetHandle: e.targetHandle ?? null,
+      })),
+    }),
+    prisma.pipeline.update({
+      where: { id: pipeline.id },
+      data: {
+        name: template.name,
+        description: template.description,
+        seedFingerprint: fingerprintTemplate(template),
+      },
+    }),
+  ]);
 }
 
 /**
@@ -111,7 +187,13 @@ async function createPipelinesFromTemplates(
   projectId: string,
   templates: LibraryPipelineTemplate[]
 ): Promise<void> {
-  const pipelines: { id: string; projectId: string; name: string; description: string }[] = [];
+  const pipelines: {
+    id: string;
+    projectId: string;
+    name: string;
+    description: string;
+    seedFingerprint: string;
+  }[] = [];
   const nodes: {
     id: string;
     pipelineId: string;
@@ -137,6 +219,9 @@ async function createPipelinesFromTemplates(
       projectId,
       name: template.name,
       description: template.description,
+      // Recorded so a later correction to this template can tell an untouched
+      // copy from one the user has edited.
+      seedFingerprint: fingerprintTemplate(template),
     });
 
     // Ids are generated per copy; template edges reference nodes by index.

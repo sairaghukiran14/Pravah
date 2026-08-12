@@ -98,6 +98,56 @@ export function splitTextIntoSentenceChunks(text: string, maxLen: number = 400):
 }
 
 
+/** Router conditions that compare a number rather than matching text. */
+export const NUMERIC_CONDITIONS = new Set(['gt', 'gte', 'lt', 'lte']);
+
+/**
+ * Pulls a numeric field out of whatever the upstream node produced.
+ *
+ * Nodes report their scores in different places — STT returns `confidence` on
+ * the response object, while the sentiment node returns a JSON string the model
+ * generated. Returns null when nothing comparable is present, so the caller can
+ * decide rather than comparing against NaN.
+ */
+export function readNumericField(payload: any, text: string, field: string): number | null {
+  const coerce = (value: any): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  if (payload && typeof payload === 'object') {
+    const direct = coerce(payload[field]);
+    if (direct !== null) return direct;
+
+    // Structured nodes hand back a JSON document in `response`.
+    if (typeof payload.response === 'string') {
+      try {
+        const parsed = JSON.parse(payload.response);
+        const nested = coerce(parsed?.[field]);
+        if (nested !== null) return nested;
+      } catch {
+        /* not JSON — fall through */
+      }
+    }
+  }
+
+  if (typeof text === 'string' && text.trim() !== '') {
+    try {
+      const parsed = JSON.parse(text);
+      const fromText = coerce(parsed?.[field]);
+      if (fromText !== null) return fromText;
+    } catch {
+      /* not JSON — fall through */
+    }
+  }
+
+  return null;
+}
+
 /**
  * Splits a document into overlapping chunks for retrieval.
  *
@@ -582,11 +632,37 @@ Return ONLY a valid JSON object matching the following structure:
           }
         } catch (_) {}
         matched = categoryLabel.includes(conditionValue);
+      } else if (NUMERIC_CONDITIONS.has(conditionType)) {
+        // Threshold routing — the case that makes "confidence below 0.8, send
+        // it down the fallback branch" expressible. The field defaults to
+        // confidence because that is what STT and sentiment both report.
+        const field = String(node.config?.condition_field || 'confidence');
+        const observed = readNumericField(dynamicInputPayload, upstreamInputText, field);
+        const threshold = Number(conditionValue);
+
+        if (observed === null || !Number.isFinite(threshold)) {
+          // Nothing comparable — fail closed to the false branch rather than
+          // letting NaN silently decide the route.
+          matched = false;
+        } else if (conditionType === 'gt') matched = observed > threshold;
+        else if (conditionType === 'gte') matched = observed >= threshold;
+        else if (conditionType === 'lt') matched = observed < threshold;
+        else matched = observed <= threshold;
+
+        output = {
+          matched,
+          activeHandle: matched ? 'true' : 'false',
+          observed,
+          response:
+            observed === null
+              ? `Condition [${field} ${conditionType} ${conditionValue}]: no numeric "${field}" found on the input (Routing to False branch)`
+              : `Condition [${field} ${conditionType} ${conditionValue}]: observed ${observed} — ${matched ? 'MATCHED' : 'NOT MATCHED'} (Routing to ${matched ? 'True' : 'False'} branch)`,
+        };
       } else {
         matched = inputText.includes(conditionValue);
       }
 
-      output = {
+      output = output ?? {
         matched,
         activeHandle: matched ? 'true' : 'false',
         response: `Condition [${conditionType} = "${conditionValue}"]: ${matched ? 'MATCHED' : 'NOT MATCHED'} (Routing to ${matched ? 'True' : 'False'} branch)`
