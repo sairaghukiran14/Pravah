@@ -53,9 +53,17 @@ export async function reserveCredits(
  * transitions `reservedCredits` from set to null, so the refund that follows
  * can only happen once.
  */
-async function claimReservation(runId: string): Promise<boolean> {
+async function claimReservation(runId: string, userId: string): Promise<boolean> {
   const claimed = await prisma.pipelineRun.updateMany({
-    where: { id: runId, reservedCredits: { not: null } },
+    // Scoped to the owner as well as the id. Both current callers already pass
+    // a run they own, but ownership belongs in the query rather than in the
+    // discipline of the caller — this is the same rule the route handlers and
+    // assertObjectAccess apply everywhere else.
+    where: {
+      id: runId,
+      reservedCredits: { not: null },
+      pipeline: { project: { userId } },
+    },
     data: { reservedCredits: null },
   });
   return claimed.count > 0;
@@ -79,7 +87,7 @@ export async function settleCredits({
   actualCost: number;
   runId: string | null;
 }): Promise<void> {
-  if (runId !== null && !(await claimReservation(runId))) {
+  if (runId !== null && !(await claimReservation(runId, userId))) {
     // Already settled or already reaped — the hold has been returned once.
     return;
   }
@@ -144,7 +152,7 @@ export async function reapStaleRuns(userId: string): Promise<number> {
   for (const run of stale) {
     // Claim before counting the refund: a run that settles concurrently must
     // not also be refunded here.
-    if (await claimReservation(run.id)) {
+    if (await claimReservation(run.id, userId)) {
       refund += run.reservedCredits ?? 0;
     }
     reaped.push(run.id);
