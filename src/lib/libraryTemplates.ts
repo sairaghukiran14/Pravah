@@ -175,7 +175,7 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
   },
   {
     "name": "2. Document QA Bot (Multilingual RAG Engine)",
-    "description": "Splits uploaded text chunks, performs simulated vector relevance query lookup, asks the LLM to answer using only retrieved contexts, and translates output into Telugu.",
+    "description": "Digitises an uploaded document with Sarvam Document AI, splits it into overlapping chunks, retrieves the passages matching your query, answers from those passages only, and translates the answer into Telugu.",
     "nodes": [
       {
         "type": "document_input",
@@ -184,6 +184,16 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         "y": 250,
         "config": {
           "format": "pdf"
+        }
+      },
+      {
+        "type": "vision",
+        "label": "Digitise Document",
+        "x": 150,
+        "y": 30,
+        "config": {
+          "language": "hi-IN",
+          "prompt": "Return the full text of this document exactly as written, preserving headings, tables and paragraph order. Do not summarise, omit or add anything."
         }
       },
       {
@@ -212,7 +222,8 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         "x": 645,
         "y": 15,
         "config": {
-          "prompt": "Answer the question based only on context: {{vector_search.text}}",
+          "system_prompt": "You answer strictly from the retrieved passages provided to you. If the passages do not contain the answer, say so plainly rather than drawing on outside knowledge.",
+          "prompt": "Using only the retrieved passages below, answer: what is the refund policy?",
           "temperature": 0.1
         }
       },
@@ -262,6 +273,12 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
       {
         "source": 4,
         "target": 5,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "source": 5,
+        "target": 6,
         "sourceHandle": "output",
         "targetHandle": "input"
       }
@@ -1645,7 +1662,8 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         "x": 480,
         "y": 450,
         "config": {
-          "prompt": "Write an audio guide answer using context: {{vector_search.text}}",
+          "system_prompt": "You write short spoken-word audio guide answers. Use only the retrieved passages provided to you, and keep the result under 80 words so it reads naturally aloud.",
+          "prompt": "Write an audio guide answer from the retrieved passages below.",
           "temperature": 0.2
         }
       },

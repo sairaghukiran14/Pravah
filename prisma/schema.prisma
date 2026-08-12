@@ -124,10 +124,16 @@ model PipelineRun {
   input      Json?
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
+  // Credit held for this run, cleared when the run settles. Storing it on the
+  // row is what lets the reaper return the exact amount held by a run whose
+  // process was killed before it could settle itself — and clearing it is the
+  // claim that stops settlement and reaping from both refunding the same hold.
+  reservedCredits Float?
   nodeRuns   NodeRun[]
   pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@index([pipelineId])
+  @@index([status, startedAt])
 }
 
 model NodeRun {

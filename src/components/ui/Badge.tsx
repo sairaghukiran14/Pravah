@@ -11,6 +11,9 @@ export const Badge: React.FC<BadgeProps> = ({ status }) => {
     running: 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse',
     completed: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     failed: 'bg-red-50 text-red-600 border-red-200',
+    // A skipped node is not an error — a router chose the other branch, or the
+    // path it sat on lost its input. It reads differently from a failure.
+    skipped: 'bg-amber-50 text-amber-700 border-amber-200',
   };
 
   const labels: Record<string, string> = {
@@ -18,6 +21,7 @@ export const Badge: React.FC<BadgeProps> = ({ status }) => {
     running: 'Running',
     completed: 'Completed',
     failed: 'Failed',
+    skipped: 'Skipped',
   };
 
   const dotColors: Record<string, string> = {
@@ -25,6 +29,7 @@ export const Badge: React.FC<BadgeProps> = ({ status }) => {
     running: 'bg-blue-500',
     completed: 'bg-emerald-500',
     failed: 'bg-red-500',
+    skipped: 'bg-amber-500',
   };
 
   const style = styles[status] || 'bg-gray-100 text-gray-600 border-gray-200';

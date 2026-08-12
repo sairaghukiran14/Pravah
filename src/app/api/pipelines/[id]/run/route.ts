@@ -3,17 +3,27 @@ import prisma from '@/lib/prisma';
 import { sortNodesTopologically, executeSingleNode } from '@/lib/execution';
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
+import { nodeCost } from '@/lib/api/pricing';
 import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
 import {
   reserveCredits,
   settleCredits,
   releaseReservation,
   countActiveRuns,
+  reapStaleRuns,
   RUN_RESERVATION,
   MAX_CONCURRENT_RUNS,
 } from '@/lib/api/credits';
 
 type Params = { id: string };
+
+/**
+ * Without an explicit value this inherits the platform default, which is short
+ * enough (10-15s on Vercel) that any pipeline doing real work is killed
+ * mid-stream — and a killed process never reaches the settlement in `finally`.
+ * 60s is the ceiling available on every plan; Pro deployments can raise it.
+ */
+export const maxDuration = 60;
 
 const nodeSchema = z.object({
   id: z.string(),
@@ -56,6 +66,10 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
       select: { id: true },
     });
     if (!owned) throw forbidden('Pipeline not found or unauthorized');
+
+    // Return any slots and credit held by runs whose process died before they
+    // could settle themselves, so an earlier timeout does not lock the account.
+    await reapStaleRuns(userId).catch((e) => console.warn('[run] Reaper failed:', e));
 
     if ((await countActiveRuns(userId)) >= MAX_CONCURRENT_RUNS) {
       throw tooManyRequests(
@@ -139,41 +153,6 @@ async function resolvePipelineData(
   };
 }
 
-/**
- * The text a node actually processed, used to meter per-character pricing.
- *
- * executeSingleNode records `{ text }` for entry nodes but `{ payload }` when
- * the input came from an upstream node — and payload may be a string or the
- * previous node's output object. Reading only `.text` silently yielded an empty
- * string for any node with an incoming edge, which is the normal case, so
- * translate and TTS were billed as zero.
- */
-function billableText(input: any): string {
-  if (!input) return '';
-  if (typeof input.text === 'string') return input.text;
-
-  const payload = input.payload;
-  if (typeof payload === 'string') return payload;
-  if (payload && typeof payload === 'object') {
-    return (
-      payload.translated_text ||
-      payload.transcript ||
-      payload.response ||
-      payload.text ||
-      ''
-    );
-  }
-  return '';
-}
-
-function nodeCost(nodeType: string, input: any): number {
-  if (nodeType === 'stt') return 0.375; // baseline 30s of audio
-  if (nodeType === 'translate') return billableText(input).length * 0.003; // ₹3.00 / 1k chars
-  if (nodeType === 'tts') return billableText(input).length * 0.00225; // ₹2.25 / 1k chars
-  const free = ['audio_input', 'audio_output', 'text_input', 'text_output'];
-  return free.includes(nodeType) ? 0 : 0.5;
-}
-
 function streamRun({
   pipelineId,
   userId,
@@ -196,7 +175,7 @@ function streamRun({
       };
 
       const { nodes, edges } = pipelineData;
-      let runId = '';
+      let runId: string | null = null;
       let totalCost = 0;
 
       try {
@@ -205,6 +184,9 @@ function streamRun({
             pipelineId,
             status: 'running',
             input: { text: INITIAL_INPUT_TEXT },
+            // Recorded so the reaper can return this exact hold if the process
+            // is killed before it settles.
+            reservedCredits: reserved,
             nodeRuns: {
               create: nodes.map((n) => ({ nodeId: n.id, nodeType: n.type, status: 'pending' })),
             },
@@ -221,28 +203,49 @@ function streamRun({
 
         const sortedNodes = sortNodesTopologically(nodes, edges);
         const nodeOutputs: Record<string, any> = {};
-        const skippedNodes = new Set<string>();
-        let isPipelineFailed = false;
+        /** Nodes that produced no output, whether they failed or were skipped. */
+        const unavailable = new Set<string>();
+        /** Edges a router ruled out; the node they feed may still run via another input. */
+        const deadEdges = new Set<string>();
+        let anyFailed = false;
+        let budgetExhausted = false;
+
+        const activeRunId = dbRun.id;
+        const markSkipped = async (nodeId: string, reason: string) => {
+          unavailable.add(nodeId);
+          await prisma.nodeRun
+            .updateMany({
+              where: { runId: activeRunId, nodeId },
+              data: { status: 'skipped', error: reason, finishedAt: new Date() },
+            })
+            .catch(() => {});
+          sendEvent('node_skipped', { nodeId, reason });
+        };
 
         for (const node of sortedNodes) {
-          if (isPipelineFailed) {
-            sendEvent('node_skipped', { nodeId: node.id, reason: 'Upstream node failed' });
+          // Stop before starting work that the reservation cannot cover. Checked
+          // up front so the overshoot is bounded by the cost of a single node.
+          if (budgetExhausted || totalCost >= reserved) {
+            budgetExhausted = true;
+            await markSkipped(node.id, 'Run budget exhausted before this node could execute');
             continue;
           }
 
-          if (skippedNodes.has(node.id)) {
-            edges.filter((e) => e.source === node.id).forEach((e) => skippedNodes.add(e.target));
-            await prisma.nodeRun
-              .updateMany({
-                where: { runId, nodeId: node.id },
-                data: {
-                  status: 'failed',
-                  error: 'Skipped by conditional router',
-                  finishedAt: new Date(),
-                },
-              })
-              .catch(() => {});
-            sendEvent('node_skipped', { nodeId: node.id, reason: 'Skipped by conditional router' });
+          const incoming = edges.filter((e) => e.target === node.id);
+          const liveIncoming = incoming.filter(
+            (e) => !deadEdges.has(e.id) && !unavailable.has(e.source)
+          );
+
+          // A node runs while at least one input is still live, so a failure or
+          // a pruned branch only stops the paths that actually depended on it.
+          // Entry nodes have no incoming edges and are never blocked here.
+          if (incoming.length > 0 && liveIncoming.length === 0) {
+            await markSkipped(
+              node.id,
+              incoming.some((e) => deadEdges.has(e.id))
+                ? 'Skipped by conditional router'
+                : 'No upstream node produced an input for this node'
+            );
             continue;
           }
 
@@ -257,7 +260,10 @@ function streamRun({
 
           const result = await executeSingleNode(
             node,
-            edges,
+            // Only this node's live edges, so it reads its input from a source
+            // that actually ran rather than from a pruned or failed one. Entry
+            // nodes have none, which is the empty-input path already handled.
+            liveIncoming,
             nodeOutputs,
             INITIAL_INPUT_TEXT,
             inputs
@@ -270,7 +276,7 @@ function streamRun({
               edges
                 .filter((e) => e.source === node.id)
                 .forEach((e) => {
-                  if (e.sourceHandle !== result.output.activeHandle) skippedNodes.add(e.target);
+                  if (e.sourceHandle !== result.output.activeHandle) deadEdges.add(e.id);
                 });
             }
 
@@ -295,7 +301,9 @@ function streamRun({
               durationMs: result.durationMs,
             });
           } else {
-            isPipelineFailed = true;
+            anyFailed = true;
+            // Only the paths fed by this node stop; independent branches carry on.
+            unavailable.add(node.id);
             await prisma.nodeRun
               .updateMany({
                 where: { runId, nodeId: node.id },
@@ -311,11 +319,11 @@ function streamRun({
           }
         }
 
-        const finalStatus = isPipelineFailed ? 'failed' : 'completed';
+        const finalStatus = anyFailed || budgetExhausted ? 'failed' : 'completed';
 
         await prisma.pipelineRun
           .update({
-            where: { id: runId },
+            where: { id: dbRun.id },
             data: { status: finalStatus, finishedAt: new Date() },
           })
           .catch((e) => console.warn('Run status update failed:', e));
@@ -330,15 +338,12 @@ function streamRun({
             .catch(() => {});
         }
       } finally {
-        // Always settle: refund the unused portion of the reservation, or take
-        // the excess if the run cost more than was held.
+        // Always settle. The cost charged is what the run actually incurred —
+        // capping it at the reservation silently absorbed the excess on exactly
+        // the largest pipelines. Execution halts once the hold is spent, so the
+        // overshoot is bounded by a single node.
         try {
-          await settleCredits({
-            userId,
-            reserved,
-            actualCost: Math.min(totalCost, reserved),
-            runId: runId || 'unknown',
-          });
+          await settleCredits({ userId, reserved, actualCost: totalCost, runId });
         } catch (e) {
           console.error('[run] Credit settlement failed:', e);
         }
