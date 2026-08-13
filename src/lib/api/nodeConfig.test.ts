@@ -77,4 +77,79 @@ describe('parseNodeConfig', () => {
       expect(hasNodeConfigSchema(type)).toBe(true);
     }
   });
+
+  describe('transliteration', () => {
+    it('accepts the endpoint options', () => {
+      const r = parse('transliteration', {
+        source_language_code: 'hi-IN',
+        target_language_code: 'en-IN',
+        spoken_form: true,
+        numerals_format: 'native',
+      });
+      expect(r.ok).toBe(true);
+    });
+
+    // Saved before the node called the real endpoint; execution maps these.
+    it('still accepts the legacy script names', () => {
+      expect(parse('transliteration', { source_script: 'Devanagari', target_script: 'Latin' }).ok).toBe(true);
+    });
+
+    it('rejects an unknown numerals format', () => {
+      expect(parse('transliteration', { numerals_format: 'roman' }).ok).toBe(false);
+    });
+  });
+
+  describe('ocr', () => {
+    it('accepts a document language and output format', () => {
+      expect(parse('ocr', { language: 'hi-IN', output_format: 'md' }).ok).toBe(true);
+    });
+
+    it('rejects an output format Document AI does not produce', () => {
+      expect(parse('ocr', { output_format: 'txt' }).ok).toBe(false);
+    });
+
+    it('rejects a malformed language', () => {
+      expect(parse('ocr', { language: 'hindi' }).ok).toBe(false);
+    });
+  });
+
+  it('accepts the language detection node, which takes no options', () => {
+    expect(parse('language_detect', {}).ok).toBe(true);
+    expect(hasNodeConfigSchema('language_detect')).toBe(true);
+  });
+
+  describe('input nodes', () => {
+    // The blob is a base64 payload or proxy URL whose real constraints live
+    // where it is read; what is checked here is the structure around it.
+    it('accepts an upload envelope with its payload intact', () => {
+      const r = parse('document_input', {
+        format: 'pdf',
+        file_data: { name: 'invoice.pdf', type: 'document', r2_key: 'audio_input_u1_1_invoice.pdf', data: 'x'.repeat(5000) },
+      });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect((r.config.file_data as any).data).toHaveLength(5000);
+    });
+
+    it('rejects an input type the editor cannot produce', () => {
+      expect(parse('audio_input', { input_type: 'telepathy' }).ok).toBe(false);
+      expect(parse('audio_input', { input_type: 'mic' }).ok).toBe(true);
+    });
+
+    it('rejects an absurd file name', () => {
+      expect(parse('image_input', { file_data: { name: 'x'.repeat(600) } }).ok).toBe(false);
+    });
+  });
+
+  it('has a schema for every node type the engine can run', () => {
+    const everyType = [
+      'stt', 'translate', 'tts', 'podcast', 'router', 'delay',
+      'pdf_splitter', 'vector_search', 'transliteration', 'codemix_normalizer',
+      'webhook', 'sms_sender', 'language_detect',
+      'audio_input', 'text_input', 'document_input', 'image_input', 'video_input', 'url_input',
+      'ocr', 'vision', 'llm', 'summarize', 'sentiment', 'keyword_extraction', 'classification',
+      'text_output', 'audio_output', 'file_output',
+    ];
+    const unmodelled = everyType.filter((t) => !hasNodeConfigSchema(t));
+    expect(unmodelled).toEqual([]);
+  });
 });

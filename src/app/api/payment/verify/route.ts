@@ -170,6 +170,19 @@ async function creditWallet({
       data: { userId, amount, type: 'purchase', description },
     });
 
+    // Inside the transaction that actually moved the money, so the audit line
+    // exists only for a credit that was genuinely applied — this is the one
+    // place where a best-effort write would be the wrong choice.
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: 'payment.credit',
+        targetType: 'order',
+        targetId: orderId,
+        metadata: { amount, paymentId, mock: signature === null },
+      },
+    });
+
     return user;
   });
 }

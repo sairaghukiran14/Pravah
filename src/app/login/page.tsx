@@ -228,7 +228,7 @@ function LoginContent() {
               </div>
               <div className="flex items-center gap-1.5 font-normal">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span>10+ Indic Languages</span>
+                <span>23 Indic Languages</span>
               </div>
             </div>
           </div>

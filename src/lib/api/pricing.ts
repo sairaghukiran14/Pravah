@@ -39,5 +39,9 @@ export function nodeCost(nodeType: string, input: any): number {
   if (nodeType === 'translate') return billableText(input).length * 0.003; // ₹3.00 / 1k chars
   if (nodeType === 'tts') return billableText(input).length * 0.00225; // ₹2.25 / 1k chars
   const free = ['audio_input', 'audio_output', 'text_input', 'text_output'];
-  return free.includes(nodeType) ? 0 : 0.5;
+  if (free.includes(nodeType)) return 0;
+  // Language detection is a single short classification call against a 1000
+  // character sample — an order cheaper than a node that runs the 105B model.
+  if (nodeType === 'language_detect') return 0.05;
+  return 0.5;
 }

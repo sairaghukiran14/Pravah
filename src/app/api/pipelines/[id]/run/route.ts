@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { sortNodesTopologically, executeSingleNode } from '@/lib/execution';
+import { sortNodesTopologically, executeSingleNode, resolveNodeInput } from '@/lib/execution';
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
 import { nodeCost } from '@/lib/api/pricing';
 import { parseNodeConfig, type NodeConfigIssue } from '@/lib/api/nodeConfig';
+import { recordAudit } from '@/lib/api/audit';
 import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
 import {
   reserveCredits,
@@ -12,8 +13,10 @@ import {
   releaseReservation,
   countActiveRuns,
   reapStaleRuns,
+  creditsSpentToday,
   RUN_RESERVATION,
   MAX_CONCURRENT_RUNS,
+  DAILY_CREDIT_CEILING,
 } from '@/lib/api/credits';
 
 type Params = { id: string };
@@ -58,7 +61,7 @@ const INITIAL_INPUT_TEXT = 'नमस्ते! भारत की कृत्
 export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
   // cost 25: a single run can fan out into many paid Sarvam calls.
   { cost: 25, body: bodySchema },
-  async ({ userId, params, body }) => {
+  async ({ userId, params, body, req }) => {
     const pipelineId = params.id;
 
     // Ownership is checked before any credit is held.
@@ -71,6 +74,16 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
     // Return any slots and credit held by runs whose process died before they
     // could settle themselves, so an earlier timeout does not lock the account.
     await reapStaleRuns(userId).catch((e) => console.warn('[run] Reaper failed:', e));
+
+    // Blast-radius limit on a shared upstream key: the wallet caps what one
+    // account can spend in total, this caps how fast, which is the part that
+    // affects other tenants.
+    const spentToday = await creditsSpentToday(userId);
+    if (spentToday >= DAILY_CREDIT_CEILING) {
+      throw tooManyRequests(
+        `Daily limit reached — ${spentToday.toFixed(2)} of ${DAILY_CREDIT_CEILING} credits used in the last 24 hours. Runs resume as earlier usage ages out.`
+      );
+    }
 
     if ((await countActiveRuns(userId)) >= MAX_CONCURRENT_RUNS) {
       throw tooManyRequests(
@@ -92,6 +105,21 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
         await releaseReservation(userId, reserved);
         throw badRequest('Pipeline contains no nodes to execute.');
       }
+
+      await recordAudit({
+        userId,
+        action: 'pipeline.run',
+        targetType: 'pipeline',
+        targetId: pipelineId,
+        // Node count and types only. The inputs themselves are customer content
+        // and have no business being copied into an audit table.
+        metadata: {
+          nodeCount: pipelineData.nodes.length,
+          nodeTypes: [...new Set(pipelineData.nodes.map((n) => n.type))],
+          unsavedGraph: Boolean(body.nodes?.length),
+        },
+        req,
+      });
 
       return streamRun({ pipelineId, userId, reserved, pipelineData, inputs: body.inputs || {} });
     } catch (error) {
@@ -228,6 +256,8 @@ function streamRun({
         const deadEdges = new Set<string>();
         let anyFailed = false;
         let budgetExhausted = false;
+        /** Credits per node type, so upstream consumption is attributable. */
+        const costBreakdown: Record<string, number> = {};
 
         const activeRunId = dbRun.id;
         const markSkipped = async (nodeId: string, reason: string) => {
@@ -242,10 +272,7 @@ function streamRun({
         };
 
         for (const node of sortedNodes) {
-          // Stop before starting work that the reservation cannot cover. Checked
-          // up front so the overshoot is bounded by the cost of a single node.
-          if (budgetExhausted || totalCost >= reserved) {
-            budgetExhausted = true;
+          if (budgetExhausted) {
             await markSkipped(node.id, 'Run budget exhausted before this node could execute');
             continue;
           }
@@ -264,6 +291,35 @@ function streamRun({
               incoming.some((e) => deadEdges.has(e.id))
                 ? 'Skipped by conditional router'
                 : 'No upstream node produced an input for this node'
+            );
+            continue;
+          }
+
+          // Price the node from the input it is about to receive, before doing
+          // the work. Translate and TTS charge per character, so a single large
+          // node checked only afterwards could overshoot the hold and settle the
+          // wallet below zero.
+          const projectedInput = resolveNodeInput(
+            node,
+            liveIncoming,
+            nodeOutputs,
+            INITIAL_INPUT_TEXT,
+            inputs
+          );
+          const projectedCost = nodeCost(
+            node.type,
+            projectedInput.dynamicInputPayload
+              ? { payload: projectedInput.dynamicInputPayload }
+              : { text: projectedInput.upstreamInputText }
+          );
+
+          if (totalCost + projectedCost > reserved) {
+            budgetExhausted = true;
+            await markSkipped(
+              node.id,
+              `Run budget exhausted — this node needs ${projectedCost.toFixed(2)} credit and only ${(
+                reserved - totalCost
+              ).toFixed(2)} remains`
             );
             continue;
           }
@@ -299,7 +355,9 @@ function streamRun({
                 });
             }
 
-            totalCost += nodeCost(node.type, result.input);
+            const spent = nodeCost(node.type, result.input);
+            totalCost += spent;
+            costBreakdown[node.type] = (costBreakdown[node.type] ?? 0) + spent;
 
             await prisma.nodeRun
               .updateMany({
@@ -343,7 +401,7 @@ function streamRun({
         await prisma.pipelineRun
           .update({
             where: { id: dbRun.id },
-            data: { status: finalStatus, finishedAt: new Date() },
+            data: { status: finalStatus, finishedAt: new Date(), costBreakdown },
           })
           .catch((e) => console.warn('Run status update failed:', e));
 

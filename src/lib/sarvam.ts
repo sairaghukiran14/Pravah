@@ -585,6 +585,141 @@ export async function executeSarvamLLM(
   }
 }
 
+/** Both text endpoints below cap input at 1000 characters. */
+const SARVAM_TEXT_ENDPOINT_LIMIT = 1000;
+
+/** Languages /transliterate and /text-lid support — the 11-language set. */
+export const SARVAM_TEXT_TOOL_LANGUAGES = [
+  'en-IN', 'hi-IN', 'bn-IN', 'gu-IN', 'kn-IN', 'ml-IN',
+  'mr-IN', 'od-IN', 'pa-IN', 'ta-IN', 'te-IN',
+];
+
+export interface SarvamTransliterateRequest {
+  input: string;
+  source_language_code: string;
+  target_language_code: string;
+  /** Render numbers and abbreviations the way they are read aloud. */
+  spoken_form?: boolean;
+  numerals_format?: 'international' | 'native';
+}
+
+export interface SarvamTransliterateResponse {
+  request_id: string;
+  transliterated_text: string;
+  source_language_code: string;
+}
+
+/**
+ * Script conversion via Sarvam AI (/transliterate).
+ *
+ * This replaced prompting the 105B model to "convert the script phonetically",
+ * which was slower, cost a full LLM call per node, and could silently translate
+ * or editorialise instead of transliterating. The endpoint takes language codes
+ * rather than script names — Romanised Hindi is hi-IN to en-IN.
+ */
+export async function executeSarvamTransliterate(
+  payload: SarvamTransliterateRequest
+): Promise<SarvamTransliterateResponse> {
+  const apiKey = getApiKey();
+  const rawInput = payload.input || '';
+
+  if (!rawInput.trim()) {
+    return {
+      request_id: 'empty',
+      transliterated_text: '',
+      source_language_code: payload.source_language_code,
+    };
+  }
+
+  // The endpoint rejects anything longer, so split on sentence boundaries and
+  // rejoin — the same approach translate uses for its own limit.
+  if (rawInput.length > SARVAM_TEXT_ENDPOINT_LIMIT) {
+    const chunks = splitTextIntoChunks(rawInput, SARVAM_TEXT_ENDPOINT_LIMIT - 100);
+    const results = await Promise.all(
+      chunks.map((chunk) => executeSarvamTransliterate({ ...payload, input: chunk }))
+    );
+    return {
+      request_id: results[0]?.request_id || 'batch',
+      transliterated_text: results.map((r) => r.transliterated_text).join(' '),
+      source_language_code: payload.source_language_code,
+    };
+  }
+
+  if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
+    await new Promise((res) => setTimeout(res, 700));
+    return {
+      request_id: `tl_${Math.random().toString(36).substring(7)}`,
+      transliterated_text: `[Transliterated ${payload.source_language_code} -> ${payload.target_language_code}]: ${rawInput}`,
+      source_language_code: payload.source_language_code,
+    };
+  }
+
+  const response = await fetchWithRetry(`${SARVAM_BASE_URL}/transliterate`, {
+    method: 'POST',
+    headers: { 'api-subscription-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      input: rawInput,
+      source_language_code: payload.source_language_code,
+      target_language_code: payload.target_language_code,
+      spoken_form: payload.spoken_form ?? false,
+      numerals_format: payload.numerals_format ?? 'international',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Sarvam Transliterate Error (${response.status}): ${await response.text()}`);
+  }
+
+  return await response.json();
+}
+
+export interface SarvamLIDResponse {
+  request_id: string | null;
+  language_code: string | null;
+  script_code: string | null;
+}
+
+/**
+ * Language identification via Sarvam AI (/text-lid).
+ *
+ * Returns the script alongside the language, which is what makes Romanised
+ * Indic input recognisable: "meeru ela unnaru" comes back as te-IN in Latn
+ * rather than being mistaken for English.
+ */
+export async function executeSarvamLID(input: string): Promise<SarvamLIDResponse> {
+  const apiKey = getApiKey();
+  // Detection needs a sample, not the whole document, so this truncates rather
+  // than chunking — sending more would cost time without improving the answer.
+  const sample = (input || '').trim().slice(0, SARVAM_TEXT_ENDPOINT_LIMIT);
+
+  if (!sample) {
+    return { request_id: 'empty', language_code: null, script_code: null };
+  }
+
+  if (!apiKey || apiKey === 'mock_sarvam_api_key' || apiKey.startsWith('your_')) {
+    await new Promise((res) => setTimeout(res, 500));
+    // Crude but deterministic: enough to exercise the branch offline.
+    const hasDevanagari = /[ऀ-ॿ]/.test(sample);
+    return {
+      request_id: `lid_${Math.random().toString(36).substring(7)}`,
+      language_code: hasDevanagari ? 'hi-IN' : 'en-IN',
+      script_code: hasDevanagari ? 'Deva' : 'Latn',
+    };
+  }
+
+  const response = await fetchWithRetry(`${SARVAM_BASE_URL}/text-lid`, {
+    method: 'POST',
+    headers: { 'api-subscription-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input: sample }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Sarvam Language ID Error (${response.status}): ${await response.text()}`);
+  }
+
+  return await response.json();
+}
+
 export interface SarvamVisionRequest {
   file: string; // base64 string
   language?: string;

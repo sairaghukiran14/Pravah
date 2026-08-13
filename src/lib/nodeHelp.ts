@@ -44,7 +44,7 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
   },
   ocr: {
     title: 'Optical Character Recognition (OCR)',
-    desc: 'Performs high-accuracy OCR to extract native language text from images.',
+    desc: 'Extracts the text from an image or PDF using Sarvam Document AI, exactly as written. Connect an Image or Document input upstream.',
   },
   vision: {
     title: 'Vision AI',
@@ -96,11 +96,15 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
   },
   pdf_splitter: {
     title: 'Document Chunker',
-    desc: 'Splits raw document text into smaller, overlapping chunks suitable for semantic query databases.',
+    desc: 'Splits document text into overlapping chunks on sentence boundaries, ready for retrieval.',
   },
   vector_search: {
-    title: 'Vector Search Query',
-    desc: 'Performs semantic searches on a text dataset or document chunks to extract the top matching passages.',
+    title: 'Passage Retrieval',
+    desc: 'Ranks chunks by how many of your query words they contain and returns the top three. Keyword matching, not embeddings — a query using different words to the document will not match.',
+  },
+  language_detect: {
+    title: 'Language Detection',
+    desc: 'Identifies the language and script of the incoming text, and passes the text through unchanged. Detecting the script is what distinguishes Romanised Indic input from English.',
   },
   transliteration: {
     title: 'Script Transliteration',

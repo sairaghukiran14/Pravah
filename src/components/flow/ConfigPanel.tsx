@@ -47,6 +47,26 @@ const VOICE_LANGUAGES = SPEECH_TEXT_LANGUAGES.slice(0, 11);
 
 const SOURCE_LANGUAGES = [{ label: 'Auto Detect', value: 'auto' }, ...SPEECH_TEXT_LANGUAGES];
 
+/** Sarvam's /transliterate covers the same 11 languages as the voice models. */
+const TRANSLITERATION_LANGUAGES = VOICE_LANGUAGES;
+
+/**
+ * Maps the script name an older transliteration node stored onto the language
+ * code the endpoint takes, so opening a pipeline saved before the switch shows
+ * what it will actually run rather than an unrelated default.
+ */
+function legacyScriptLanguage(script?: string): string | undefined {
+  if (!script) return undefined;
+  const map: Record<string, string> = {
+    latin: 'en-IN', roman: 'en-IN', english: 'en-IN',
+    devanagari: 'hi-IN', hindi: 'hi-IN', marathi: 'mr-IN',
+    bengali: 'bn-IN', gujarati: 'gu-IN', kannada: 'kn-IN',
+    malayalam: 'ml-IN', odia: 'od-IN', oriya: 'od-IN',
+    gurmukhi: 'pa-IN', punjabi: 'pa-IN', tamil: 'ta-IN', telugu: 'te-IN',
+  };
+  return map[script.trim().toLowerCase()];
+}
+
 const SPEAKER_VOICES = [
   { label: 'Aditya', value: 'aditya' },
   { label: 'Ritu', value: 'ritu' },
@@ -333,21 +353,31 @@ export const ConfigPanel: React.FC = () => {
                       { label: 'Number Less Than or Equal', value: 'lte' }
                     ]}
                   />
-                  {['gt', 'gte', 'lt', 'lte'].includes(config.condition_type) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
-                      <input
-                        type="text"
-                        value={config.condition_field || ''}
-                        onChange={(e) => handleChange('condition_field', e.target.value)}
-                        placeholder="confidence"
-                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.
-                      </p>
-                    </div>
-                  )}
+                  {(() => {
+                    // Offered for every condition, not just the numeric ones —
+                    // matching language_code from a Detect Language node needs
+                    // the same mechanism as comparing a confidence score.
+                    const isNumeric = ['gt', 'gte', 'lt', 'lte'].includes(config.condition_type);
+                    return (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
+                        <input
+                          type="text"
+                          value={config.condition_field || ''}
+                          onChange={(e) => handleChange('condition_field', e.target.value)}
+                          placeholder={isNumeric ? 'confidence' : 'leave blank to match the incoming text'}
+                          className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          {isNumeric ? (
+                            <>Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.</>
+                          ) : (
+                            <>Which field of the incoming result to match — for example <span className="font-mono">language_code</span> or <span className="font-mono">script_code</span> from a Detect Language node. Leave blank to match the text itself.</>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition Value</label>
                     <input
@@ -420,7 +450,7 @@ export const ConfigPanel: React.FC = () => {
               {nodeType === 'vector_search' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Query Text</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Query Words</label>
                     <input 
                       type="text" 
                       value={config.query || ''} 
@@ -435,9 +465,16 @@ export const ConfigPanel: React.FC = () => {
                       rows={3} 
                       value={config.fallback_context || ''} 
                       onChange={(e) => handleChange('fallback_context', e.target.value)} 
-                      placeholder="Enter optional document context here..." 
-                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                      placeholder="Enter optional document context here..."
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
                     />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">
+                      Chunks are ranked by how many of your query words they contain, and the top
+                      three are returned. This matches wording rather than meaning, so use words
+                      that appear in the document.
+                    </p>
                   </div>
                 </>
               )}
@@ -445,29 +482,75 @@ export const ConfigPanel: React.FC = () => {
               {/* Transliteration */}
               {nodeType === 'transliteration' && (
                 <>
-                  <Select 
-                    label="Source Script" 
-                    value={config.source_script || 'Devanagari'} 
-                    onChange={(val) => handleChange('source_script', val)} 
-                    options={[
-                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
-                      { label: 'Telugu', value: 'Telugu' },
-                      { label: 'Tamil', value: 'Tamil' },
-                      { label: 'Latin (English/Romanized)', value: 'Latin' }
-                    ]} 
+                  <Select
+                    label="Source Language"
+                    value={config.source_language_code || legacyScriptLanguage(config.source_script) || 'hi-IN'}
+                    onChange={(val) => handleChange('source_language_code', val)}
+                    options={TRANSLITERATION_LANGUAGES}
                   />
-                  <Select 
-                    label="Target Script" 
-                    value={config.target_script || 'Latin'} 
-                    onChange={(val) => handleChange('target_script', val)} 
-                    options={[
-                      { label: 'Latin (English/Romanized)', value: 'Latin' },
-                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
-                      { label: 'Telugu', value: 'Telugu' },
-                      { label: 'Tamil', value: 'Tamil' }
-                    ]} 
+                  <Select
+                    label="Target Language"
+                    value={config.target_language_code || legacyScriptLanguage(config.target_script) || 'en-IN'}
+                    onChange={(val) => handleChange('target_language_code', val)}
+                    options={TRANSLITERATION_LANGUAGES}
                   />
+                  <Select
+                    label="Numerals"
+                    value={config.numerals_format || 'international'}
+                    onChange={(val) => handleChange('numerals_format', val)}
+                    options={[
+                      { label: 'International (0-9)', value: 'international' },
+                      { label: 'Native script digits', value: 'native' },
+                    ]}
+                  />
+                  <Select
+                    label="Spoken Form"
+                    value={config.spoken_form ? 'true' : 'false'}
+                    onChange={(val) => handleChange('spoken_form', val === 'true')}
+                    options={[
+                      { label: 'Off — transliterate as written', value: 'false' },
+                      { label: 'On — write numbers and abbreviations as spoken', value: 'true' },
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Converts script without changing the language. To convert meaning, use a Translate node.
+                  </p>
                 </>
+              )}
+
+              {/* OCR */}
+              {nodeType === 'ocr' && (
+                <>
+                  <Select
+                    label="Document Language"
+                    value={config.language || 'hi-IN'}
+                    onChange={(val) => handleChange('language', val)}
+                    options={SPEECH_TEXT_LANGUAGES}
+                  />
+                  <Select
+                    label="Output Format"
+                    value={config.output_format || 'md'}
+                    onChange={(val) => handleChange('output_format', val)}
+                    options={[
+                      { label: 'Markdown — keeps headings and tables', value: 'md' },
+                      { label: 'HTML', value: 'html' },
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Extracts the text as written, without interpreting it. To ask questions about a
+                    document, use a Vision node instead.
+                  </p>
+                </>
+              )}
+
+              {/* Language Detection */}
+              {nodeType === 'language_detect' && (
+                <p className="text-xs text-gray-500">
+                  Reports the language and script of the incoming text and passes the text through
+                  unchanged. Branch on the result with a Router node set to match the{' '}
+                  <span className="font-mono">language_code</span> or{' '}
+                  <span className="font-mono">script_code</span> field.
+                </p>
               )}
 
               {/* Code-Mix Cleaner */}
@@ -713,6 +796,41 @@ export const ConfigPanel: React.FC = () => {
               )}
               {nodeType === 'summarize' && <Select label="Summary Length" value={config.length || 'short'} onChange={(val) => handleChange('length', val)} options={[{ label: 'Short (1 paragraph)', value: 'short' }, { label: 'Medium (3 paragraphs)', value: 'medium' }, { label: 'Long (Detailed)', value: 'long' }]} />}
               {nodeType === 'sentiment' && <Select label="Output Format" value={config.format || 'json'} onChange={(val) => handleChange('format', val)} options={[{ label: 'JSON Object', value: 'json' }, { label: 'Simple Text', value: 'text' }]} />}
+              {nodeType === 'keyword_extraction' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                    <span>Max Keywords</span>
+                    <span className="font-mono text-gray-500">{config.max_keywords || 5}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value={config.max_keywords || 5}
+                    onChange={(e) => handleChange('max_keywords', parseInt(e.target.value))}
+                    className="w-full accent-gray-900 cursor-pointer"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Extracts key phrases and core terms from upstream text for indexing or routing.
+                  </p>
+                </div>
+              )}
+              {nodeType === 'classification' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Categories</label>
+                  <textarea
+                    rows={3}
+                    value={config.categories || ''}
+                    onChange={(e) => handleChange('categories', e.target.value)}
+                    placeholder="e.g. Sales, Technical Support, Billing, General Inquiry"
+                    className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Comma-separated candidate labels. Categorizes input text into one of these classes for downstream Router branching.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

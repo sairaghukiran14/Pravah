@@ -18,7 +18,14 @@ model User {
   updatedAt           DateTime       @updatedAt
   onboardingCompleted Boolean        @default(false)
   credits             Float          @default(20.00)
+  // Any session issued before this moment is refused. Bumping it is what
+  // "sign out everywhere" does — with the JWT strategy there is no server-side
+  // session row to delete, so revocation has to be a claim the token is checked
+  // against rather than a record that gets removed.
+  sessionsRevokedAt   DateTime?
   accounts            Account[]
+  auditLogs           AuditLog[]
+  transactions        CreditTransaction[]
   orders              PaymentOrder[]
   projects            Project[]
   sessions            Session[]
@@ -134,6 +141,10 @@ model PipelineRun {
   // process was killed before it could settle itself — and clearing it is the
   // claim that stops settlement and reaping from both refunding the same hold.
   reservedCredits Float?
+  // Credits consumed per node type. On one shared upstream key this is what
+  // makes consumption attributable to a tenant — the credit ledger records that
+  // a run cost something, not which capacity it consumed.
+  costBreakdown   Json?
   nodeRuns   NodeRun[]
   pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
@@ -158,6 +169,34 @@ model NodeRun {
   @@index([nodeId])
 }
 
+/**
+ * Record of security-relevant actions.
+ *
+ * Separate from CreditTransaction, which is a financial ledger and says nothing
+ * about who changed a pipeline, who ran one, or from where. Rows are written
+ * best-effort: an audit failure must never take down the action it describes,
+ * because refusing to delete a pipeline because the log is unavailable is worse
+ * than the missing line.
+ */
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  /** Verb in dotted form, e.g. pipeline.delete, session.revoke. */
+  action     String
+  /** What was acted on, where the action names one. */
+  targetType String?
+  targetId   String?
+  /** Action-specific detail. Never contains customer document or audio content. */
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
 model CreditTransaction {
   id          String   @id @default(cuid())
   userId      String
@@ -165,6 +204,10 @@ model CreditTransaction {
   type        String
   description String
   createdAt   DateTime @default(now())
+  // Without this relation the ledger had no foreign key, so deleting an account
+  // left its transactions behind pointing at a user that no longer existed —
+  // rows that cannot be attributed to anyone and cannot be erased on request.
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

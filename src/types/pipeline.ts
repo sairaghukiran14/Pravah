@@ -1,6 +1,7 @@
 export type NodeType = 
   | 'stt' | 'translate' | 'tts' | 'podcast' | 'router' | 'delay'
   | 'pdf_splitter' | 'vector_search' | 'transliteration' | 'codemix_normalizer' | 'webhook' | 'sms_sender'
+  | 'language_detect'
   // Inputs
   | 'audio_input' | 'text_input' | 'document_input' | 'image_input' | 'video_input' | 'url_input'
   // Processing

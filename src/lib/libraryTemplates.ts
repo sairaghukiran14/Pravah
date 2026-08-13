@@ -208,7 +208,7 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
       },
       {
         "type": "vector_search",
-        "label": "Vector Search Query",
+        "label": "Retrieve Passages",
         "x": 405,
         "y": 360,
         "config": {

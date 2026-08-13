@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   ListObjectsV2Command,
   HeadBucketCommand,
+  DeleteObjectsCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
@@ -110,6 +111,47 @@ export async function getR2PresignedUrl(fileName: string, expiresInSeconds = 360
   });
 
   return await getSignedUrl(r2Client, command, { expiresIn: expiresInSeconds });
+}
+
+/**
+ * Permanently removes objects from R2.
+ *
+ * Used by retention and account deletion, where leaving the bytes behind after
+ * deleting the rows that point at them would mean the data is unreachable but
+ * not actually gone — which is not what a deletion request asks for.
+ *
+ * Reports what failed rather than throwing, so one bad key cannot abandon a
+ * purge partway through and leave the rest of the batch orphaned.
+ */
+export async function deleteFromR2(
+  keys: string[]
+): Promise<{ deleted: number; failed: { key: string; reason: string }[] }> {
+  const unique = [...new Set(keys.filter(Boolean))];
+  if (unique.length === 0) return { deleted: 0, failed: [] };
+
+  let deleted = 0;
+  const failed: { key: string; reason: string }[] = [];
+
+  // The API caps a delete request at 1000 keys.
+  for (let i = 0; i < unique.length; i += 1000) {
+    const batch = unique.slice(i, i + 1000);
+    try {
+      const res = await r2Client.send(
+        new DeleteObjectsCommand({
+          Bucket: R2_BUCKET_NAME,
+          Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+        })
+      );
+      deleted += batch.length - (res.Errors?.length ?? 0);
+      for (const err of res.Errors ?? []) {
+        failed.push({ key: err.Key || 'unknown', reason: err.Message || 'unknown error' });
+      }
+    } catch (error: any) {
+      for (const key of batch) failed.push({ key, reason: error.message });
+    }
+  }
+
+  return { deleted, failed };
 }
 
 /**
