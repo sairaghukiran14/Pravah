@@ -111,6 +111,29 @@ export function splitTextIntoSentenceChunks(text: string, maxLen: number = 400):
 export const NUMERIC_CONDITIONS = new Set(['gt', 'gte', 'lt', 'lte']);
 
 /**
+ * Finds the image or PDF a file-consuming node should work on.
+ *
+ * The same file can arrive three ways — passed down an edge, uploaded in the
+ * run dialog, or attached to the node in the editor — and the nodes that read
+ * files were each resolving it slightly differently.
+ */
+export function resolveNodeFile(
+  payload: any,
+  config: Record<string, any> | undefined
+): string | null {
+  return (
+    payload?.data ||
+    payload?.file ||
+    config?.file_data?.data ||
+    config?.file?.data ||
+    config?.file_data?.url ||
+    config?.file ||
+    config?.file_url ||
+    null
+  );
+}
+
+/**
  * Script names the transliteration node used before it called the real API.
  *
  * The old node prompted an LLM with script names ("Devanagari" to "Latin").
@@ -251,6 +274,62 @@ export function chunkDocument(
   });
 }
 
+export interface ResolvedNodeInput {
+  upstreamInputText: string;
+  dynamicInputPayload: any;
+}
+
+/**
+ * Works out what a node will receive, without running it.
+ *
+ * Extracted from executeSingleNode so the orchestrator can price a node before
+ * deciding to execute it. Charges for translate and TTS scale with the length
+ * of this text, so checking the budget afterwards let a single large node
+ * overshoot the hold and settle the wallet below zero.
+ */
+export function resolveNodeInput(
+  node: SerializedNode,
+  edges: SerializedEdge[],
+  nodeOutputs: Record<string, any>,
+  initialInputText: string,
+  initialInputs: Record<string, any> = {}
+): ResolvedNodeInput {
+  const incomingEdges = edges.filter((e) => e.target === node.id);
+  let upstreamInputText = initialInputText;
+  let dynamicInputPayload: any = null;
+
+  if (incomingEdges.length > 0) {
+    const sourceOutput = nodeOutputs[incomingEdges[0].source];
+
+    if (sourceOutput) {
+      dynamicInputPayload = sourceOutput;
+      if (typeof sourceOutput === 'string') {
+        upstreamInputText = sourceOutput;
+      } else if (sourceOutput.response) {
+        upstreamInputText = sourceOutput.response;
+      } else if (sourceOutput.translated_text) {
+        upstreamInputText = sourceOutput.translated_text;
+      } else if (sourceOutput.transcript) {
+        upstreamInputText = sourceOutput.transcript;
+      } else if (sourceOutput.text) {
+        upstreamInputText = sourceOutput.text;
+      } else if (sourceOutput.audios) {
+        upstreamInputText = 'Audio Generated Successfully';
+      }
+    }
+  } else if (initialInputs[node.id]) {
+    // Entry node — the run dialog supplies its input directly.
+    const explicitInput = initialInputs[node.id];
+    if (typeof explicitInput === 'string') {
+      upstreamInputText = explicitInput;
+    } else {
+      dynamicInputPayload = explicitInput;
+    }
+  }
+
+  return { upstreamInputText, dynamicInputPayload };
+}
+
 export interface NodeExecutionResult {
   nodeId: string;
   nodeType: string;
@@ -333,43 +412,13 @@ export async function executeSingleNode(
   initialInputs: Record<string, any> = {}
 ): Promise<NodeExecutionResult> {
   const startTime = Date.now();
-
-  // Find upstream input from connected source nodes
-  const incomingEdges = edges.filter((e) => e.target === node.id);
-  let upstreamInputText = initialInputText;
-  let dynamicInputPayload = null;
-
-  if (incomingEdges.length > 0) {
-    const sourceNodeId = incomingEdges[0].source;
-    const sourceOutput = nodeOutputs[sourceNodeId];
-
-    if (sourceOutput) {
-      dynamicInputPayload = sourceOutput;
-      if (typeof sourceOutput === 'string') {
-        upstreamInputText = sourceOutput;
-      } else if (sourceOutput.response) {
-        upstreamInputText = sourceOutput.response;
-      } else if (sourceOutput.translated_text) {
-        upstreamInputText = sourceOutput.translated_text;
-      } else if (sourceOutput.transcript) {
-        upstreamInputText = sourceOutput.transcript;
-      } else if (sourceOutput.text) {
-        upstreamInputText = sourceOutput.text;
-      } else if (sourceOutput.audios) {
-        upstreamInputText = 'Audio Generated Successfully';
-      }
-    }
-  } else {
-    // If it's an entry node, pull from initialInputs if available
-    if (initialInputs[node.id]) {
-      const explicitInput = initialInputs[node.id];
-      if (typeof explicitInput === 'string') {
-        upstreamInputText = explicitInput;
-      } else {
-        dynamicInputPayload = explicitInput;
-      }
-    }
-  }
+  const { upstreamInputText, dynamicInputPayload } = resolveNodeInput(
+    node,
+    edges,
+    nodeOutputs,
+    initialInputText,
+    initialInputs
+  );
 
   try {
     let output: any = null;
@@ -950,14 +999,35 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
         input: upstreamInputText,
         temperature: 0.1,
       });
+    } else if (node.type === 'ocr') {
+      // Text extraction only. The vision node runs the same digitisation and
+      // then reasons over the result with an LLM; OCR must not, because a model
+      // paraphrasing what it "read" is exactly what an extraction step has to
+      // avoid. Previously this node had no branch at all: it fell through to the
+      // generic handler, which prompted the text model with whatever text
+      // happened to arrive and never opened the image.
+      const fileData = resolveNodeFile(dynamicInputPayload, node.config);
+
+      if (!fileData) {
+        throw new Error(
+          'No image or PDF provided for OCR. Connect an Image or Document input node upstream.'
+        );
+      }
+
+      const ocrRes = await executeSarvamVision({
+        file: fileData,
+        language: node.config?.language || 'hi-IN',
+        output_format: node.config?.output_format === 'html' ? 'html' : 'md',
+      });
+
+      output = {
+        text: ocrRes.text,
+        response: ocrRes.text,
+        job_id: ocrRes.job_id,
+      };
     } else if (node.type === 'vision') {
-      const fileData = 
-        dynamicInputPayload?.data ||
-        dynamicInputPayload?.file ||
-        node.config?.file_data?.data ||
-        node.config?.file?.data ||
-        null;
-      
+      const fileData = resolveNodeFile(dynamicInputPayload, node.config);
+
       if (!fileData) {
         throw new Error('No document file (image/PDF) provided for Vision Node digitisation.');
       }

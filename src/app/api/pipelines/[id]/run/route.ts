@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { sortNodesTopologically, executeSingleNode } from '@/lib/execution';
+import { sortNodesTopologically, executeSingleNode, resolveNodeInput } from '@/lib/execution';
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
 import { nodeCost } from '@/lib/api/pricing';
@@ -242,10 +242,7 @@ function streamRun({
         };
 
         for (const node of sortedNodes) {
-          // Stop before starting work that the reservation cannot cover. Checked
-          // up front so the overshoot is bounded by the cost of a single node.
-          if (budgetExhausted || totalCost >= reserved) {
-            budgetExhausted = true;
+          if (budgetExhausted) {
             await markSkipped(node.id, 'Run budget exhausted before this node could execute');
             continue;
           }
@@ -264,6 +261,35 @@ function streamRun({
               incoming.some((e) => deadEdges.has(e.id))
                 ? 'Skipped by conditional router'
                 : 'No upstream node produced an input for this node'
+            );
+            continue;
+          }
+
+          // Price the node from the input it is about to receive, before doing
+          // the work. Translate and TTS charge per character, so a single large
+          // node checked only afterwards could overshoot the hold and settle the
+          // wallet below zero.
+          const projectedInput = resolveNodeInput(
+            node,
+            liveIncoming,
+            nodeOutputs,
+            INITIAL_INPUT_TEXT,
+            inputs
+          );
+          const projectedCost = nodeCost(
+            node.type,
+            projectedInput.dynamicInputPayload
+              ? { payload: projectedInput.dynamicInputPayload }
+              : { text: projectedInput.upstreamInputText }
+          );
+
+          if (totalCost + projectedCost > reserved) {
+            budgetExhausted = true;
+            await markSkipped(
+              node.id,
+              `Run budget exhausted — this node needs ${projectedCost.toFixed(2)} credit and only ${(
+                reserved - totalCost
+              ).toFixed(2)} remains`
             );
             continue;
           }

@@ -99,6 +99,20 @@ describe('parseNodeConfig', () => {
     });
   });
 
+  describe('ocr', () => {
+    it('accepts a document language and output format', () => {
+      expect(parse('ocr', { language: 'hi-IN', output_format: 'md' }).ok).toBe(true);
+    });
+
+    it('rejects an output format Document AI does not produce', () => {
+      expect(parse('ocr', { output_format: 'txt' }).ok).toBe(false);
+    });
+
+    it('rejects a malformed language', () => {
+      expect(parse('ocr', { language: 'hindi' }).ok).toBe(false);
+    });
+  });
+
   it('accepts the language detection node, which takes no options', () => {
     expect(parse('language_detect', {}).ok).toBe(true);
     expect(hasNodeConfigSchema('language_detect')).toBe(true);

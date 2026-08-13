@@ -7,6 +7,8 @@ import {
   readNumericField,
   NUMERIC_CONDITIONS,
   resolveTransliterationLanguage,
+  resolveNodeFile,
+  resolveNodeInput,
 } from './execution';
 import type { SerializedEdge, SerializedNode } from '@/types/pipeline';
 
@@ -128,6 +130,84 @@ describe('sortNodesTopologically', () => {
     const nodes = [node('a'), node('b')];
     const edges = [edge('a', 'b'), edge('b', 'a')];
     expect(sortNodesTopologically(nodes, edges)).toHaveLength(2);
+  });
+});
+
+describe('resolveNodeFile', () => {
+  it('prefers a file passed down an edge', () => {
+    expect(resolveNodeFile({ data: 'from-edge' }, { file_data: { data: 'from-config' } })).toBe('from-edge');
+  });
+
+  it('falls back to a file attached in the editor', () => {
+    expect(resolveNodeFile(null, { file_data: { data: 'from-config' } })).toBe('from-config');
+  });
+
+  it.each([
+    ['payload.file', { file: 'a' }, undefined, 'a'],
+    ['config.file', null, { file: 'b' }, 'b'],
+    ['config.file_url', null, { file_url: 'c' }, 'c'],
+    ['config.file_data.url', null, { file_data: { url: 'd' } }, 'd'],
+  ])('resolves a file from %s', (_label, payload, config, expected) => {
+    expect(resolveNodeFile(payload, config)).toBe(expected);
+  });
+
+  // The OCR and Vision nodes throw on null, which is what turns "no file" into
+  // a clear error instead of a confident answer about a document nobody read.
+  it('returns null when no file is present anywhere', () => {
+    expect(resolveNodeFile(null, undefined)).toBeNull();
+    expect(resolveNodeFile({}, {})).toBeNull();
+    expect(resolveNodeFile({ text: 'just text' }, { language: 'hi-IN' })).toBeNull();
+  });
+});
+
+describe('resolveNodeInput', () => {
+  const n = (id: string) => node(id);
+
+  it('gives an entry node the run input', () => {
+    const r = resolveNodeInput(n('a'), [], {}, 'seed text');
+    expect(r.upstreamInputText).toBe('seed text');
+    expect(r.dynamicInputPayload).toBeNull();
+  });
+
+  it('prefers an explicit run-dialog input for an entry node', () => {
+    const r = resolveNodeInput(n('a'), [], {}, 'seed text', { a: 'typed by the user' });
+    expect(r.upstreamInputText).toBe('typed by the user');
+  });
+
+  it('passes a non-string run input through as a payload', () => {
+    const file = { data: 'base64', name: 'a.pdf' };
+    const r = resolveNodeInput(n('a'), [], {}, 'seed', { a: file });
+    expect(r.dynamicInputPayload).toEqual(file);
+  });
+
+  it.each([
+    ['a plain string', 'hello', 'hello'],
+    ['response', { response: 'generated' }, 'generated'],
+    ['translated_text', { translated_text: 'अनुवाद' }, 'अनुवाद'],
+    ['transcript', { transcript: 'heard' }, 'heard'],
+    ['text', { text: 'plain' }, 'plain'],
+  ])('reads the upstream output shape %s', (_label, output, expected) => {
+    const r = resolveNodeInput(n('b'), [edge('a', 'b')], { a: output }, 'seed');
+    expect(r.upstreamInputText).toBe(expected);
+  });
+
+  it('describes audio output rather than passing binary downstream', () => {
+    const r = resolveNodeInput(n('b'), [edge('a', 'b')], { a: { audios: ['<base64>'] } }, 'seed');
+    expect(r.upstreamInputText).toBe('Audio Generated Successfully');
+  });
+
+  it('falls back to the run input when the upstream node produced nothing', () => {
+    const r = resolveNodeInput(n('b'), [edge('a', 'b')], {}, 'seed');
+    expect(r.upstreamInputText).toBe('seed');
+  });
+
+  // This is what the pre-execution budget check depends on: the orchestrator
+  // must see exactly what the node will see, or it prices the wrong thing.
+  it('matches what execution will receive, so a node can be priced first', () => {
+    const outputs = { a: { translated_text: 'x'.repeat(1200) } };
+    const r = resolveNodeInput(n('b'), [edge('a', 'b')], outputs, 'seed');
+    expect(r.upstreamInputText).toHaveLength(1200);
+    expect(r.dynamicInputPayload).toBe(outputs.a);
   });
 });
 

@@ -450,7 +450,7 @@ export const ConfigPanel: React.FC = () => {
               {nodeType === 'vector_search' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Query Text</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Query Words</label>
                     <input 
                       type="text" 
                       value={config.query || ''} 
@@ -465,9 +465,16 @@ export const ConfigPanel: React.FC = () => {
                       rows={3} 
                       value={config.fallback_context || ''} 
                       onChange={(e) => handleChange('fallback_context', e.target.value)} 
-                      placeholder="Enter optional document context here..." 
-                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none" 
+                      placeholder="Enter optional document context here..."
+                      className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
                     />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">
+                      Chunks are ranked by how many of your query words they contain, and the top
+                      three are returned. This matches wording rather than meaning, so use words
+                      that appear in the document.
+                    </p>
                   </div>
                 </>
               )}
@@ -507,6 +514,31 @@ export const ConfigPanel: React.FC = () => {
                   />
                   <p className="text-xs text-gray-500">
                     Converts script without changing the language. To convert meaning, use a Translate node.
+                  </p>
+                </>
+              )}
+
+              {/* OCR */}
+              {nodeType === 'ocr' && (
+                <>
+                  <Select
+                    label="Document Language"
+                    value={config.language || 'hi-IN'}
+                    onChange={(val) => handleChange('language', val)}
+                    options={SPEECH_TEXT_LANGUAGES}
+                  />
+                  <Select
+                    label="Output Format"
+                    value={config.output_format || 'md'}
+                    onChange={(val) => handleChange('output_format', val)}
+                    options={[
+                      { label: 'Markdown — keeps headings and tables', value: 'md' },
+                      { label: 'HTML', value: 'html' },
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Extracts the text as written, without interpreting it. To ask questions about a
+                    document, use a Vision node instead.
                   </p>
                 </>
               )}

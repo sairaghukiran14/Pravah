@@ -98,6 +98,11 @@ const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
 
   language_detect: z.looseObject({}),
 
+  ocr: z.looseObject({
+    language: languageCode.optional(),
+    output_format: z.enum(['html', 'md']).optional(),
+  }),
+
   codemix_normalizer: z.looseObject({ target_language: z.string().max(64).optional() }),
 
   pdf_splitter: z.looseObject({
