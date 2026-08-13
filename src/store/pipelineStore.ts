@@ -96,7 +96,7 @@ const getDefaultConfig = (type: NodeType) => {
   }
 };
 
-const getDefaultLabel = (type: NodeType) => {
+export const getDefaultLabel = (type: NodeType) => {
   switch (type) {
     case 'stt': return 'Sarvam Speech to Text';
     case 'translate': return 'Sarvam Translate';
@@ -118,12 +118,28 @@ const getDefaultLabel = (type: NodeType) => {
     case 'sentiment': return 'Sentiment';
     case 'keyword_extraction': return 'Keyword Extraction';
     case 'classification': return 'Classification';
-    
+    case 'podcast': return 'Podcast Generator';
+    case 'language_detect': return 'Detect Language';
+    case 'transliteration': return 'Transliterate';
+    case 'codemix_normalizer': return 'Code-Mix Cleaner';
+    case 'pdf_splitter': return 'Document Chunker';
+    case 'vector_search': return 'Vector Search';
+
+    // Control flow
+    case 'router': return 'Router';
+    case 'delay': return 'Delay';
+
+    // Integrations
+    case 'webhook': return 'Webhook';
+    case 'sms_sender': return 'SMS Sender';
+
     // Outputs
     case 'text_output': return 'Text Output';
     case 'audio_output': return 'Audio Output';
     case 'file_output': return 'File Output';
 
+    // Every type above is named. Reaching this means a type was added to the
+    // engine without a label, which the test below is there to catch.
     default: return 'Node';
   }
 };

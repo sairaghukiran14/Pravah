@@ -353,21 +353,31 @@ export const ConfigPanel: React.FC = () => {
                       { label: 'Number Less Than or Equal', value: 'lte' }
                     ]}
                   />
-                  {['gt', 'gte', 'lt', 'lte'].includes(config.condition_type) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
-                      <input
-                        type="text"
-                        value={config.condition_field || ''}
-                        onChange={(e) => handleChange('condition_field', e.target.value)}
-                        placeholder="confidence"
-                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.
-                      </p>
-                    </div>
-                  )}
+                  {(() => {
+                    // Offered for every condition, not just the numeric ones —
+                    // matching language_code from a Detect Language node needs
+                    // the same mechanism as comparing a confidence score.
+                    const isNumeric = ['gt', 'gte', 'lt', 'lte'].includes(config.condition_type);
+                    return (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Field to Compare</label>
+                        <input
+                          type="text"
+                          value={config.condition_field || ''}
+                          onChange={(e) => handleChange('condition_field', e.target.value)}
+                          placeholder={isNumeric ? 'confidence' : 'leave blank to match the incoming text'}
+                          className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          {isNumeric ? (
+                            <>Which number on the incoming result to test. Defaults to <span className="font-mono">confidence</span>.</>
+                          ) : (
+                            <>Which field of the incoming result to match — for example <span className="font-mono">language_code</span> or <span className="font-mono">script_code</span> from a Detect Language node. Leave blank to match the text itself.</>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition Value</label>
                     <input
