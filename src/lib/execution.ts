@@ -1,5 +1,14 @@
 import { SerializedEdge, SerializedNode } from '@/types/pipeline';
-import { executeSarvamSTT, executeSarvamTTS, executeSarvamTranslate, executeSarvamLLM, executeSarvamVision } from './sarvam';
+import {
+  executeSarvamSTT,
+  executeSarvamTTS,
+  executeSarvamTranslate,
+  executeSarvamLLM,
+  executeSarvamVision,
+  executeSarvamTransliterate,
+  executeSarvamLID,
+  SARVAM_TEXT_TOOL_LANGUAGES,
+} from './sarvam';
 import { safeFetch } from './api/safeFetch';
 
 /**
@@ -100,6 +109,63 @@ export function splitTextIntoSentenceChunks(text: string, maxLen: number = 400):
 
 /** Router conditions that compare a number rather than matching text. */
 export const NUMERIC_CONDITIONS = new Set(['gt', 'gte', 'lt', 'lte']);
+
+/**
+ * Script names the transliteration node used before it called the real API.
+ *
+ * The old node prompted an LLM with script names ("Devanagari" to "Latin").
+ * Sarvam's /transliterate takes language codes instead, so pipelines saved
+ * against the old config keep working by mapping their script to the language
+ * that writes in it.
+ */
+const SCRIPT_TO_LANGUAGE: Record<string, string> = {
+  latin: 'en-IN',
+  roman: 'en-IN',
+  english: 'en-IN',
+  devanagari: 'hi-IN',
+  hindi: 'hi-IN',
+  marathi: 'mr-IN',
+  bengali: 'bn-IN',
+  gujarati: 'gu-IN',
+  kannada: 'kn-IN',
+  malayalam: 'ml-IN',
+  odia: 'od-IN',
+  oriya: 'od-IN',
+  gurmukhi: 'pa-IN',
+  punjabi: 'pa-IN',
+  tamil: 'ta-IN',
+  telugu: 'te-IN',
+};
+
+/**
+ * Resolves a transliteration endpoint language from either the current config
+ * (a language code) or the legacy one (a script name).
+ *
+ * Rejects a language the endpoint does not support rather than quietly
+ * substituting a different one — transliterating Assamese as Hindi would
+ * produce plausible-looking output that is simply wrong.
+ */
+export function resolveTransliterationLanguage(
+  languageCode: string | undefined,
+  scriptName: string | undefined,
+  fallback: string
+): string {
+  if (languageCode) {
+    if (!SARVAM_TEXT_TOOL_LANGUAGES.includes(languageCode)) {
+      throw new Error(
+        `Transliteration does not support ${languageCode}. Supported: ${SARVAM_TEXT_TOOL_LANGUAGES.join(', ')}.`
+      );
+    }
+    return languageCode;
+  }
+
+  if (scriptName) {
+    const mapped = SCRIPT_TO_LANGUAGE[scriptName.trim().toLowerCase()];
+    if (mapped) return mapped;
+  }
+
+  return fallback;
+}
 
 /**
  * Pulls a numeric field out of whatever the upstream node produced.
@@ -603,8 +669,22 @@ Return ONLY a valid JSON object matching the following structure:
     } else if (node.type === 'router') {
       const conditionType = node.config?.condition_type || 'contains';
       const conditionValue = replaceVariables(String(node.config?.condition_value || ''), nodeOutputs, initialInputs).trim().toLowerCase();
-      const inputText = String(upstreamInputText || '').trim().toLowerCase();
-      
+
+      // A named field lets a branch test something specific the upstream node
+      // reported — language_code from detection, say — instead of the text that
+      // merely passes through it.
+      const namedField = String(node.config?.condition_field || '').trim();
+      const fieldValue =
+        namedField && dynamicInputPayload && typeof dynamicInputPayload === 'object'
+          ? dynamicInputPayload[namedField]
+          : undefined;
+
+      const inputText = String(
+        fieldValue !== undefined && fieldValue !== null ? fieldValue : upstreamInputText || ''
+      )
+        .trim()
+        .toLowerCase();
+
       let matched = false;
       if (conditionType === 'equals') {
         matched = inputText === conditionValue;
@@ -731,21 +811,43 @@ Return ONLY a valid JSON object matching the following structure:
         matches: sortedMatches
       };
     } else if (node.type === 'transliteration') {
-      const source = node.config?.source_script || 'Devanagari';
-      const target = node.config?.target_script || 'Latin';
       const textToTransliterate = replaceVariables(upstreamInputText, nodeOutputs, initialInputs);
 
-      const translitRes = await executeSarvamLLM({
-        model: 'sarvam-105b',
-        system_prompt: `You are a script transliterator. Convert the user input from ${source} script to ${target} script based strictly on phonetics and pronunciation.
-Do NOT translate the meaning, only convert the letters/script phonetically. Return ONLY the transliterated text with no other explanations.`,
-        prompt: textToTransliterate,
-        temperature: 0.1,
+      const translitRes = await executeSarvamTransliterate({
+        input: textToTransliterate,
+        source_language_code: resolveTransliterationLanguage(
+          node.config?.source_language_code,
+          node.config?.source_script,
+          'hi-IN'
+        ),
+        target_language_code: resolveTransliterationLanguage(
+          node.config?.target_language_code,
+          node.config?.target_script,
+          'en-IN'
+        ),
+        spoken_form: node.config?.spoken_form === true,
+        numerals_format: node.config?.numerals_format === 'native' ? 'native' : 'international',
       });
 
       output = {
-        text: translitRes.response.trim(),
-        response: translitRes.response.trim()
+        text: translitRes.transliterated_text,
+        response: translitRes.transliterated_text,
+        source_language_code: translitRes.source_language_code,
+      };
+    } else if (node.type === 'language_detect') {
+      const textToInspect = replaceVariables(upstreamInputText, nodeOutputs, initialInputs);
+      const lid = await executeSarvamLID(textToInspect);
+
+      output = {
+        language_code: lid.language_code,
+        script_code: lid.script_code,
+        // The text itself passes through unchanged, so detection can sit in the
+        // middle of a chain without becoming the thing downstream nodes read.
+        text: textToInspect,
+        response: textToInspect,
+        detected: lid.language_code
+          ? `${lid.language_code}${lid.script_code ? ` (${lid.script_code})` : ''}`
+          : 'undetermined',
       };
     } else if (node.type === 'codemix_normalizer') {
       const targetLang = node.config?.target_language || 'Hindi';

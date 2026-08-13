@@ -77,4 +77,30 @@ describe('parseNodeConfig', () => {
       expect(hasNodeConfigSchema(type)).toBe(true);
     }
   });
+
+  describe('transliteration', () => {
+    it('accepts the endpoint options', () => {
+      const r = parse('transliteration', {
+        source_language_code: 'hi-IN',
+        target_language_code: 'en-IN',
+        spoken_form: true,
+        numerals_format: 'native',
+      });
+      expect(r.ok).toBe(true);
+    });
+
+    // Saved before the node called the real endpoint; execution maps these.
+    it('still accepts the legacy script names', () => {
+      expect(parse('transliteration', { source_script: 'Devanagari', target_script: 'Latin' }).ok).toBe(true);
+    });
+
+    it('rejects an unknown numerals format', () => {
+      expect(parse('transliteration', { numerals_format: 'roman' }).ok).toBe(false);
+    });
+  });
+
+  it('accepts the language detection node, which takes no options', () => {
+    expect(parse('language_detect', {}).ok).toBe(true);
+    expect(hasNodeConfigSchema('language_detect')).toBe(true);
+  });
 });

@@ -20,9 +20,10 @@ Pravah is a powerful, full-stack workflow orchestration studio that allows users
 
 * **Visual Workflow Orchestration**: Built on React Flow, enabling seamless drag-and-drop node connections to construct complex DAG pipelines.
 * **Indic AI Integrations**: Deeply integrated with Sarvam AI to provide:
-  * Real-time Speech-to-Text (STT) processing
-  * Multilingual machine translation across 10+ Indic languages
-  * Natural-sounding Text-to-Speech (TTS) synthesis
+  * Real-time Speech-to-Text (STT) processing across 23 Indic languages
+  * Multilingual machine translation across the same 23 languages
+  * Natural-sounding Text-to-Speech (TTS) synthesis in the 11 languages Bulbul supports
+  * Script transliteration and language/script detection, so Romanised and code-mixed input is handled explicitly
 * **Custom Execution Engine**: A robust, topological sort-based backend engine that resolves dependencies and runs asynchronous multi-node data pipelines while capturing granular, node-level execution logs.
 * **Pay-As-You-Go Billing**: Secure, credit-based billing system integrated with Razorpay. Features server-side webhook/payment signature verification and dynamic execution cost deduction.
 * **File & Media Handling**: Automated upload processing and secure cloud storage utilizing Cloudflare R2.

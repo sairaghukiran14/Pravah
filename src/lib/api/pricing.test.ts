@@ -68,4 +68,12 @@ describe('nodeCost', () => {
       expect(nodeCost(type, { text: 'anything' })).toBe(0.5);
     }
   );
+
+  // A short classification call, not a 105B inference — pricing it the same
+  // would discourage using detection to route, which is the point of it.
+  it('charges less for language detection than for a model node', () => {
+    const detect = nodeCost('language_detect', { text: 'anything' });
+    expect(detect).toBeGreaterThan(0);
+    expect(detect).toBeLessThan(nodeCost('llm', { text: 'anything' }));
+  });
 });

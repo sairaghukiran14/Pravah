@@ -102,6 +102,10 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
     title: 'Vector Search Query',
     desc: 'Performs semantic searches on a text dataset or document chunks to extract the top matching passages.',
   },
+  language_detect: {
+    title: 'Language Detection',
+    desc: 'Identifies the language and script of the incoming text, and passes the text through unchanged. Detecting the script is what distinguishes Romanised Indic input from English.',
+  },
   transliteration: {
     title: 'Script Transliteration',
     desc: 'Converts text scripts based on phonetics (e.g. converting Hindi in Devanagari script to Latin characters).',

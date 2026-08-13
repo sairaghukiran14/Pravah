@@ -40,6 +40,7 @@ const nodeTypes = {
   pdf_splitter: GenericNode,
   vector_search: GenericNode,
   transliteration: GenericNode,
+  language_detect: GenericNode,
   codemix_normalizer: GenericNode,
   webhook: GenericNode,
   sms_sender: GenericNode,
@@ -137,7 +138,7 @@ const FlowEditorContent: React.FC = () => {
             if (node.type === 'router') return '#a855f7';
             if (node.type === 'delay') return '#6366f1';
             if (node.type === 'pdf_splitter' || node.type === 'vector_search') return '#22d3ee';
-            if (node.type === 'transliteration' || node.type === 'codemix_normalizer') return '#059669';
+            if (node.type === 'transliteration' || node.type === 'codemix_normalizer' || node.type === 'language_detect') return '#059669';
             if (node.type === 'webhook' || node.type === 'sms_sender') return '#db2777';
             return '#d1d5db';
           }}

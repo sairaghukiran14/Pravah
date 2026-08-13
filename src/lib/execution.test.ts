@@ -6,6 +6,7 @@ import {
   replaceVariables,
   readNumericField,
   NUMERIC_CONDITIONS,
+  resolveTransliterationLanguage,
 } from './execution';
 import type { SerializedEdge, SerializedNode } from '@/types/pipeline';
 
@@ -127,6 +128,44 @@ describe('sortNodesTopologically', () => {
     const nodes = [node('a'), node('b')];
     const edges = [edge('a', 'b'), edge('b', 'a')];
     expect(sortNodesTopologically(nodes, edges)).toHaveLength(2);
+  });
+});
+
+describe('resolveTransliterationLanguage', () => {
+  it('uses an explicit language code', () => {
+    expect(resolveTransliterationLanguage('te-IN', undefined, 'hi-IN')).toBe('te-IN');
+  });
+
+  // Pipelines saved before the node called the real endpoint stored script
+  // names. They must keep running rather than silently reverting to a default.
+  it.each([
+    ['Devanagari', 'hi-IN'],
+    ['Latin', 'en-IN'],
+    ['Telugu', 'te-IN'],
+    ['Tamil', 'ta-IN'],
+    ['Gurmukhi', 'pa-IN'],
+    ['oriya', 'od-IN'],
+  ])('maps the legacy script %s to %s', (script, expected) => {
+    expect(resolveTransliterationLanguage(undefined, script, 'hi-IN')).toBe(expected);
+  });
+
+  it('is not case sensitive about legacy script names', () => {
+    expect(resolveTransliterationLanguage(undefined, '  DEVANAGARI ', 'en-IN')).toBe('hi-IN');
+  });
+
+  it('falls back when neither is given', () => {
+    expect(resolveTransliterationLanguage(undefined, undefined, 'en-IN')).toBe('en-IN');
+  });
+
+  it('falls back for a script name it does not recognise', () => {
+    expect(resolveTransliterationLanguage(undefined, 'Cyrillic', 'hi-IN')).toBe('hi-IN');
+  });
+
+  // Substituting a supported language for an unsupported one would produce
+  // confident, wrong output rather than an error the user can act on.
+  it('rejects a language the endpoint does not support', () => {
+    expect(() => resolveTransliterationLanguage('as-IN', undefined, 'hi-IN')).toThrow(/does not support/i);
+    expect(() => resolveTransliterationLanguage('doi-IN', undefined, 'hi-IN')).toThrow();
   });
 });
 

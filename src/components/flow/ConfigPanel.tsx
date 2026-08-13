@@ -47,6 +47,26 @@ const VOICE_LANGUAGES = SPEECH_TEXT_LANGUAGES.slice(0, 11);
 
 const SOURCE_LANGUAGES = [{ label: 'Auto Detect', value: 'auto' }, ...SPEECH_TEXT_LANGUAGES];
 
+/** Sarvam's /transliterate covers the same 11 languages as the voice models. */
+const TRANSLITERATION_LANGUAGES = VOICE_LANGUAGES;
+
+/**
+ * Maps the script name an older transliteration node stored onto the language
+ * code the endpoint takes, so opening a pipeline saved before the switch shows
+ * what it will actually run rather than an unrelated default.
+ */
+function legacyScriptLanguage(script?: string): string | undefined {
+  if (!script) return undefined;
+  const map: Record<string, string> = {
+    latin: 'en-IN', roman: 'en-IN', english: 'en-IN',
+    devanagari: 'hi-IN', hindi: 'hi-IN', marathi: 'mr-IN',
+    bengali: 'bn-IN', gujarati: 'gu-IN', kannada: 'kn-IN',
+    malayalam: 'ml-IN', odia: 'od-IN', oriya: 'od-IN',
+    gurmukhi: 'pa-IN', punjabi: 'pa-IN', tamil: 'ta-IN', telugu: 'te-IN',
+  };
+  return map[script.trim().toLowerCase()];
+}
+
 const SPEAKER_VOICES = [
   { label: 'Aditya', value: 'aditya' },
   { label: 'Ritu', value: 'ritu' },
@@ -445,29 +465,50 @@ export const ConfigPanel: React.FC = () => {
               {/* Transliteration */}
               {nodeType === 'transliteration' && (
                 <>
-                  <Select 
-                    label="Source Script" 
-                    value={config.source_script || 'Devanagari'} 
-                    onChange={(val) => handleChange('source_script', val)} 
-                    options={[
-                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
-                      { label: 'Telugu', value: 'Telugu' },
-                      { label: 'Tamil', value: 'Tamil' },
-                      { label: 'Latin (English/Romanized)', value: 'Latin' }
-                    ]} 
+                  <Select
+                    label="Source Language"
+                    value={config.source_language_code || legacyScriptLanguage(config.source_script) || 'hi-IN'}
+                    onChange={(val) => handleChange('source_language_code', val)}
+                    options={TRANSLITERATION_LANGUAGES}
                   />
-                  <Select 
-                    label="Target Script" 
-                    value={config.target_script || 'Latin'} 
-                    onChange={(val) => handleChange('target_script', val)} 
-                    options={[
-                      { label: 'Latin (English/Romanized)', value: 'Latin' },
-                      { label: 'Devanagari (Hindi)', value: 'Devanagari' },
-                      { label: 'Telugu', value: 'Telugu' },
-                      { label: 'Tamil', value: 'Tamil' }
-                    ]} 
+                  <Select
+                    label="Target Language"
+                    value={config.target_language_code || legacyScriptLanguage(config.target_script) || 'en-IN'}
+                    onChange={(val) => handleChange('target_language_code', val)}
+                    options={TRANSLITERATION_LANGUAGES}
                   />
+                  <Select
+                    label="Numerals"
+                    value={config.numerals_format || 'international'}
+                    onChange={(val) => handleChange('numerals_format', val)}
+                    options={[
+                      { label: 'International (0-9)', value: 'international' },
+                      { label: 'Native script digits', value: 'native' },
+                    ]}
+                  />
+                  <Select
+                    label="Spoken Form"
+                    value={config.spoken_form ? 'true' : 'false'}
+                    onChange={(val) => handleChange('spoken_form', val === 'true')}
+                    options={[
+                      { label: 'Off — transliterate as written', value: 'false' },
+                      { label: 'On — write numbers and abbreviations as spoken', value: 'true' },
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Converts script without changing the language. To convert meaning, use a Translate node.
+                  </p>
                 </>
+              )}
+
+              {/* Language Detection */}
+              {nodeType === 'language_detect' && (
+                <p className="text-xs text-gray-500">
+                  Reports the language and script of the incoming text and passes the text through
+                  unchanged. Branch on the result with a Router node set to match the{' '}
+                  <span className="font-mono">language_code</span> or{' '}
+                  <span className="font-mono">script_code</span> field.
+                </p>
               )}
 
               {/* Code-Mix Cleaner */}

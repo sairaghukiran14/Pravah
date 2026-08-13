@@ -86,9 +86,17 @@ const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
   }),
 
   transliteration: z.looseObject({
+    source_language_code: languageCode.optional(),
+    target_language_code: languageCode.optional(),
+    spoken_form: z.boolean().optional(),
+    numerals_format: z.enum(['international', 'native']).optional(),
+    // Legacy script names, kept so pipelines saved before the endpoint switch
+    // still validate; execution maps them to language codes.
     source_script: z.string().max(64).optional(),
     target_script: z.string().max(64).optional(),
   }),
+
+  language_detect: z.looseObject({}),
 
   codemix_normalizer: z.looseObject({ target_language: z.string().max(64).optional() }),
 

@@ -59,7 +59,8 @@ const ragNodes: ToolbarItem[] = [
 ];
 
 const regionalNodes: ToolbarItem[] = [
-  { type: 'transliteration', title: 'Transliterate', desc: 'Converts text scripts phonetically (e.g. Devanagari to Latin).', icon: <Languages className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
+  { type: 'transliteration', title: 'Transliterate', desc: 'Converts text between Indic scripts and Roman phonetically, using Sarvam\'s transliteration model.', icon: <Languages className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
+  { type: 'language_detect', title: 'Detect Language', desc: 'Identifies the language and script of incoming text, so a branch can route on Romanised or mixed-script input.', icon: <Languages className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
   { type: 'codemix_normalizer', title: 'Code-Mix Cleaner', desc: 'Cleans up multi-lingual spoken slang (like Hinglish/Tenglish) into formal language.', icon: <Smile className="h-3.5 w-3.5 text-emerald-600" />, bg: 'bg-emerald-50', hover: 'hover:border-emerald-200 hover:bg-emerald-50/50' },
 ];
 
