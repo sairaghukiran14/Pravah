@@ -5,6 +5,7 @@ import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
 import { nodeCost } from '@/lib/api/pricing';
 import { parseNodeConfig, type NodeConfigIssue } from '@/lib/api/nodeConfig';
+import { recordAudit } from '@/lib/api/audit';
 import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
 import {
   reserveCredits,
@@ -58,7 +59,7 @@ const INITIAL_INPUT_TEXT = 'नमस्ते! भारत की कृत्
 export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
   // cost 25: a single run can fan out into many paid Sarvam calls.
   { cost: 25, body: bodySchema },
-  async ({ userId, params, body }) => {
+  async ({ userId, params, body, req }) => {
     const pipelineId = params.id;
 
     // Ownership is checked before any credit is held.
@@ -92,6 +93,21 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
         await releaseReservation(userId, reserved);
         throw badRequest('Pipeline contains no nodes to execute.');
       }
+
+      await recordAudit({
+        userId,
+        action: 'pipeline.run',
+        targetType: 'pipeline',
+        targetId: pipelineId,
+        // Node count and types only. The inputs themselves are customer content
+        // and have no business being copied into an audit table.
+        metadata: {
+          nodeCount: pipelineData.nodes.length,
+          nodeTypes: [...new Set(pipelineData.nodes.map((n) => n.type))],
+          unsavedGraph: Boolean(body.nodes?.length),
+        },
+        req,
+      });
 
       return streamRun({ pipelineId, userId, reserved, pipelineData, inputs: body.inputs || {} });
     } catch (error) {

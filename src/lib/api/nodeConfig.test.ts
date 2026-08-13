@@ -117,4 +117,39 @@ describe('parseNodeConfig', () => {
     expect(parse('language_detect', {}).ok).toBe(true);
     expect(hasNodeConfigSchema('language_detect')).toBe(true);
   });
+
+  describe('input nodes', () => {
+    // The blob is a base64 payload or proxy URL whose real constraints live
+    // where it is read; what is checked here is the structure around it.
+    it('accepts an upload envelope with its payload intact', () => {
+      const r = parse('document_input', {
+        format: 'pdf',
+        file_data: { name: 'invoice.pdf', type: 'document', r2_key: 'audio_input_u1_1_invoice.pdf', data: 'x'.repeat(5000) },
+      });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect((r.config.file_data as any).data).toHaveLength(5000);
+    });
+
+    it('rejects an input type the editor cannot produce', () => {
+      expect(parse('audio_input', { input_type: 'telepathy' }).ok).toBe(false);
+      expect(parse('audio_input', { input_type: 'mic' }).ok).toBe(true);
+    });
+
+    it('rejects an absurd file name', () => {
+      expect(parse('image_input', { file_data: { name: 'x'.repeat(600) } }).ok).toBe(false);
+    });
+  });
+
+  it('has a schema for every node type the engine can run', () => {
+    const everyType = [
+      'stt', 'translate', 'tts', 'podcast', 'router', 'delay',
+      'pdf_splitter', 'vector_search', 'transliteration', 'codemix_normalizer',
+      'webhook', 'sms_sender', 'language_detect',
+      'audio_input', 'text_input', 'document_input', 'image_input', 'video_input', 'url_input',
+      'ocr', 'vision', 'llm', 'summarize', 'sentiment', 'keyword_extraction', 'classification',
+      'text_output', 'audio_output', 'file_output',
+    ];
+    const unmodelled = everyType.filter((t) => !hasNodeConfigSchema(t));
+    expect(unmodelled).toEqual([]);
+  });
 });

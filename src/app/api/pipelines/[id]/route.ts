@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { route } from '@/lib/api/route';
+import { recordAudit } from '@/lib/api/audit';
 import { notFound } from '@/lib/api/errors';
 
 type Params = { id: string };
@@ -84,13 +85,25 @@ export const PUT = route<z.infer<typeof updateSchema>, undefined, Params>(
   }
 );
 
-export const DELETE = route<undefined, undefined, Params>({}, async ({ userId, params }) => {
+export const DELETE = route<undefined, undefined, Params>({}, async ({ userId, params, req }) => {
   const existing = await prisma.pipeline.findFirst({
     where: { id: params.id, project: { userId } },
-    select: { id: true },
+    select: { id: true, name: true, _count: { select: { nodes: true, runs: true } } },
   });
   if (!existing) throw notFound('Pipeline not found');
 
   await prisma.pipeline.delete({ where: { id: params.id } });
+
+  // Deletion cascades to nodes, edges and run history, so this line is the only
+  // remaining record that the pipeline existed.
+  await recordAudit({
+    userId,
+    action: 'pipeline.delete',
+    targetType: 'pipeline',
+    targetId: params.id,
+    metadata: { name: existing.name, nodes: existing._count.nodes, runs: existing._count.runs },
+    req,
+  });
+
   return { success: true };
 });

@@ -35,6 +35,29 @@ const promptText = z.string().max(20_000);
 const chunkSize = z.coerce.number().int().min(1).max(20_000);
 const chunkOverlap = z.coerce.number().int().min(0).max(20_000);
 
+/** The upload envelope the editor attaches to a file-carrying input node. */
+const fileEnvelope = z.looseObject({
+  name: z.string().max(512).optional(),
+  type: z.string().max(128).optional(),
+  url: z.string().max(4_096).optional(),
+  r2_key: z.string().max(1_024).optional(),
+});
+
+/**
+ * Schema for a node that carries an upload: the caller's own fields are
+ * validated, while the file payload stays permissive because it is a base64
+ * blob or proxy URL whose real constraints — size limits and the SSRF egress
+ * guard — are applied where it is read, not here.
+ */
+function fileBearingConfig(fields: Record<string, z.ZodType>) {
+  return z.looseObject({
+    ...fields,
+    file_data: fileEnvelope.optional(),
+    file_url: z.string().max(4_096).optional(),
+    audio_url: z.string().max(4_096).optional(),
+  });
+}
+
 const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
   stt: z.looseObject({
     language_code: languageCode.optional(),
@@ -142,6 +165,31 @@ const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
   text_input: z.looseObject({ text: z.string().max(200_000).optional() }),
 
   url_input: z.looseObject({ url: z.string().max(2_048).optional() }),
+
+  // Neither takes configuration — the engine fixes their instructions so the
+  // output shape stays parseable by the router.
+  keyword_extraction: z.looseObject({}),
+  sentiment: z.looseObject({}),
+
+  /**
+   * Input nodes carry an upload the editor assembled, so the file payload
+   * itself stays unconstrained — it is a base64 blob or a proxy URL, and the
+   * egress guard and size limits that matter are applied where it is read.
+   * What is checked is the small amount of structure around it.
+   */
+  audio_input: fileBearingConfig({
+    input_type: z.enum(['upload', 'mic']).optional(),
+  }),
+  document_input: fileBearingConfig({
+    format: z.string().max(32).optional(),
+  }),
+  image_input: fileBearingConfig({}),
+  video_input: fileBearingConfig({}),
+
+  // Output nodes render whatever reaches them; they hold no configuration.
+  text_output: z.looseObject({}),
+  audio_output: z.looseObject({}),
+  file_output: fileBearingConfig({}),
 };
 
 export interface NodeConfigIssue {

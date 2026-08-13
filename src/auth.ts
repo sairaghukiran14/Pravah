@@ -32,11 +32,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Fetch from DB if user object is not present on subsequent calls
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: { onboardingCompleted: true }
+          select: { onboardingCompleted: true, sessionsRevokedAt: true },
         });
-        if (dbUser) {
-          token.onboardingCompleted = dbUser.onboardingCompleted;
+
+        // The account has no record at all — deleted, or the token names an id
+        // that never existed. Either way it must stop being accepted.
+        if (!dbUser) return null;
+
+        // Revocation is checked here because it is the only place every request
+        // already reads the user row, so enforcing it costs no extra query.
+        if (dbUser.sessionsRevokedAt && token.iat) {
+          const issuedAt = token.iat * 1000;
+          if (issuedAt < dbUser.sessionsRevokedAt.getTime()) return null;
         }
+
+        token.onboardingCompleted = dbUser.onboardingCompleted;
       }
       return token;
     },

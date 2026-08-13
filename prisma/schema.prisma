@@ -18,7 +18,13 @@ model User {
   updatedAt           DateTime       @updatedAt
   onboardingCompleted Boolean        @default(false)
   credits             Float          @default(20.00)
+  // Any session issued before this moment is refused. Bumping it is what
+  // "sign out everywhere" does — with the JWT strategy there is no server-side
+  // session row to delete, so revocation has to be a claim the token is checked
+  // against rather than a record that gets removed.
+  sessionsRevokedAt   DateTime?
   accounts            Account[]
+  auditLogs           AuditLog[]
   orders              PaymentOrder[]
   projects            Project[]
   sessions            Session[]
@@ -156,6 +162,34 @@ model NodeRun {
 
   @@index([runId])
   @@index([nodeId])
+}
+
+/**
+ * Record of security-relevant actions.
+ *
+ * Separate from CreditTransaction, which is a financial ledger and says nothing
+ * about who changed a pipeline, who ran one, or from where. Rows are written
+ * best-effort: an audit failure must never take down the action it describes,
+ * because refusing to delete a pipeline because the log is unavailable is worse
+ * than the missing line.
+ */
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  /** Verb in dotted form, e.g. pipeline.delete, session.revoke. */
+  action     String
+  /** What was acted on, where the action names one. */
+  targetType String?
+  targetId   String?
+  /** Action-specific detail. Never contains customer document or audio content. */
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action])
 }
 
 model CreditTransaction {
