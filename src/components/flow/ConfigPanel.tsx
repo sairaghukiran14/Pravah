@@ -796,6 +796,41 @@ export const ConfigPanel: React.FC = () => {
               )}
               {nodeType === 'summarize' && <Select label="Summary Length" value={config.length || 'short'} onChange={(val) => handleChange('length', val)} options={[{ label: 'Short (1 paragraph)', value: 'short' }, { label: 'Medium (3 paragraphs)', value: 'medium' }, { label: 'Long (Detailed)', value: 'long' }]} />}
               {nodeType === 'sentiment' && <Select label="Output Format" value={config.format || 'json'} onChange={(val) => handleChange('format', val)} options={[{ label: 'JSON Object', value: 'json' }, { label: 'Simple Text', value: 'text' }]} />}
+              {nodeType === 'keyword_extraction' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex justify-between">
+                    <span>Max Keywords</span>
+                    <span className="font-mono text-gray-500">{config.max_keywords || 5}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value={config.max_keywords || 5}
+                    onChange={(e) => handleChange('max_keywords', parseInt(e.target.value))}
+                    className="w-full accent-gray-900 cursor-pointer"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Extracts key phrases and core terms from upstream text for indexing or routing.
+                  </p>
+                </div>
+              )}
+              {nodeType === 'classification' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Categories</label>
+                  <textarea
+                    rows={3}
+                    value={config.categories || ''}
+                    onChange={(e) => handleChange('categories', e.target.value)}
+                    placeholder="e.g. Sales, Technical Support, Billing, General Inquiry"
+                    className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-900 focus:outline-none"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Comma-separated candidate labels. Categorizes input text into one of these classes for downstream Router branching.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
