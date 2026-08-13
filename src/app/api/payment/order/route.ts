@@ -21,6 +21,9 @@ export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }
   // Development convenience: without configured keys, create a mock order so the
   // checkout flow can be exercised locally.
   if (!keyId || !keySecret || keyId === 'mock_key_id') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ApiError(500, 'Razorpay integration is not configured');
+    }
     const mockOrder = {
       id: `order_mock_${Math.random().toString(36).substring(7)}`,
       amount: Math.round(amount * 100),
