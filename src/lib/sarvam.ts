@@ -8,6 +8,8 @@ import {
 } from '@/types/sarvam';
 import { downloadFromR2, R2_BUCKET_NAME } from './r2';
 import { safeFetch } from './api/safeFetch';
+import { isWav, chunkWav, wavDurationSeconds } from './audio/wav';
+import { STT_MAX_SECONDS, MAX_AUDIO_SIZE_MB } from './audio/limits';
 
 const SARVAM_BASE_URL = 'https://api.sarvam.ai';
 
@@ -66,7 +68,6 @@ async function fetchWithRetry(
 }
 
 // Environment based limits for Sarvam API usage
-const MAX_AUDIO_SIZE_MB = parseInt(process.env.SARVAM_MAX_AUDIO_SIZE_MB || '10'); // default 10 MB
 const MAX_TEXT_LENGTH = parseInt(process.env.SARVAM_MAX_TEXT_LENGTH || '5000'); // default 5000 characters
 
 function getApiKey(): string {
@@ -138,8 +139,53 @@ function createValidWavBuffer(seconds = 1): Buffer {
   return buffer;
 }
 
+/** POST one audio buffer to /speech-to-text. The caller guarantees it is within the length limit. */
+async function transcribeChunk(
+  audio: Buffer,
+  mime: string,
+  ext: string,
+  payload: SarvamSTTRequest,
+  apiKey: string
+): Promise<SarvamSTTResponse> {
+  const formData = new FormData();
+  formData.append('model', payload.model || 'saaras:v3');
+  formData.append('language_code', payload.language_code || 'hi-IN');
+  formData.append('mode', payload.mode || 'transcribe');
+  formData.append(
+    'file',
+    new Blob([new Uint8Array(audio)], { type: mime }),
+    `audio.${ext}`
+  );
+
+  const response = await fetchWithRetry(`${SARVAM_BASE_URL}/speech-to-text`, {
+    method: 'POST',
+    headers: {
+      'api-subscription-key': apiKey,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    // Audio that reaches here over the limit is in a format we cannot cut —
+    // the raw vendor JSON tells the user nothing they can act on.
+    if (response.status === 400 && /duration exceeds/i.test(errText)) {
+      throw new Error(
+        `This audio is longer than ${STT_MAX_SECONDS} seconds and is in a format that cannot be split automatically (${ext}). ` +
+          `Re-record it in the editor, or upload it as a WAV file.`
+      );
+    }
+    throw new Error(`Sarvam STT Error (${response.status}): ${errText}`);
+  }
+
+  return await response.json();
+}
+
 /**
  * Speech-to-Text via Sarvam AI API (/speech-to-text)
+ *
+ * Audio longer than 30 seconds is cut into pieces and transcribed piece by
+ * piece, then rejoined — the synchronous endpoint rejects anything longer.
  */
 export async function executeSarvamSTT(
   payload: SarvamSTTRequest
@@ -161,11 +207,6 @@ export async function executeSarvamSTT(
   }
 
   try {
-    const formData = new FormData();
-    formData.append('model', payload.model || 'saaras:v3');
-    formData.append('language_code', payload.language_code || 'hi-IN');
-    formData.append('mode', payload.mode || 'transcribe');
-    
     let audioBuffer: Buffer | null = null;
     let detectedMime = 'audio/wav';
     let detectedExt = 'wav';
@@ -257,24 +298,43 @@ export async function executeSarvamSTT(
       detectedExt = 'wav';
     }
 
-    const blob = new Blob([new Uint8Array(audioBuffer)], { type: detectedMime });
-    formData.append('file', blob, `audio.${detectedExt}`);
+    // Only uncompressed WAV can be cut without a decoder. Everything else goes
+    // up whole and, if it is too long, comes back with the guidance above.
+    const segments =
+      isWav(audioBuffer) && wavDurationSeconds(audioBuffer) > STT_MAX_SECONDS
+        ? chunkWav(audioBuffer, STT_MAX_SECONDS)
+        : [audioBuffer];
 
-    // Real call to Sarvam API
-    const response = await fetchWithRetry(`${SARVAM_BASE_URL}/speech-to-text`, {
-      method: 'POST',
-      headers: {
-        'api-subscription-key': apiKey,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Sarvam STT Error (${response.status}): ${errText}`);
+    if (segments.length === 1) {
+      return await transcribeChunk(
+        segments[0],
+        detectedMime,
+        detectedExt,
+        payload,
+        apiKey
+      );
     }
 
-    return await response.json();
+    // Sequential on purpose: the transcript has to be reassembled in order, and
+    // firing a dozen concurrent requests at Sarvam is how a long file earns a 429.
+    const results: SarvamSTTResponse[] = [];
+    for (const segment of segments) {
+      results.push(
+        await transcribeChunk(segment, detectedMime, detectedExt, payload, apiKey)
+      );
+    }
+
+    return {
+      request_id: results[0]?.request_id,
+      transcript: results
+        .map((r) => r.transcript?.trim())
+        .filter(Boolean)
+        .join(' '),
+      language_code: results[0]?.language_code || payload.language_code,
+      confidence: results.length
+        ? results.reduce((sum, r) => sum + (r.confidence ?? 0), 0) / results.length
+        : undefined,
+    };
   } catch (error: any) {
     console.error('Sarvam STT execution error:', error);
     throw error;

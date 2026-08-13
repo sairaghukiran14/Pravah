@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Play, Sparkles, Mic, Square, Upload } from 'lucide-react';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
+import { normalizeToWav, blobToDataUrl } from '@/lib/audio/normalize';
 
 interface RunDialogProps {
   isOpen: boolean;
@@ -51,19 +52,29 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
         }
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         setIsProcessing((prev) => ({ ...prev, [nodeId]: true }));
-        const blob = new Blob(audioChunks.current[nodeId], { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(blob);
-        
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = () => {
-          const base64data = reader.result;
-          handleInputChange(nodeId, { type: 'audio', data: base64data, url: audioUrl });
+        const recorded = new Blob(audioChunks.current[nodeId], { type: 'audio/webm' });
+
+        try {
+          // WebM cannot be split into the 30s segments Sarvam's endpoint
+          // requires, so it is converted to WAV here while a decoder is at hand.
+          const { blob, durationSeconds } = await normalizeToWav(recorded);
+          handleInputChange(nodeId, {
+            type: 'audio',
+            data: await blobToDataUrl(blob),
+            url: URL.createObjectURL(blob),
+            durationSeconds,
+          });
+        } catch (err) {
+          console.error('Could not process the recording', err);
+          alert(
+            err instanceof Error ? err.message : 'Could not process the recording'
+          );
+        } finally {
           setIsProcessing((prev) => ({ ...prev, [nodeId]: false }));
-        };
-        
+        }
+
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -175,13 +186,26 @@ export const RunDialog: React.FC<RunDialogProps> = ({ isOpen, onClose, onConfirm
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
                            <Upload className="h-6 w-6 text-gray-400 mb-2" />
                            <span className="text-sm text-gray-600 font-medium">Click to upload audio</span>
-                           <span className="text-xs text-gray-400 mt-1">MP3, WAV, M4A up to 10MB</span>
-                           <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="audio/*" onChange={(e) => {
+                           <span className="text-xs text-gray-400 mt-1">MP3, WAV, M4A — long recordings are transcribed in full</span>
+                           <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="audio/*" onChange={async (e) => {
                              const file = e.target.files?.[0];
-                             if (file) {
-                               const reader = new FileReader();
-                               reader.readAsDataURL(file);
-                               reader.onload = () => handleInputChange(node.id, { type: 'audio', data: reader.result, name: file.name });
+                             if (!file) return;
+                             setIsProcessing((prev) => ({ ...prev, [node.id]: true }));
+                             try {
+                               // Converted up front so the server can split it
+                               // into the 30s segments Sarvam's endpoint needs.
+                               const { blob, durationSeconds } = await normalizeToWav(file);
+                               handleInputChange(node.id, {
+                                 type: 'audio',
+                                 data: await blobToDataUrl(blob),
+                                 name: file.name,
+                                 durationSeconds,
+                               });
+                             } catch (err) {
+                               console.error('Could not read the audio file', err);
+                               alert(err instanceof Error ? err.message : 'Could not read the audio file');
+                             } finally {
+                               setIsProcessing((prev) => ({ ...prev, [node.id]: false }));
                              }
                            }} />
                            {inputs[node.id]?.name && <div className="mt-2 text-xs font-semibold text-emerald-600">Selected: {inputs[node.id].name}</div>}

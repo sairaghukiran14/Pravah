@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { X, Trash2, Mic, Languages, Volume2, Play, Square, Upload } from 'lucide-react';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
+import { normalizeToWav, blobToDataUrl } from '@/lib/audio/normalize';
 
 /**
  * Language coverage differs by model, so these are two lists rather than one.
@@ -126,16 +127,27 @@ export const ConfigPanel: React.FC = () => {
         if (e.data.size > 0) audioChunks.current.push(e.data);
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         setIsProcessing(true);
-        const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(blob);
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = () => {
-          handleChange('audio_data', { type: 'audio', data: reader.result, url: audioUrl });
+        const recorded = new Blob(audioChunks.current, { type: 'audio/webm' });
+
+        try {
+          // WebM cannot be split into the 30s segments Sarvam's endpoint
+          // requires, so it is converted to WAV here while a decoder is at hand.
+          const { blob, durationSeconds } = await normalizeToWav(recorded);
+          handleChange('audio_data', {
+            type: 'audio',
+            data: await blobToDataUrl(blob),
+            url: URL.createObjectURL(blob),
+            durationSeconds,
+          });
+        } catch (err) {
+          console.error('Could not process the recording', err);
+          alert(err instanceof Error ? err.message : 'Could not process the recording');
+        } finally {
           setIsProcessing(false);
-        };
+        }
+
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -680,12 +692,26 @@ export const ConfigPanel: React.FC = () => {
                      <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
                         <Upload className="h-5 w-5 text-gray-400 mb-1" />
                         <span className="text-xs text-gray-600 font-medium">Click to upload audio</span>
-                        <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="audio/*" onChange={(e) => {
+                        <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="audio/*" onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.readAsDataURL(file);
-                            reader.onload = () => handleChange('audio_data', { type: 'audio', data: reader.result, name: file.name, url: URL.createObjectURL(file) });
+                          if (!file) return;
+                          setIsProcessing(true);
+                          try {
+                            // Converted up front so the server can split it into
+                            // the 30s segments Sarvam's endpoint needs.
+                            const { blob, durationSeconds } = await normalizeToWav(file);
+                            handleChange('audio_data', {
+                              type: 'audio',
+                              data: await blobToDataUrl(blob),
+                              name: file.name,
+                              url: URL.createObjectURL(blob),
+                              durationSeconds,
+                            });
+                          } catch (err) {
+                            console.error('Could not read the audio file', err);
+                            alert(err instanceof Error ? err.message : 'Could not read the audio file');
+                          } finally {
+                            setIsProcessing(false);
                           }
                         }} />
                         {config.audio_data?.name && <div className="mt-2 text-[10px] font-semibold text-emerald-600">Selected: {config.audio_data.name}</div>}

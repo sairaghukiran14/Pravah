@@ -7,6 +7,8 @@ import { Toolbar } from '@/components/flow/Toolbar';
 import { FlowEditor } from '@/components/flow/FlowEditor';
 import { ConfigPanel } from '@/components/flow/ConfigPanel';
 import { RunDialog } from '@/components/flow/RunDialog';
+import { NodeErrorDialog, type FailedNode } from '@/components/flow/NodeErrorDialog';
+import { classifyNodeError } from '@/lib/api/nodeErrors';
 import { ExecutionSidebar } from '@/components/flow/ExecutionSidebar';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { Button } from '@/components/ui/Button';
@@ -33,8 +35,11 @@ export default function PipelineEditorPage({
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isCreditsDialogOpen, setIsCreditsDialogOpen] = useState(false);
-  const [isSarvamCreditsDialogOpen, setIsSarvamCreditsDialogOpen] = useState(false);
   const [isUnconnectedNodeWarningOpen, setIsUnconnectedNodeWarningOpen] = useState(false);
+  // Collected across the run: independent branches keep executing after one
+  // fails, so a run can produce more than one failure to explain.
+  const [failedNodes, setFailedNodes] = useState<FailedNode[]>([]);
+  const [isNodeErrorDialogOpen, setIsNodeErrorDialogOpen] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
   const [pipelineCost, setPipelineCost] = useState(0);
 
@@ -246,6 +251,10 @@ export default function PipelineEditorPage({
           }
 
           if (eventType === 'run_started') {
+            // Failures belong to one run; carrying them forward would show the
+            // previous run's errors alongside this one's.
+            setFailedNodes([]);
+            setIsNodeErrorDialogOpen(false);
             addExecutionLog(`▶ Pipeline Run #${eventData.runId?.substring(0, 8)} initialized`, 'info');
           } else if (eventType === 'node_started') {
             setNodeStatus(eventData.nodeId, 'running');
@@ -259,12 +268,25 @@ export default function PipelineEditorPage({
             );
           } else if (eventType === 'node_failed') {
             setNodeStatus(eventData.nodeId, 'failed');
-            addExecutionLog(`❌ Node Failed: ${eventData.error}`, 'error');
-            
-            const errStr = String(eventData.error).toLowerCase();
-            if (errStr.includes('sarvam') && (errStr.includes('402') || errStr.includes('insufficient') || errStr.includes('quota') || errStr.includes('credit'))) {
-              setIsSarvamCreditsDialogOpen(true);
-            }
+
+            // The server classifies the failure; fall back to classifying here
+            // so an older stream still produces a readable dialog.
+            const failure =
+              eventData.failure ??
+              classifyNodeError(eventData.error, eventData.nodeType || '');
+
+            addExecutionLog(`❌ ${eventData.label || 'Node'} failed: ${failure.title}`, 'error');
+
+            setFailedNodes((prev) => [
+              ...prev,
+              {
+                nodeId: eventData.nodeId,
+                label: eventData.label || eventData.nodeId,
+                nodeType: eventData.nodeType || '',
+                failure,
+              },
+            ]);
+            setIsNodeErrorDialogOpen(true);
           } else if (eventType === 'node_skipped') {
             setNodeStatus(eventData.nodeId, 'skipped');
             addExecutionLog(`◽ Node Skipped: ${eventData.nodeId} (${eventData.reason})`, 'info');
@@ -510,31 +532,13 @@ export default function PipelineEditorPage({
         </div>
       </Modal>
 
-      {/* Sarvam API Insufficient Credits Dialog */}
-      <Modal
-        isOpen={isSarvamCreditsDialogOpen}
-        onClose={() => setIsSarvamCreditsDialogOpen(false)}
-        title="Service Unavailable"
-      >
-        <div className="flex flex-col gap-4 text-center py-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
-            <AlertCircle className="h-6 w-6" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-700 font-medium">
-              The AI provider (Sarvam API) has insufficient credits.
-            </p>
-            <p className="text-sm text-gray-500 font-normal">
-              Please contact the administrator to resolve this issue.
-            </p>
-          </div>
-          <div className="flex justify-center mt-4">
-            <Button variant="primary" onClick={() => setIsSarvamCreditsDialogOpen(false)}>
-              Okay
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Explains any node failure, including the provider-credit case this
+          previously handled through a substring match on the error text. */}
+      <NodeErrorDialog
+        isOpen={isNodeErrorDialogOpen}
+        onClose={() => setIsNodeErrorDialogOpen(false)}
+        failures={failedNodes}
+      />
 
       {/* Unconnected Nodes Warning Dialog */}
       <Modal
