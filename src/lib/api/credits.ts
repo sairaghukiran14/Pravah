@@ -34,6 +34,36 @@ export const MAX_CONCURRENT_RUNS = Number(process.env.MAX_CONCURRENT_RUNS || 3);
  */
 export const STALE_RUN_MINUTES = Number(process.env.STALE_RUN_MINUTES || 15);
 
+/**
+ * Credits one account may consume in a rolling 24 hours.
+ *
+ * Every tenant's traffic goes through one Sarvam key, so a single account
+ * running large pipelines in a loop degrades the upstream rate limit for
+ * everyone else. The wallet bounds what a user can spend in total; this bounds
+ * how fast they can spend it, which is the part that affects other tenants.
+ *
+ * Generous by default — this is a blast-radius limit, not a pricing lever.
+ */
+export const DAILY_CREDIT_CEILING = Number(process.env.DAILY_CREDIT_CEILING || 500);
+
+/**
+ * Credits this account has consumed in the last 24 hours.
+ *
+ * Read from the ledger rather than tracked separately, so it cannot drift from
+ * what the user was actually charged.
+ */
+export async function creditsSpentToday(userId: string): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const result = await prisma.creditTransaction.aggregate({
+    where: { userId, type: 'deduction', createdAt: { gte: since } },
+    _sum: { amount: true },
+  });
+
+  // Deductions are stored negative; report consumption as a positive figure.
+  return Math.abs(result._sum.amount ?? 0);
+}
+
 export async function reserveCredits(
   userId: string,
   amount = RUN_RESERVATION

@@ -13,8 +13,10 @@ import {
   releaseReservation,
   countActiveRuns,
   reapStaleRuns,
+  creditsSpentToday,
   RUN_RESERVATION,
   MAX_CONCURRENT_RUNS,
+  DAILY_CREDIT_CEILING,
 } from '@/lib/api/credits';
 
 type Params = { id: string };
@@ -72,6 +74,16 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
     // Return any slots and credit held by runs whose process died before they
     // could settle themselves, so an earlier timeout does not lock the account.
     await reapStaleRuns(userId).catch((e) => console.warn('[run] Reaper failed:', e));
+
+    // Blast-radius limit on a shared upstream key: the wallet caps what one
+    // account can spend in total, this caps how fast, which is the part that
+    // affects other tenants.
+    const spentToday = await creditsSpentToday(userId);
+    if (spentToday >= DAILY_CREDIT_CEILING) {
+      throw tooManyRequests(
+        `Daily limit reached — ${spentToday.toFixed(2)} of ${DAILY_CREDIT_CEILING} credits used in the last 24 hours. Runs resume as earlier usage ages out.`
+      );
+    }
 
     if ((await countActiveRuns(userId)) >= MAX_CONCURRENT_RUNS) {
       throw tooManyRequests(
@@ -244,6 +256,8 @@ function streamRun({
         const deadEdges = new Set<string>();
         let anyFailed = false;
         let budgetExhausted = false;
+        /** Credits per node type, so upstream consumption is attributable. */
+        const costBreakdown: Record<string, number> = {};
 
         const activeRunId = dbRun.id;
         const markSkipped = async (nodeId: string, reason: string) => {
@@ -341,7 +355,9 @@ function streamRun({
                 });
             }
 
-            totalCost += nodeCost(node.type, result.input);
+            const spent = nodeCost(node.type, result.input);
+            totalCost += spent;
+            costBreakdown[node.type] = (costBreakdown[node.type] ?? 0) + spent;
 
             await prisma.nodeRun
               .updateMany({
@@ -385,7 +401,7 @@ function streamRun({
         await prisma.pipelineRun
           .update({
             where: { id: dbRun.id },
-            data: { status: finalStatus, finishedAt: new Date() },
+            data: { status: finalStatus, finishedAt: new Date(), costBreakdown },
           })
           .catch((e) => console.warn('Run status update failed:', e));
 
