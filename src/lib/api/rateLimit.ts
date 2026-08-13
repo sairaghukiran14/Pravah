@@ -114,8 +114,43 @@ export async function consumeRateLimit(
  * requests we key on the user id, which a client cannot forge, because
  * X-Forwarded-For is attacker-controlled unless a trusted proxy overwrites it.
  */
+function isPrivateIp(ip: string): boolean {
+  if (ip === 'localhost' || ip === '::1' || ip === 'unknown') return true;
+
+  const parts = ip.split('.').map(Number);
+  if (parts.length === 4) {
+    if (parts[0] === 10) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 172 && parts[1]! >= 16 && parts[1]! <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true; // Link-local
+  }
+
+  if (ip.startsWith('fe80:') || ip.startsWith('fc00:') || ip.startsWith('fd00:')) return true;
+
+  return false;
+}
+
 export function clientIpFrom(headers: Headers): string {
+  // x-real-ip is set by the edge proxy (Vercel, Cloudflare, etc.) and is not
+  // spoofable because the edge proxy overwrites it. X-Forwarded-For can be
+  // pre-pended with arbitrary IP values by the client.
+  const realIp = headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp;
+
   const forwarded = headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0]!.trim();
-  return headers.get('x-real-ip')?.trim() || 'unknown';
+  if (forwarded) {
+    const ips = forwarded.split(',').map((ip) => ip.trim()).filter(Boolean);
+    // Traverse from right to left, skipping trusted private IP ranges to find the
+    // actual client IP, preventing client-injected spoofed IPs.
+    for (let i = ips.length - 1; i >= 0; i--) {
+      const ip = ips[i]!;
+      if (!isPrivateIp(ip)) {
+        return ip;
+      }
+    }
+    // Fallback to the first address if all IPs are private.
+    if (ips.length > 0) return ips[0]!;
+  }
+  return 'unknown';
 }

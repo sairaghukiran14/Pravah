@@ -47,7 +47,8 @@ export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }
   const amount = order.amount; // server-side value, not client input
 
   const isServerMockMode =
-    !keyId || !keySecret || keyId === 'mock_key_id' || keySecret === 'mock_key_secret';
+    (!keyId || !keySecret || keyId === 'mock_key_id' || keySecret === 'mock_key_secret') &&
+    process.env.NODE_ENV !== 'production';
   const isMockOrder = razorpay_order_id.startsWith('order_mock_');
 
   if (isServerMockMode && isMockOrder) {
