@@ -10,6 +10,8 @@ import {
   SARVAM_TEXT_TOOL_LANGUAGES,
 } from './sarvam';
 import { safeFetch } from './api/safeFetch';
+import { pageCountFromPayload } from './documents/pageCount';
+import type { NodeUsage } from './api/pricing';
 
 /**
  * Utility function to replace dynamic variables formatted as {{expression}}
@@ -338,6 +340,11 @@ export interface NodeExecutionResult {
   output: any;
   error?: string;
   durationMs: number;
+  /**
+   * What the node actually consumed, for nodes whose billable size only exists
+   * once they have run. Settlement prices from this; the projection cannot.
+   */
+  usage?: NodeUsage;
 }
 
 /**
@@ -422,6 +429,8 @@ export async function executeSingleNode(
 
   try {
     let output: any = null;
+    /** Set by nodes that only learn their billable size by running. */
+    let usage: NodeUsage | undefined;
 
     if (node.type === 'text_input') {
       output = node.config?.text || upstreamInputText;
@@ -447,6 +456,13 @@ export async function executeSingleNode(
         file: audioPayload,
         url: runDialogAudio?.url || configAudio?.url || node.config?.audio_url || null,
         name: runDialogAudio?.name || configAudio?.name || 'audio_input.wav',
+        // Carried so STT can be billed per 30s segment rather than per file —
+        // a long recording costs several Sarvam calls, not one.
+        durationSeconds:
+          runDialogAudio?.durationSeconds ??
+          configAudio?.durationSeconds ??
+          node.config?.duration_seconds ??
+          null,
         text: upstreamInputText,
       };
     } else if (node.type === 'image_input' || node.type === 'video_input' || node.type === 'document_input' || node.type === 'file_output') {
@@ -466,6 +482,15 @@ export async function executeSingleNode(
         file: filePayload,
         url: runDialogFile?.url || configFile?.url || node.config?.file_url || null,
         name: runDialogFile?.name || configFile?.name || `${node.type}_file`,
+        // Counted here, before OCR runs, because the run holds a fixed amount
+        // of credit up front — a page count discovered after digitisation would
+        // be settled against a hold that never covered it.
+        pageCount:
+          node.type === 'document_input'
+            ? runDialogFile?.pageCount ??
+              configFile?.pageCount ??
+              pageCountFromPayload(filePayload)
+            : undefined,
         text: upstreamInputText,
       };
     } else if (node.type === 'audio_output') {
@@ -665,6 +690,14 @@ Return ONLY a valid JSON object matching the following structure:
 
       // 2. Synthesize each dialogue line
       const audioBuffers: Buffer[] = [];
+      // Every turn is a separate paid text-to-speech call, so the node's real
+      // cost is the whole script, not the one flat fee it used to charge.
+      usage = {
+        speechChars: normalizedDialogues.reduce(
+          (total, turn) => total + (turn.text?.length || 0),
+          0
+        ),
+      };
       for (const turn of normalizedDialogues) {
         const selectedSpeaker = turn.speaker === 'A' ? speakerA : speakerB;
         const currentPace = turn.speaker === 'A' ? paceA : paceB;
@@ -1088,6 +1121,7 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
       input: dynamicInputPayload ? { payload: dynamicInputPayload } : { text: upstreamInputText },
       output,
       durationMs,
+      usage,
     };
   } catch (error: any) {
     const durationMs = Date.now() - startTime;

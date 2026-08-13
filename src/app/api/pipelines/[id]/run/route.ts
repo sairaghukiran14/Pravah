@@ -4,6 +4,7 @@ import { sortNodesTopologically, executeSingleNode, resolveNodeInput } from '@/l
 import { SerializedNode, SerializedEdge } from '@/types/pipeline';
 import { route } from '@/lib/api/route';
 import { nodeCost } from '@/lib/api/pricing';
+import { classifyNodeError } from '@/lib/api/nodeErrors';
 import { parseNodeConfig, type NodeConfigIssue } from '@/lib/api/nodeConfig';
 import { recordAudit } from '@/lib/api/audit';
 import { forbidden, paymentRequired, tooManyRequests, badRequest } from '@/lib/api/errors';
@@ -310,7 +311,11 @@ function streamRun({
             node.type,
             projectedInput.dynamicInputPayload
               ? { payload: projectedInput.dynamicInputPayload }
-              : { text: projectedInput.upstreamInputText }
+              : { text: projectedInput.upstreamInputText },
+            // No usage yet — the node has not run. Rates that read usage project
+            // from configuration instead, deliberately high enough that the
+            // settlement below cannot exceed what was held here.
+            { config: node.config }
           );
 
           if (totalCost + projectedCost > reserved) {
@@ -355,7 +360,10 @@ function streamRun({
                 });
             }
 
-            const spent = nodeCost(node.type, result.input);
+            const spent = nodeCost(node.type, result.input, {
+              usage: result.usage,
+              config: node.config,
+            });
             totalCost += spent;
             costBreakdown[node.type] = (costBreakdown[node.type] ?? 0) + spent;
 
@@ -392,7 +400,16 @@ function streamRun({
                 },
               })
               .catch(() => {});
-            sendEvent('node_failed', { nodeId: node.id, error: result.error });
+            // Classified here rather than in the UI so the wording is decided
+            // once, and so the raw provider message never has to be re-parsed
+            // with substring checks on the client.
+            sendEvent('node_failed', {
+              nodeId: node.id,
+              nodeType: node.type,
+              label: node.label || node.type,
+              error: result.error,
+              failure: classifyNodeError(result.error, node.type),
+            });
           }
         }
 

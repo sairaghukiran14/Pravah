@@ -2,7 +2,8 @@ import { uploadToR2 } from '@/lib/r2';
 import { route } from '@/lib/api/route';
 import { badRequest } from '@/lib/api/errors';
 
-const MAX_AUDIO_SIZE_MB = Number(process.env.SARVAM_MAX_AUDIO_SIZE_MB || 10);
+import { MAX_AUDIO_SIZE_MB } from '@/lib/audio/limits';
+
 const ALLOWED_PREFIXES = ['audio/', 'video/'];
 
 export const POST = route({ cost: 5 }, async ({ req, userId }) => {
