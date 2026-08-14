@@ -479,13 +479,13 @@ export const AIPipelineBuilder: React.FC<AIPipelineBuilderProps> = ({
               const pipeline = msg.pipeline;
               return (
                 <div key={index} className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'} max-w-full`}>
-                  <div className={`flex items-start gap-2 max-w-[85%]`}>
+                  <div className="flex items-start gap-2 max-w-[85%] min-w-0">
                     {isAssistant && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 border border-indigo-100 mt-0.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 border border-indigo-100 mt-0.5 animate-fade-in">
                         <img src="/logo.png" alt="Pravah Logo" className="h-4 w-4 object-contain rounded-[20%]" />
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <div className="space-y-3 flex-1 min-w-0">
                       <div
                         className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-2xs ${
                           isAssistant
