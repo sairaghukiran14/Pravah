@@ -504,7 +504,7 @@ export const AIPipelineBuilder: React.FC<AIPipelineBuilderProps> = ({
                         
                         for (const node of sorted) {
                           const x = node.positionX ?? node.x ?? 0;
-                          let foundCol = columns.find(col => {
+                          const foundCol = columns.find(col => {
                             const colX = col[0].positionX ?? col[0].x ?? 0;
                             return Math.abs(colX - x) < 120;
                           });
