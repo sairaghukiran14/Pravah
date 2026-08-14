@@ -1,0 +1,220 @@
+<title>Pravah — Verification Report</title>
+<style>
+  :root {
+    --bg: #FAFAFA;
+    --panel: #FFFFFF;
+    --sunk: #F1F2F4;
+    --ink: #16181C;
+    --ink-2: #4B5058;
+    --ink-3: #838A96;
+    --line: #E1E4E9;
+    --pass: #12705F;
+    --pass-bg: #E4F2EF;
+    --warn: #96550C;
+    --warn-bg: #FBF0E1;
+    --fail: #A32C28;
+    --fail-bg: #FBEBEA;
+    --link: #2C4CC4;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0C0E11; --panel: #14171B; --sunk: #1C2026;
+      --ink: #EDEFF2; --ink-2: #AAB1BC; --ink-3: #737A86; --line: #272C33;
+      --pass: #56C9B2; --pass-bg: #0E2C27;
+      --warn: #DFA45E; --warn-bg: #2C2114;
+      --fail: #E8817C; --fail-bg: #2E1717;
+      --link: #8CA2F0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C0E11; --panel: #14171B; --sunk: #1C2026;
+    --ink: #EDEFF2; --ink-2: #AAB1BC; --ink-3: #737A86; --line: #272C33;
+    --pass: #56C9B2; --pass-bg: #0E2C27;
+    --warn: #DFA45E; --warn-bg: #2C2114;
+    --fail: #E8817C; --fail-bg: #2E1717;
+    --link: #8CA2F0;
+  }
+
+  h1,h2,h3,p,ul,ol,table,figure { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; display: flex; flex-direction: column; gap: 2.75rem; }
+
+  .eyebrow { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: clamp(1.75rem,5vw,2.4rem); font-weight: 700; letter-spacing: -0.025em; line-height: 1.14; text-wrap: balance; margin-top: 0.4rem; }
+  h2 { font-size: 1.2rem; font-weight: 650; letter-spacing: -0.015em; }
+  p { color: var(--ink-2); }
+  strong { color: var(--ink); font-weight: 620; }
+  code { font-family: var(--mono); font-size: 0.85em; background: var(--sunk); padding: 0.1em 0.35em; border-radius: 3px; color: var(--ink); }
+
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  .sec-head { display: flex; flex-direction: column; gap: 0.3rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+
+  .verdict { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .verdict > div { background: var(--panel); padding: 0.85rem 1rem; flex: 1 1 8rem; }
+  .verdict .k { display: block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+  .verdict .v { display: block; font-size: 1.3rem; font-weight: 660; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.3; margin-top: 0.2rem; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; background: var(--panel); }
+  th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; background: var(--sunk); }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+
+  .tag { display: inline-block; font-family: var(--mono); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.15rem 0.45rem; border-radius: 3px; white-space: nowrap; }
+  .tag.pass { background: var(--pass-bg); color: var(--pass); }
+  .tag.warn { background: var(--warn-bg); color: var(--warn); }
+  .tag.fail { background: var(--fail-bg); color: var(--fail); }
+
+  .finding { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 6px; background: var(--panel); padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .finding.fixed { border-left-color: var(--pass); }
+  .finding.open { border-left-color: var(--warn); }
+  .finding.crit { border-left-color: var(--fail); }
+  .finding-h { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .finding-h h3 { font-size: 0.97rem; font-weight: 650; letter-spacing: -0.005em; }
+  .finding p { margin: 0; font-size: 0.9rem; }
+  .finding .ev { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-3); background: var(--sunk); border-radius: 4px; padding: 0.5rem 0.65rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+
+  ul { padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  li { color: var(--ink-2); font-size: 0.9rem; }
+  li strong { color: var(--ink); }
+  a { color: var(--link); }
+  a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Pravah &middot; Verification Report &middot; 14 Aug 2026</div>
+    <h1>Full test and implementation review</h1>
+    <p style="margin-top:0.7rem">Everything built this session — long-audio chunking, node failure dialogs, and the pricing corrections — exercised against the unit suite, a production build, a live dev server, and a real browser. Three defects surfaced during the pass and were fixed. Six issues remain open and need your decision.</p>
+  </header>
+
+  <section>
+    <div class="verdict">
+      <div><span class="k">Tests</span><span class="v">321</span></div>
+      <div><span class="k">Test files</span><span class="v">13</span></div>
+      <div><span class="k">Build</span><span class="v">Pass</span></div>
+      <div><span class="k">Fixed</span><span class="v">3</span></div>
+      <div><span class="k">Open</span><span class="v">6</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>What was actually run</h2>
+      <p>Unit tests alone would not have caught any of the three defects below.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Route safety</td><td><span class="tag pass">Pass</span></td><td>23 route files, all using the <code>route()</code> wrapper; 1 exempt</td></tr>
+          <tr><td>Typecheck</td><td><span class="tag pass">Pass</span></td><td><code>tsc --noEmit</code>, no errors</td></tr>
+          <tr><td>Lint</td><td><span class="tag pass">Pass</span></td><td>eslint, no warnings</td></tr>
+          <tr><td>Unit + integration</td><td><span class="tag pass">Pass</span></td><td>321 tests / 13 files / 6.6s</td></tr>
+          <tr><td>Production build</td><td><span class="tag pass">Pass</span></td><td>All pages and 30+ API routes compiled</td></tr>
+          <tr><td>Runtime smoke</td><td><span class="tag pass">Pass</span></td><td>Public pages 200; <code>/dashboard</code> and <code>/pipeline</code> redirect; APIs 401 unauthenticated</td></tr>
+          <tr><td>Browser audio path</td><td><span class="tag pass">Pass</span></td><td>95s stereo 44.1kHz → 16kHz mono WAV, duration preserved exactly, 4 segments</td></tr>
+          <tr><td>Failure dialog render</td><td><span class="tag pass">Pass</span></td><td>Verified in a throwaway route, both states, then deleted</td></tr>
+          <tr><td>Server logs</td><td><span class="tag pass">Pass</span></td><td>No errors during the smoke run</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Defects found during this pass</h2>
+      <p>All three are fixed and covered by tests. Two were introduced by my own earlier work.</p>
+    </div>
+
+    <div class="finding crit">
+      <div class="finding-h"><span class="tag fail">Fixed</span><h3>The test suite was making live, billable Sarvam calls</h3></div>
+      <p>Importing almost anything in <code>src</code> pulls in Prisma, and the Prisma client loads <code>.env</code> as an import side effect. That put the real <code>SARVAM_API_KEY</code> into <code>process.env</code>, so any test touching a transcribe, translate or speak node hit the paid API — on every <code>npm test</code> and every CI run, against production quota.</p>
+      <p class="ev">BARE:         0
+AFTER_PRISMA: 36</p>
+      <p>Caught because a new integration test failed with a genuine Sarvam <code>400</code> carrying a real <code>request_id</code>. Fixed with a <code>vitest.setup.ts</code> that forces the mock key before every test file; tests that want the HTTP layer now set their own key and stub fetch explicitly.</p>
+    </div>
+
+    <div class="finding crit">
+      <div class="finding-h"><span class="tag fail">Fixed</span><h3>Audio size limit disagreed with itself</h3></div>
+      <p>Raising the transcription ceiling to 50MB left <code>api/audio/upload</code> reading the <em>same</em> environment variable with a fallback of 10. With the variable unset, uploads rejected at 10MB (~5.5 min) while transcription believed it allowed 27 minutes — the stricter gate won silently, so most of the chunking work was unreachable and the symptom looked like an unrelated upload bug.</p>
+      <p>Both now read one exported constant, the same way <code>STT_MAX_SECONDS</code> is shared between the executor and the biller.</p>
+    </div>
+
+    <div class="finding fixed">
+      <div class="finding-h"><span class="tag warn">Fixed</span><h3>A test passed for the wrong reason</h3></div>
+      <p>The assertion that an unsplittable WebM produces an actionable error was satisfied by a fallback in <code>executeSarvamSTT</code> that replaces any buffer under 100 bytes with 1.5 seconds of silence — resetting the extension to <code>wav</code>. The test never exercised the WebM path. Rewritten with a 4KB buffer; it now genuinely asserts <code>(webm)</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>What the new integration tests prove</h2>
+      <p>The unit tests priced a duration correctly. They could not show the number ever <em>reaches</em> pricing.</p>
+    </div>
+    <ul>
+      <li><strong>Chunked transcription really chunks.</strong> A 95s recording issues exactly 4 upstream requests, each a valid standalone WAV within the 30s limit, cut on frame boundaries, with no audio dropped between segments — and the transcripts rejoin in order.</li>
+      <li><strong>Billing units survive the graph.</strong> <code>durationSeconds</code> set on a run input reaches the STT node's price through <code>audio_input</code> and an edge: 25s → ₹0.375, 95s → ₹1.50, 300s → ₹3.75. Page count does the same through <code>document_input</code>: a 10-page PDF bills ₹7.50 against Sarvam's ₹5.00.</li>
+      <li><strong>The hold always covers the settlement.</strong> Asserted across every configurable podcast length, so a node cannot spend more credit than was reserved for it.</li>
+      <li><strong>Errors degrade correctly.</strong> Provider failures pass through unchanged; only the duration case is rewritten into guidance.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Open issues</h2>
+      <p>Found and confirmed, not fixed — each needs a decision rather than a patch.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>Translate breaks before the audio does</h3></div>
+      <p>STT now handles a 20-minute recording, but <code>MAX_TEXT_LENGTH</code> caps translate and TTS at 5,000 characters — roughly <strong>6–7 minutes of speech</strong>. The Coimbatore pipeline therefore survives a 30-second demo and a 5-minute consultation, then fails on a long one at a node the user would not expect. The failure dialog explains it and suggests a Summarize node, but the real fix is chunking translate the way STT was chunked.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>Correct pricing now exceeds the credit hold</h3></div>
+      <p>A run reserves a flat 10 credits. With per-page and per-turn pricing, a <strong>40-page OCR projects ₹30</strong> and a <strong>20-turn podcast ₹18.50</strong> — both above the hold, so those runs are skipped with "Run budget exhausted" instead of executing. Arithmetically right, but work that used to run at a loss now will not start. <code>RUN_RESERVATION_CREDITS</code> is configurable; ~50 restores them at honest prices.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>A 50MB upload cannot reach a Vercel deployment</h3></div>
+      <p>Audio uploads go to <code>/api/audio/upload</code> as multipart form data, and Vercel caps request bodies at about 4.5MB regardless of our own limit. At 16kHz mono WAV (32KB/s) that is roughly <strong>2 minutes 20 seconds</strong> of audio. Everything longer works locally and fails in production. Long recordings need a presigned upload straight to R2, bypassing the function.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>Failed nodes discard the input that caused them</h3></div>
+      <p>The catch in <code>executeSingleNode</code> returns <code>input: { text }</code>, dropping the payload. Billing is unaffected — failed nodes are never charged — but the stored <code>NodeRun</code> row loses the one thing needed to reproduce the failure.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>Unreadable audio is silently replaced with silence</h3></div>
+      <p><code>executeSarvamSTT</code> substitutes 1.5 seconds of generated silence for any buffer under 100 bytes. The user gets a confident transcript of nothing instead of a clear failure — and it is what made the WebM test above pass for the wrong reason.</p>
+    </div>
+
+    <div class="finding open">
+      <div class="finding-h"><span class="tag warn">Open</span><h3>The app is still not deployed</h3></div>
+      <p>Unchanged from earlier: every URL points at <code>localhost:3000</code>, and the Google OAuth consent screen has not been confirmed as production. None of this session's work reaches a user until those two clear.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Suggested order</h2>
+    </div>
+    <ul>
+      <li><strong>Before anything else</strong> — rotate the Sarvam API key. It sat in an environment where the test suite could spend it, and any CI run that executed the suite used real quota.</li>
+      <li><strong>Then</strong> — deploy, and confirm the OAuth consent screen reads "In production".</li>
+      <li><strong>Then</strong> — raise <code>RUN_RESERVATION_CREDITS</code>, so correctly-priced OCR and podcast runs can start.</li>
+      <li><strong>Before promoting long audio</strong> — presigned R2 upload and translate chunking. Until both land, the honest ceiling is about two minutes of audio in production.</li>
+    </ul>
+  </section>
+
+</div>

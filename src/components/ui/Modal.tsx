@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -28,7 +29,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/30 transition-opacity" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+      <div className={`relative z-10 w-full overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-xl transition-all duration-300 ${
+        size === 'lg' ? 'max-w-xl' :
+        size === 'xl' ? 'max-w-2xl' :
+        size === '2xl' ? 'max-w-3xl' :
+        size === '3xl' ? 'max-w-5xl' :
+        'max-w-lg'
+      }`}>
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <h3 className="text-base font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
