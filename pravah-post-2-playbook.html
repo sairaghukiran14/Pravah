@@ -1,0 +1,609 @@
+<title>Pravah Post #2 — The Coimbatore Pipeline</title>
+<style>
+  :root {
+    --ground: #F6F7F9;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDEFF3;
+    --ink: #14161D;
+    --ink-soft: #4A5060;
+    --ink-faint: #7C8397;
+    --rule: #DDE1E8;
+    --accent: #4B45D6;
+    --accent-soft: #ECEBFB;
+    --verify: #0E6E63;
+    --verify-soft: #E2F2EF;
+    --warn: #A34B12;
+    --warn-soft: #FBEDE3;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D0F14;
+      --surface: #161921;
+      --surface-sunk: #1E222C;
+      --ink: #ECEEF3;
+      --ink-soft: #A8AFC0;
+      --ink-faint: #737B8E;
+      --rule: #2A2F3B;
+      --accent: #9B95F5;
+      --accent-soft: #211F3E;
+      --verify: #5FCDBF;
+      --verify-soft: #102C29;
+      --warn: #E0975F;
+      --warn-soft: #2E1F14;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0D0F14;
+    --surface: #161921;
+    --surface-sunk: #1E222C;
+    --ink: #ECEEF3;
+    --ink-soft: #A8AFC0;
+    --ink-faint: #737B8E;
+    --rule: #2A2F3B;
+    --accent: #9B95F5;
+    --accent-soft: #211F3E;
+    --verify: #5FCDBF;
+    --verify-soft: #102C29;
+    --warn: #E0975F;
+    --warn-soft: #2E1F14;
+  }
+
+  h1, h2, h3, p, ul, table { margin: 0; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 650;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 5.5vw, 2.6rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin-top: 0.5rem;
+  }
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 660;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  h3 {
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+  }
+  p { color: var(--ink-soft); }
+  strong { color: var(--ink); font-weight: 620; }
+
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  .lede { font-size: 1.05rem; }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* stat strip */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .stat { background: var(--surface); padding: 0.9rem 1rem; }
+  .stat .k {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.3rem;
+  }
+  .stat .v {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 660;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+  .stat .n { display: block; font-size: 0.75rem; line-height: 1.4; color: var(--ink-faint); }
+
+  /* paste block */
+  .paste {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .paste-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.85rem;
+    background: var(--surface-sunk);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--ink-faint);
+  }
+  .paste-bar b { color: var(--ink-soft); font-weight: 500; }
+  .paste pre {
+    margin: 0;
+    padding: 1.1rem 1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.75;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* callouts */
+  .note {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    font-size: 0.9rem;
+  }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note.verify { border-left-color: var(--verify); background: var(--verify-soft); }
+  .note .label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .note.warn .label { color: var(--warn); }
+  .note.verify .label { color: var(--verify); }
+  .note p { color: var(--ink); margin: 0; }
+
+  /* shot list — real temporal sequence, so the timecodes carry meaning */
+  .shots { display: flex; flex-direction: column; }
+  .shot {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--rule);
+    align-items: start;
+  }
+  .shot:last-child { border-bottom: 1px solid var(--rule); }
+  .shot .tc {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    padding-top: 0.15rem;
+  }
+  .shot .d { font-size: 0.9rem; color: var(--ink-soft); }
+  .shot .d b { display: block; color: var(--ink); font-weight: 620; }
+  .shot.hero { background: var(--accent-soft); margin: 0 -0.75rem; padding: 0.7rem 0.75rem; border-radius: 4px; }
+
+  /* run of show */
+  .run { display: flex; flex-direction: column; }
+  .run-row {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .run-row:last-child { border-bottom: 1px solid var(--rule); }
+  .run-row .t {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+    padding-top: 0.1rem;
+  }
+  .run-row.key .t { color: var(--accent); font-weight: 600; }
+  .run-row.block .t { color: var(--warn); font-weight: 600; }
+  .run-row .a { font-size: 0.9rem; color: var(--ink-soft); }
+  .run-row .a b { display: block; color: var(--ink); font-weight: 620; }
+
+  /* pre-flight gates — sequential blockers, so the numbering is load-bearing */
+  .gate {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.1rem 1.15rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .gate-h { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; }
+  .gate-n {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--surface);
+    background: var(--warn);
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+  }
+  .gate p { margin: 0; font-size: 0.9rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    background: var(--surface-sunk);
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+  }
+
+  ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  li { color: var(--ink-soft); font-size: 0.95rem; }
+  li b { color: var(--ink); font-weight: 620; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; background: var(--surface); }
+  th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--rule); }
+  th {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 650;
+    background: var(--surface-sunk);
+  }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 0.8rem; }
+
+  a { color: var(--accent); }
+  a:focus-visible, .paste:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .stat, .shot, .run-row { transition: background-color 0.15s ease; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Pravah &middot; LinkedIn Post #2</div>
+    <h1>The Coimbatore Pipeline</h1>
+    <p class="lede">Post #1 reached 3,000 people and converted none of them. That wasn't a copy problem — the funnel behind the post has three gates that return zero regardless of what the post says. Fix those first. The post is written and waiting below.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>Pre-flight</h2>
+      <p>Do not publish until all three clear. Post #2 aimed at a broken funnel just burns your best remaining story.</p>
+    </div>
+
+    <div class="gate">
+      <div class="gate-h"><span class="gate-n">Gate 1</span><h3>Is it actually deployed?</h3></div>
+      <p>Every URL in the repo points at <span class="chip">http://localhost:3000</span> — both env files, and there is no <span class="chip">vercel.json</span>, no deploy step in CI, no deploy script. Your launch playbook still had the demo link as the literal placeholder <span class="chip">[your-deployed-url-here]</span>.</p>
+      <p><b>The check:</b> open your live URL in an <b>incognito window</b>. Not your normal browser — you already have a session there, so it will work for you and only you. If there is no live URL, this is the entire answer to "nobody signed in," and nothing else on this page matters yet.</p>
+    </div>
+
+    <div class="gate">
+      <div class="gate-h"><span class="gate-n">Gate 2</span><h3>Is the Google OAuth screen in production mode?</h3></div>
+      <p>Google is your only sign-in method. If the consent screen is still in <b>Testing</b> — the default, and the single most common silent killer for indie NextAuth apps — then only email addresses you explicitly allowlisted can sign in <em>at all</em>. Everyone else hits a hard <b>"Access blocked: Pravah has not completed the Google verification process"</b> wall. Not a warning they can click past. A wall.</p>
+      <p><b>The check:</b> Google Cloud Console → APIs &amp; Services → OAuth consent screen. It must read <b>In production</b>. If it reads Testing, your signup count was mathematically zero no matter how good the post was.</p>
+    </div>
+
+    <div class="gate">
+      <div class="gate-h"><span class="gate-n">Gate 3</span><h3>Can a stranger see anything without an account?</h3></div>
+      <p>Right now, no. The middleware gates <span class="chip">/dashboard</span>, <span class="chip">/pipeline</span>, <span class="chip">/profile</span> and <span class="chip">/onboarding</span>, and Google is the only way in. There is no step between "watched a 40-second video" and "hand over your Google account."</p>
+      <p><b>The fix that matters most:</b> a public <span class="chip">/demo</span> route with the Coimbatore pipeline pre-loaded and no auth. Curiosity converts to interest there, and interest is what survives a signup form. Everything else on this page is worth a few percent; this one is worth the difference between zero and a number.</p>
+    </div>
+
+    <div class="note warn">
+      <span class="label">Also fix before launch</span>
+      <p>Your login page — the last screen before the decision — says <b>"Welcome back"</b> to a first-time stranger arriving from LinkedIn, and never mentions the ₹20 free credits your landing page advertises and your schema actually grants. The "Go to Dashboard" button under the Google button is a dead end that fires a <span class="chip">Sign in required</span> toast. Two small changes, made at the exact moment someone is deciding.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Where post #1 landed</h2>
+      <p>Against the targets you set yourself in the launch playbook.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="k">Impressions</span><span class="v">3,000</span><span class="n">Good &check; &middot; target 2,000+</span></div>
+      <div class="stat"><span class="k">Reactions</span><span class="v">50</span><span class="n">Good &check; &middot; target 50+</span></div>
+      <div class="stat"><span class="k">Engagement</span><span class="v">1.7%</span><span class="n">healthy for a first post</span></div>
+      <div class="stat"><span class="k">Sign-ins</span><span class="v">0</span><span class="n">the only number that counts</span></div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Funnel stage</th><th>Survivors</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Saw the post</td><td class="num">3,000</td><td>the part that worked</td></tr>
+          <tr><td>Expanded comments</td><td class="num">~150</td><td>most viewers never do</td></tr>
+          <tr><td>Clicked the link</td><td class="num">~20</td><td>buried below the fold</td></tr>
+          <tr><td>Reached /login</td><td class="num">~8</td><td>no preview, no reason yet</td></tr>
+          <tr><td>Signed in</td><td class="num">0</td><td>see the three gates above</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="label">The read</span>
+      <p>1.7% engagement means the people who <em>saw</em> post #1 liked it. The copy was never the problem.</p>
+      <p>The problem is that it ended with <b>"I'd love your feedback — what pipelines would you build?"</b> — which asks for comments. It got 50 comments and reactions. <b>The post performed exactly as written.</b> It never told anyone to go try the product, and the only link sat where roughly 95% of viewers never looked.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>The post</h2>
+      <p>Paste as-is, once the gates clear. The link goes <b>in the body</b> this time — see the note underneath.</p>
+    </div>
+    <div class="paste">
+      <div class="paste-bar"><b>post-2.txt</b><span>~1,390 chars</span></div>
+<pre>A patient walks into a clinic in Coimbatore and describes
+her symptoms in Tamil.
+
+Her doctor reads a structured English clinical note 40
+seconds later.
+
+Nobody typed anything. Nobody wrote a line of code.
+
+Here is the entire pipeline that does it. Four nodes on a
+canvas:
+
+🎙️ Audio Input — the nurse just hits record
+🧠 Saaras STT — Tamil speech becomes Tamil text
+🌐 Sarvam Translate — Tamil text becomes English
+📋 Summarize — raw transcript becomes a structured note
+
+Drag. Connect. Run.
+
+Then I did the math on what one run actually costs, and
+that is the part I keep thinking about.
+
+At my current per-node rates, that whole pipeline comes to
+roughly ₹2.70 per patient.
+
+Not ₹270. Not a ₹40,000-a-month enterprise seat.
+Roughly the price of a cup of chai. Per consultation.
+
+That is what sovereign Indic models change. Cost stops
+being the reason a rural clinic can't have good tooling.
+
+I built Pravah so a pipeline like this takes three minutes
+to assemble instead of three days of API plumbing.
+
+To be clear: this is a demo, not a deployed clinical
+system. Real medical use needs validation and a doctor in
+the loop. I'm showing what the plumbing makes possible —
+not replacing anyone's judgment.
+
+But the plumbing was the missing part.
+
+You can go build this exact pipeline right now. New
+accounts get ₹20 in free credits — about seven runs of
+what you just watched. No card, no sales call.
+
+→ [your-live-url]
+
+And I'm curious what you'd point it at. What's one thing
+your users type today that they'd rather just say out loud?
+
+#IndicAI #SarvamAI #BuildInPublic #HealthTech #AIForIndia</pre>
+    </div>
+
+    <div class="note">
+      <span class="label">Why the link moved into the body</span>
+      <p>Your launch playbook says never put links in the post body. That rule is real, but post #1 applied it against its own goal. A body link costs you roughly <b>25% of reach</b>. A comment link costs you roughly <b>80% of your clicks</b>.</p>
+      <p>When the goal is impressions, the comment wins. When the goal is sign-ups, it is the wrong trade — and post #1 is the evidence. You bought 3,000 impressions with clicks you needed more.</p>
+    </div>
+
+    <div class="note verify">
+      <span class="label">Checked in the code</span>
+      <p><b>The ₹2.70 holds.</b> From your rates in <b>src/lib/api/pricing.ts</b> — STT 0.375 + Translate (600 chars × 0.003) + Summarize 0.5 = <b>2.675 credits</b>. And <b>1 credit = ₹1</b> is confirmed, not assumed: <b>verify/route.ts</b> increments the wallet by the rupee value of the Razorpay order. Quote the number with confidence.</p>
+      <p><b>The "seven runs":</b> ₹20 free credits ÷ ₹2.675 = 7.5. Holds as long as the free grant in your schema stays at 20.</p>
+      <p><b>The URL:</b> paste the real one and open it in incognito first. A dead link in the body is far worse than a dead link in a comment — it is the most visible line in the post.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>What the pipeline actually earns</h2>
+      <p>Against Sarvam's published rates. Useful if anyone in the comments asks whether the price is real.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Node</th><th>You charge</th><th>Sarvam bills</th><th>Margin</th></tr></thead>
+        <tbody>
+          <tr><td>Audio Input</td><td class="num">₹0</td><td class="num">₹0</td><td class="num">—</td></tr>
+          <tr><td>Saaras STT (30s)</td><td class="num">₹0.375</td><td class="num">₹0.250</td><td class="num">₹0.125</td></tr>
+          <tr><td>Translate (600 ch)</td><td class="num">₹1.800</td><td class="num">₹1.200</td><td class="num">₹0.600</td></tr>
+          <tr><td>Summarize</td><td class="num">₹0.500</td><td class="num">₹0.013</td><td class="num">₹0.487</td></tr>
+          <tr><td>Text Output</td><td class="num">₹0</td><td class="num">₹0</td><td class="num">—</td></tr>
+          <tr><td><b>Total</b></td><td class="num"><b>₹2.675</b></td><td class="num"><b>₹1.463</b></td><td class="num"><b>₹1.212</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="label">45% gross margin</span>
+      <p>The Coimbatore pipeline is one of the healthy ones. It is also the cheapest thing you could have picked to demo, which is worth knowing before someone asks you to price a voice-to-voice or document workflow on the spot — those carry very different economics, and two of them were losing money until this week.</p>
+      <p>The ₹2.70 in the post is the charge, not the cost. If anyone asks what it costs <em>you</em>, the honest answer is about ₹1.46 — and that is a perfectly good answer to give.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Why this beats post #1's structure</h2>
+    </div>
+    <ul>
+      <li><b>One use case, not eleven.</b> Post #1 listed five models, six pipelines and seven stack items. Nobody forwards a spec sheet. One story is repeatable — a reader can retell it to a colleague in a sentence.</li>
+      <li><b>A number nobody expects.</b> ₹2.70 is the shareable atom. It survives being pulled out of context, which is exactly what happens when someone reshares.</li>
+      <li><b>Five hashtags, not eight.</b> Eight reads as reach-farming and dilutes topical classification.</li>
+      <li><b>The honesty paragraph is a feature.</b> Unqualified healthcare claims get torn apart in comments by actual clinicians. Pre-empting it converts your sharpest potential critic into your most credible commenter.</li>
+      <li><b>A question anyone can answer.</b> "What do your users type that they'd rather say?" needs no technical knowledge — which widens the comment pool well past engineers, and comments are what drive reach.</li>
+      <li><b>It asks for the thing you actually want.</b> Post #1 asked for opinions and received opinions. This one asks people to go use the product, names the price of trying (zero), and puts the link where it can be seen. You get what you ask for — so ask for the right thing.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>The 40-second video</h2>
+      <p>One continuous screen recording. No cuts, no music.</p>
+    </div>
+    <div class="shots">
+      <div class="shot"><span class="tc">0:00–0:05</span><span class="d"><b>Empty canvas</b>Drag in Audio Input. Caption burned in: "Tamil patient audio →"</span></div>
+      <div class="shot"><span class="tc">0:05–0:12</span><span class="d"><b>STT node</b>Drop, connect the edge, open config, set source to <span class="chip">ta-IN</span></span></div>
+      <div class="shot"><span class="tc">0:12–0:18</span><span class="d"><b>Translate node</b>Connect. Set <span class="chip">ta-IN</span> → <span class="chip">en-IN</span></span></div>
+      <div class="shot"><span class="tc">0:18–0:23</span><span class="d"><b>Summarize → Text Output</b>Connect both. The graph is now visibly complete.</span></div>
+      <div class="shot"><span class="tc">0:23–0:26</span><span class="d"><b>Hit Run</b>Cursor moves deliberately. Let the click land.</span></div>
+      <div class="shot hero"><span class="tc">0:26–0:34</span><span class="d"><b>The money shot — hold here</b>Nodes turn green left to right as the DAG resolves. Do not speed this up, do not cut away. This single stretch is what people screenshot.</span></div>
+      <div class="shot"><span class="tc">0:34–0:40</span><span class="d"><b>The output</b>English clinical note, large enough to read on a phone. Freeze the last 2 seconds.</span></div>
+    </div>
+    <div class="note warn">
+      <span class="label">Two things that decide whether the video works</span>
+      <p><b>LinkedIn autoplays muted.</b> If your captions aren't burned into the frame, most viewers see silent mystery footage and scroll. Burn in large on-screen text at every stage.</p>
+      <p><b>Frame 1 is your thumbnail.</b> Don't let it be an empty grey canvas. Start on a title card — "Tamil speech → English clinical note. ₹2.70." — or record the empty canvas with the caption already on screen.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>First comment</h2>
+      <p>Within 60 seconds of publishing.</p>
+    </div>
+    <div class="paste">
+      <div class="paste-bar"><b>first-comment.txt</b><span>post immediately</span></div>
+<pre>Cost breakdown for the ₹2.70, since someone will ask:
+
+Audio Input   ₹0
+Saaras STT    ₹0.375  (30s of audio)
+Translate     ₹1.80   (~600 chars @ ₹3/1k)
+Summarize     ₹0.50
+Text Output   ₹0
+                ─────
+                ₹2.675
+
+Source is open if you'd rather read it than run it:
+→ github.com/sairaghukiran14/pravah
+
+Built entirely on Sarvam AI's API suite.</pre>
+    </div>
+    <div class="note">
+      <span class="label">Tagging</span>
+      <p>You tagged both founders on post #1, one day ago. Tagging them again this fast reads as pestering. <b>Tag the Sarvam AI company page only</b> — and only in this comment, not the body. If post #1's DM gets a reply first, that changes the calculus and you can tag freely.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Follow-up comment</h2>
+      <p>Roughly 5 hours in, to bump the post back into feeds.</p>
+    </div>
+    <div class="paste">
+      <div class="paste-bar"><b>bump-comment.txt</b><span>~1:00 PM IST</span></div>
+<pre>A few people asked why translation is the expensive node
+here — it's the only one billed per character rather than
+per call, so it scales with how much the patient actually
+said.
+
+Which means the pipeline gets cheaper per unit of value
+the longer the consultation runs. The fixed costs (STT
+baseline, summarize) amortise; only the translate line
+grows.
+
+Not something I designed for. Just how the arithmetic
+landed.</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Run of show</h2>
+      <p>The launch day is unchanged. What's new is everything above the line — and none of the day matters until that clears.</p>
+    </div>
+    <div class="run">
+      <div class="run-row block"><span class="t">Blocking</span><span class="a"><b>Deploy, and open it in incognito</b>Gate 1. Until a stranger can load the app, nothing below this line is worth doing.</span></div>
+      <div class="run-row block"><span class="t">Blocking</span><span class="a"><b>Set the OAuth screen to production</b>Gate 2. Two minutes in Google Cloud Console, and possibly the whole explanation for post #1.</span></div>
+      <div class="run-row block"><span class="t">Blocking</span><span class="a"><b>Ship a public /demo route</b>Gate 3. The one build that changes the shape of the funnel rather than a few percent of it.</span></div>
+      <div class="run-row"><span class="t">Then</span><span class="a"><b>Fix the login page copy</b>"Welcome back" → what they get and what it costs. Remove the dead Dashboard button.</span></div>
+      <div class="run-row"><span class="t">Then</span><span class="a"><b>Sign up with a fresh Google account</b>Your own funnel, start to finish, as a stranger. This is the test that would have caught all of it.</span></div>
+      <div class="run-row"><span class="t">Night before</span><span class="a"><b>Record and caption the video</b>Burn in captions. Check the first frame. Export 1080p, 16:9.</span></div>
+      <div class="run-row"><span class="t">Done</span><span class="a"><b>Credit → ₹ mapping verified</b>1 credit = ₹1, confirmed in verify/route.ts. The ₹2.70 is defensible.</span></div>
+      <div class="run-row"><span class="t">Night before</span><span class="a"><b>Save as draft, don't publish</b>Paste the real URL into the body. Prep the first comment, ready to paste.</span></div>
+      <div class="run-row key"><span class="t">8:15 AM</span><span class="a"><b>Publish</b>Native video upload. No links in the body.</span></div>
+      <div class="run-row key"><span class="t">8:16 AM</span><span class="a"><b>First comment</b>Cost breakdown + links. Within 60 seconds.</span></div>
+      <div class="run-row"><span class="t">8:20 AM</span><span class="a"><b>Seed</b>Dev WhatsApp groups, 5–10 direct asks. Short version on X.</span></div>
+      <div class="run-row key"><span class="t">8:30–10:00</span><span class="a"><b>The golden 90</b>Reply to every comment inside 5 minutes, and reply with a question rather than a thank-you. Threads count far more than likes.</span></div>
+      <div class="run-row"><span class="t">1:00 PM</span><span class="a"><b>Bump comment</b>The translate-cost insight above.</span></div>
+      <div class="run-row"><span class="t">6:00 PM</span><span class="a"><b>Afternoon sweep</b>Clear new comments. Reshare to story if tracking above post #1.</span></div>
+      <div class="run-row"><span class="t">9:00 PM</span><span class="a"><b>Compare against post #1</b>Same clock, same metrics. That comparison is what tells you which format to keep.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Targets</h2>
+      <p>Post #1's actuals as the baseline, not the playbook's generic tiers. Expect impressions to come down — that is the trade, and it is the right one.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Metric</th><th>Post #1</th><th>Holding</th><th>Working</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Impressions</td><td class="num">3,000</td><td class="num">2,200</td><td class="num">6,000+</td></tr>
+          <tr><td>Reactions</td><td class="num">50</td><td class="num">45</td><td class="num">150+</td></tr>
+          <tr><td>Comments</td><td class="num">—</td><td class="num">15</td><td class="num">40+</td></tr>
+          <tr><td>Link clicks</td><td class="num">~20</td><td class="num">80</td><td class="num">250+</td></tr>
+          <tr><td>Sign-ups</td><td class="num">0</td><td class="num">5</td><td class="num">25+</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <span class="label">The one number that matters</span>
+      <p><b>Sign-ups.</b> Not impressions, not reactions. Post #1 already proved you can reach 3,000 people and change nothing — reach was never the missing ingredient.</p>
+      <p>If impressions drop to 2,200 and sign-ups go from 0 to 5, <b>that is a large win</b>, and it will feel like a loss on the LinkedIn analytics screen. Decide now that you'll read it correctly, because the vanity number is the one the platform puts in front of you.</p>
+    </div>
+    <div class="note verify">
+      <span class="label">Instrument it before you post</span>
+      <p>You cannot tune a funnel you can't see. Before launch, put a <span class="chip">?ref=li2</span> on the URL in the post body, and make sure you can answer three questions on the night: how many landed, how many reached the login screen, how many finished. Right now you know only the first and last, which is why post #1 gave you a zero and no explanation for it.</p>
+    </div>
+  </section>
+
+</div>

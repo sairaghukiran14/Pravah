@@ -25,6 +25,9 @@ Pravah is a powerful, full-stack workflow orchestration studio that allows users
   * Natural-sounding Text-to-Speech (TTS) synthesis in the 11 languages Bulbul supports
   * Script transliteration and language/script detection, so Romanised and code-mixed input is handled explicitly
 * **Custom Execution Engine**: A robust, topological sort-based backend engine that resolves dependencies and runs asynchronous multi-node data pipelines while capturing granular, node-level execution logs.
+* **AI Conversational Pipeline Builder**: Powered by the Sarvam Sovereign LLM (`sarvam-105b`), this allows users to describe requirements in natural language and receive auto-configured visual flow previews.
+* **In-Browser WAV Recording & Auto-Chunking**: Features a custom Web Audio API capture system that encodes 16kHz mono PCM WAV files in-browser. This allows the backend to automatically split and transcribe voice descriptions of any length (up to 5 minutes) without duration limits.
+* **Spoken Language Selector & Structural Guarantees**: Allows selecting speech input languages (EN, HI, TE, TA, BN, KN, MR) with auto-translation detection, and guarantees fully-connected visual layouts with zero disconnected or orphaned nodes.
 * **Pay-As-You-Go Billing**: Secure, credit-based billing system integrated with Razorpay. Features server-side webhook/payment signature verification and dynamic execution cost deduction.
 * **File & Media Handling**: Automated upload processing and secure cloud storage utilizing Cloudflare R2.
 
