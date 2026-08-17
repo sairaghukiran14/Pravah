@@ -41,7 +41,6 @@ Available Nodes & Configurations:
 - tts: Text-to-Speech. Config: { "model": "bulbul:v3", "target_language_code": string, "speaker": string (e.g. "aditya", "ritu", "diya", "kamlesh", "gurvinder", "darshan", "venkat", "bharat", "mahesh", "ananya", "kavya", "uma", "harshvardhan"), "pace": number }
 - podcast: Conversational audio. Config: { "speaker_a": string, "speaker_b": string, "target_language_code": string, "conversation_style": "debate" | "interview" | "casual" }
 - ocr: Text extraction. Config: {}
-- vision: Document AI. Config: { "language": string, "prompt": string }
 - llm: Generative LLM logic. Config: { "system_prompt": string, "prompt": string, "temperature": number }
 - summarize: Summary extraction. Config: {}
 - sentiment: Sentiment analysis. Config: {}

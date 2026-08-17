@@ -80,7 +80,7 @@ const getDefaultConfig = (type: NodeType) => {
     
     // Processing
     case 'ocr': return { language: 'eng' };
-    case 'vision': return { prompt: 'Describe this image.' };
+    case 'vision': return { prompt: 'Describe the image.' };
     case 'llm': return { model: 'sarvam-105b', temperature: 0.7, prompt: 'Summarize the input.' };
     case 'summarize': return { length: 'short' };
     case 'sentiment': return { format: 'json' };
@@ -112,7 +112,7 @@ export const getDefaultLabel = (type: NodeType) => {
     
     // Processing
     case 'ocr': return 'OCR';
-    case 'vision': return 'Vision';
+    case 'vision': return 'Vision Analysis';
     case 'llm': return 'LLM';
     case 'summarize': return 'Summarize';
     case 'sentiment': return 'Sentiment';

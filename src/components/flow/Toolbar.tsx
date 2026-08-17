@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   Mic, Languages, Volume2, 
   FileText, Image, Video, Link as LinkIcon, FileUp, 
-  Eye, Brain, AlignLeft, Smile, Key, Tags, 
+  Brain, AlignLeft, Smile, Key, Tags, 
   Monitor, PlayCircle, Download, Mail, FileAudio, Keyboard
 } from 'lucide-react';
 import { NodeType } from '@/types/pipeline';
@@ -34,7 +34,6 @@ const processingNodes: ToolbarItem[] = [
   { type: 'tts', title: 'TTS', desc: 'Synthesize natural voice audio from text using Sarvam AI Bulbul:v3.', icon: <Volume2 className="h-3.5 w-3.5 text-orange-600" />, bg: 'bg-orange-50', hover: 'hover:border-orange-200 hover:bg-orange-50/50' },
   { type: 'podcast', title: 'Podcast', desc: 'Generates a 2-speaker conversational dialogue on a topic with distinct perspectives.', icon: <PlayCircle className="h-3.5 w-3.5 text-rose-600" />, bg: 'bg-rose-50', hover: 'hover:border-rose-200 hover:bg-rose-50/50' },
   { type: 'ocr', title: 'OCR', desc: 'Extract text from an image or PDF exactly as written, using Sarvam Document AI.', icon: <FileText className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
-  { type: 'vision', title: 'Vision', desc: 'Object detection and visual feature extraction.', icon: <Eye className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
   { type: 'llm', title: 'LLM', desc: 'Query a large language model (e.g. Gemini) for generative responses.', icon: <Brain className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
   { type: 'summarize', title: 'Summarize', desc: 'Automatically compress texts into condensed takeaways.', icon: <AlignLeft className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },
   { type: 'sentiment', title: 'Sentiment', desc: 'Classify text polarity (Positive, Neutral, Negative).', icon: <Smile className="h-3.5 w-3.5 text-purple-600" />, bg: 'bg-purple-50', hover: 'hover:border-purple-200 hover:bg-purple-50/50' },

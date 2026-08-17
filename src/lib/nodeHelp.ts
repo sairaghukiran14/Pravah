@@ -47,8 +47,8 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
     desc: 'Extracts the text from an image or PDF using Sarvam Document AI, exactly as written. Connect an Image or Document input upstream.',
   },
   vision: {
-    title: 'Vision AI',
-    desc: 'Processes visual imagery to generate descriptions, tags, or detect target objects.',
+    title: 'Vision Analysis',
+    desc: 'Processes images and visual inputs to describe scenes, detect objects, or extract visual information.',
   },
   llm: {
     title: 'Large Language Model (LLM)',

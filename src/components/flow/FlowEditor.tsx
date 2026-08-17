@@ -25,7 +25,6 @@ const nodeTypes = {
   video_input: GenericNode,
   url_input: GenericNode,
   ocr: GenericNode,
-  vision: GenericNode,
   llm: GenericNode,
   summarize: GenericNode,
   sentiment: GenericNode,

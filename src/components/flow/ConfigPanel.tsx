@@ -549,8 +549,7 @@ export const ConfigPanel: React.FC = () => {
                     ]}
                   />
                   <p className="text-xs text-gray-500">
-                    Extracts the text as written, without interpreting it. To ask questions about a
-                    document, use a Vision node instead.
+                    Extracts the text as written, without interpreting it. To ask questions or analyze the document, connect an LLM node downstream.
                   </p>
                 </>
               )}
@@ -813,12 +812,6 @@ export const ConfigPanel: React.FC = () => {
                     <input type="range" min="0" max="1.0" step="0.05" value={config.temperature ?? 0.2} onChange={(e) => handleChange('temperature', parseFloat(e.target.value))} className="w-full accent-gray-900 cursor-pointer" />
                   </div>
                 </>
-              )}
-              {nodeType === 'vision' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Vision Prompt</label>
-                  <textarea className="w-full rounded-lg border border-gray-300 p-2 text-sm" rows={2} value={config.prompt || 'Describe this image.'} onChange={(e) => handleChange('prompt', e.target.value)} placeholder="What to extract/describe..." />
-                </div>
               )}
               {nodeType === 'summarize' && <Select label="Summary Length" value={config.length || 'short'} onChange={(val) => handleChange('length', val)} options={[{ label: 'Short (1 paragraph)', value: 'short' }, { label: 'Medium (3 paragraphs)', value: 'medium' }, { label: 'Long (Detailed)', value: 'long' }]} />}
               {nodeType === 'sentiment' && <Select label="Output Format" value={config.format || 'json'} onChange={(val) => handleChange('format', val)} options={[{ label: 'JSON Object', value: 'json' }, { label: 'Simple Text', value: 'text' }]} />}

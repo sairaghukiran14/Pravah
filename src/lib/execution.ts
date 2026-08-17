@@ -1058,31 +1058,6 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
         response: ocrRes.text,
         job_id: ocrRes.job_id,
       };
-    } else if (node.type === 'vision') {
-      const fileData = resolveNodeFile(dynamicInputPayload, node.config);
-
-      if (!fileData) {
-        throw new Error('No document file (image/PDF) provided for Vision Node digitisation.');
-      }
-
-      // 1. Submit digitise job and poll for markdown output
-      const visionRes = await executeSarvamVision({
-        file: fileData,
-        language: node.config?.language || 'hi-IN',
-        output_format: 'md',
-      });
-
-      // 2. Query LLM to reason over the digitised text if a custom prompt is provided
-      const customPrompt = node.config?.prompt || 'Describe this image.';
-      const outputFormatText = `Document AI Digitised Text:\n\n${visionRes.text}`;
-      
-      output = await executeSarvamLLM({
-        model: 'sarvam-105b',
-        system_prompt: `You are a Document AI analysis assistant. The user wants you to analyze the digitized text of their document. Contextualize, describe, or extract details as requested by their prompt.`,
-        prompt: customPrompt,
-        input: outputFormatText,
-        temperature: 0.2,
-      });
     } else {
       // Sarvam Vision & Optical Processing Node fallback execution
       output = await executeSarvamLLM({

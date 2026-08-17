@@ -187,13 +187,13 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         }
       },
       {
-        "type": "vision",
+        "type": "ocr",
         "label": "Digitise Document",
         "x": 150,
         "y": 30,
         "config": {
           "language": "hi-IN",
-          "prompt": "Return the full text of this document exactly as written, preserving headings, tables and paragraph order. Do not summarise, omit or add anything."
+          "output_format": "md"
         }
       },
       {
@@ -964,8 +964,8 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
     ]
   },
   {
-    "name": "7. Advanced Document Vision & Audio Alert",
-    "description": "Digitises uploaded PDFs or invoice images, translates the extracted metadata, and synthesizes audio alerts for localized records.",
+    "name": "7. Scanned Invoice OCR & Audio Alert",
+    "description": "Digitises uploaded PDFs or invoice images using OCR, translates the text, and synthesizes audio alerts for localized records.",
     "nodes": [
       {
         "type": "document_input",
@@ -977,13 +977,13 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         }
       },
       {
-        "type": "vision",
-        "label": "Document AI & Prompt Analysis",
+        "type": "ocr",
+        "label": "Document AI OCR Digitisation",
         "x": 330,
         "y": 45,
         "config": {
-          "prompt": "Extract key invoice details including vendor name, total amount, and items list.",
-          "language": "en-IN"
+          "language": "en-IN",
+          "output_format": "md"
         }
       },
       {
@@ -1133,8 +1133,8 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
     ]
   },
   {
-    "name": "8. Document Vision & OCR Pipeline",
-    "description": "Extract text from documents and analyze visually with Vision AI.",
+    "name": "8. Document OCR & LLM Analysis Pipeline",
+    "description": "Extract text from documents and analyze with LLM reasoning.",
     "nodes": [
       {
         "type": "document_input",
@@ -1153,8 +1153,8 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         "config": {}
       },
       {
-        "type": "vision",
-        "label": "Vision Analysis",
+        "type": "llm",
+        "label": "LLM Analysis",
         "x": 400,
         "y": 300,
         "config": {
@@ -1170,7 +1170,7 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
       },
       {
         "type": "text_output",
-        "label": "Vision Insights",
+        "label": "LLM Insights",
         "x": 700,
         "y": 300,
         "config": {}
@@ -1184,7 +1184,7 @@ export const LIBRARY_PIPELINES: LibraryPipelineTemplate[] = [
         "targetHandle": "input"
       },
       {
-        "source": 0,
+        "source": 1,
         "target": 2,
         "sourceHandle": "output",
         "targetHandle": "input"

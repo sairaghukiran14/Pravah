@@ -161,6 +161,7 @@ export default function LandingPage() {
               <a href="#demo" className="hover:text-slate-900 transition-colors">Live Demo</a>
               <a href="#use-cases" className="hover:text-slate-900 transition-colors">Use Cases</a>
               <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing & Credits</a>
+              <Link href="/docs" className="hover:text-slate-900 transition-colors">Docs</Link>
             </nav>
 
             {/* Action Buttons */}
@@ -197,6 +198,7 @@ export default function LandingPage() {
               <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Live Demo</a>
               <a href="#use-cases" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Use Cases</a>
               <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Pricing & Credits</a>
+              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Docs</Link>
               <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                 <Link href="/login" className="px-3 py-2 text-sm font-medium text-slate-700">Sign in</Link>
                 <Link href="/login" className="flex items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-normal text-white">

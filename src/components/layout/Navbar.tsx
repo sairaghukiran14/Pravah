@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FolderGit2, LogOut, User, Wallet, HelpCircle } from 'lucide-react';
+import { FolderGit2, LogOut, User, Wallet, HelpCircle, BookOpen, ArrowRight } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
@@ -52,6 +52,17 @@ export const Navbar: React.FC = () => {
           </Link>
         </div>
 
+        {/* Center Marketing Links (Only when unauthenticated) */}
+        {status !== 'loading' && status !== 'authenticated' && (
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-500">
+            <Link href="/#features" className="hover:text-slate-900 transition-colors">Capabilities</Link>
+            <Link href="/#demo" className="hover:text-slate-900 transition-colors">Live Demo</Link>
+            <Link href="/#use-cases" className="hover:text-slate-900 transition-colors">Use Cases</Link>
+            <Link href="/#pricing" className="hover:text-slate-900 transition-colors">Pricing & Credits</Link>
+            <Link href="/docs" className={`transition-colors ${pathname.startsWith('/docs') ? 'text-slate-900 font-bold' : 'hover:text-slate-900 text-slate-500'}`}>Docs</Link>
+          </nav>
+        )}
+
         {/* Profile Section (No Sign In button on dashboard header) */}
         <div className="flex items-center gap-3">
           {status === 'loading' ? (
@@ -59,7 +70,7 @@ export const Navbar: React.FC = () => {
               <div className="h-6 w-6 rounded-full bg-gray-200" />
               <div className="h-3 w-20 bg-gray-200 rounded" />
             </div>
-          ) : (
+          ) : status === 'authenticated' ? (
             <div className="flex items-center gap-3">
               {/* Navigation segmented control on the right */}
               <nav className="flex items-center gap-1 bg-gray-50/80 border border-gray-200/60 p-0.5 rounded-xl text-xs font-semibold mr-1">
@@ -84,6 +95,17 @@ export const Navbar: React.FC = () => {
                 >
                   <HelpCircle className={`h-3.5 w-3.5 transition-colors duration-200 ${pathname === '/nodes' ? 'text-blue-500' : 'text-gray-400'}`} />
                   <span className="hidden sm:inline">Node Guide</span>
+                </Link>
+                <Link
+                  href="/docs"
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg border transition-all duration-200 ease-in-out ${
+                    pathname.startsWith('/docs')
+                      ? 'bg-white text-gray-900 shadow-2xs border-gray-200/50'
+                      : 'text-gray-500 hover:text-gray-950 border-transparent'
+                  }`}
+                >
+                  <BookOpen className={`h-3.5 w-3.5 transition-colors duration-200 ${pathname.startsWith('/docs') ? 'text-blue-500' : 'text-gray-400'}`} />
+                  <span className="hidden sm:inline">Docs</span>
                 </Link>
               </nav>
 
@@ -125,6 +147,19 @@ export const Navbar: React.FC = () => {
                   <LogOut className="h-3.5 w-3.5" />
                 </button>
               </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link href="/login" className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-955 transition-colors cursor-pointer">
+                Sign in
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-800 transition-all shadow-2xs whitespace-nowrap"
+              >
+                <span>Launch Studio</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           )}
         </div>

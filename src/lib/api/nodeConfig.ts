@@ -98,15 +98,13 @@ const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
     temperature: z.coerce.number().min(0).max(2).optional(),
   }),
 
+  vision: z.looseObject({
+    prompt: promptText.optional(),
+  }),
+
   summarize: z.looseObject({ length: z.string().max(32).optional() }),
 
   classification: z.looseObject({ categories: z.string().max(2_000).optional() }),
-
-  vision: z.looseObject({
-    language: languageCode.optional(),
-    prompt: promptText.optional(),
-    output_format: z.enum(['html', 'md']).optional(),
-  }),
 
   transliteration: z.looseObject({
     source_language_code: languageCode.optional(),

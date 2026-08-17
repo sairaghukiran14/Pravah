@@ -51,7 +51,6 @@ const NODE_LABELS: Record<string, string> = {
   llm: 'LLM',
   summarize: 'Summarize',
   ocr: 'OCR',
-  vision: 'Vision',
   sentiment: 'Sentiment',
   classification: 'Classification',
   keyword_extraction: 'Keyword Extraction',
