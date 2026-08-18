@@ -87,6 +87,7 @@ export const AIPipelineBuilder: React.FC<AIPipelineBuilderProps> = ({
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Pravah AI is analyzing your workflow...');
 
   // Audio Recording States
   const [isRecording, setIsRecording] = useState(false);
@@ -117,6 +118,30 @@ export const AIPipelineBuilder: React.FC<AIPipelineBuilderProps> = ({
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory, isSending]);
+
+  // Cycle loading messages during API calls to improve perceived latency
+  useEffect(() => {
+    if (!isSending) {
+      setLoadingMessage('Pravah AI is analyzing your workflow...');
+      return;
+    }
+
+    const messages = [
+      'Pravah AI is analyzing your workflow...',
+      'Selecting appropriate Indic AI capability nodes...',
+      'Mapping processing nodes and visual coordinates...',
+      'Ensuring edges are connected with no orphaned nodes...',
+      'Almost ready! Finalizing visual pipeline layout...',
+    ];
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % messages.length;
+      setLoadingMessage(messages[currentIndex]);
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [isSending]);
 
   // Helper: File/Blob to Base64
   const fileToBase64 = (fileOrBlob: File | Blob): Promise<string> => {
@@ -593,7 +618,7 @@ export const AIPipelineBuilder: React.FC<AIPipelineBuilderProps> = ({
                 </div>
                 <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-xs px-4 py-3 flex items-center gap-2.5 text-xs text-gray-400 shadow-2xs">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
-                  <span>Pravah AI is configuring your pipeline...</span>
+                  <span>{loadingMessage}</span>
                 </div>
               </div>
             )}

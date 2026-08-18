@@ -27,15 +27,22 @@ async function fetchWithRetry(
   url: string,
   options: RequestInit,
   attempts = 3,
-  delayMs = 1000
+  delayMs = 1000,
+  timeoutMs = 25000 // 25 seconds timeout to abort hung requests early and trigger retries
 ): Promise<Response> {
   let lastError: unknown;
 
   for (let i = 0; i < attempts; i++) {
     const isLast = i === attempts - 1;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(id);
 
       if (response.ok || !RETRYABLE_STATUS.has(response.status) || isLast) {
         return response;
@@ -52,13 +59,14 @@ async function fetchWithRetry(
       await new Promise((res) => setTimeout(res, wait));
       continue;
     } catch (err: any) {
+      clearTimeout(id);
       lastError = err;
       if (isLast) throw err;
 
       const wait = delayMs * 2 ** i;
       console.warn(
         `Fetch to ${url} failed (attempt ${i + 1}/${attempts}), retrying in ${wait}ms:`,
-        err.message
+        err.name === 'AbortError' ? 'Request timed out (aborted)' : err.message
       );
       await new Promise((res) => setTimeout(res, wait));
     }
