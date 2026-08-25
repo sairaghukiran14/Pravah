@@ -12,12 +12,32 @@ import {
 } from '@xyflow/react';
 import { NodeType, RunStatus, SerializedNode, SerializedEdge, PipelineData } from '@/types/pipeline';
 
+export interface HistorySnapshot {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+export interface ClipboardNodeData {
+  type: NodeType;
+  label: string;
+  config: Record<string, any>;
+}
+
 export interface PipelineStoreState {
   // Graph state
   nodes: Node[];
   edges: Edge[];
   selectedNodeId: string | null;
   edgeToDeleteId: string | null;
+
+  // History & Clipboard state
+  past: HistorySnapshot[];
+  future: HistorySnapshot[];
+  canUndo: boolean;
+  canRedo: boolean;
+  clipboardNode: ClipboardNodeData | null;
+  isCommandPaletteOpen: boolean;
+  setCommandPaletteOpen: (open: boolean) => void;
 
   // Metadata
   pipelineId: string | null;
@@ -41,6 +61,11 @@ export interface PipelineStoreState {
   addNode: (type: NodeType, position: XYPosition) => void;
   removeNode: (id: string) => void;
   removeEdge: (id: string) => void;
+  duplicateNode: (id?: string) => string | null;
+  copyNode: (id?: string) => void;
+  pasteNode: (position?: XYPosition) => string | null;
+  undo: () => void;
+  redo: () => void;
   updateNodeConfig: (id: string, config: Record<string, any>) => void;
   updateNodeLabel: (id: string, label: string) => void;
   selectNode: (id: string | null) => void;
@@ -157,11 +182,36 @@ export function isPersistedChange(change: { type?: string }): boolean {
   return change.type !== 'dimensions' && change.type !== 'select';
 }
 
+const MAX_HISTORY_LENGTH = 30;
+
+const cloneSnapshot = (nodes: Node[], edges: Edge[]): HistorySnapshot => ({
+  nodes: JSON.parse(JSON.stringify(nodes)),
+  edges: JSON.parse(JSON.stringify(edges)),
+});
+
+const pushHistory = (currentPast: HistorySnapshot[], nodes: Node[], edges: Edge[]) => {
+  const newPast = [...currentPast, cloneSnapshot(nodes, edges)].slice(-MAX_HISTORY_LENGTH);
+  return {
+    past: newPast,
+    future: [],
+    canUndo: true,
+    canRedo: false,
+  };
+};
+
 export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
   edgeToDeleteId: null,
+
+  past: [],
+  future: [],
+  canUndo: false,
+  canRedo: false,
+  clipboardNode: null,
+  isCommandPaletteOpen: false,
+  setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
 
   pipelineId: null,
   pipelineName: 'Untitled Pipeline',
@@ -206,8 +256,10 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
     const filteredEdges = get().edges.filter(
       (edge) => !(edge.target === connection.target && edge.targetHandle === connection.targetHandle)
     );
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
 
     set({
+      ...historyUpdate,
       edges: addEdge(
         {
           ...connection,
@@ -222,6 +274,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   addNode: (type, position) => {
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
     const id = `node_${type}_${Math.random().toString(36).substring(2, 9)}`;
     const newNode: Node = {
       id,
@@ -235,6 +288,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
     };
 
     set({
+      ...historyUpdate,
       nodes: [...get().nodes, newNode],
       selectedNodeId: id,
       isDirty: true,
@@ -242,7 +296,9 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   removeNode: (id) => {
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
     set({
+      ...historyUpdate,
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId,
@@ -251,8 +307,142 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   },
 
   removeEdge: (id) => {
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
     set({
+      ...historyUpdate,
       edges: get().edges.filter((e) => e.id !== id),
+      isDirty: true,
+    });
+  },
+
+  duplicateNode: (id) => {
+    const targetId = id || get().selectedNodeId;
+    if (!targetId) return null;
+
+    const node = get().nodes.find((n) => n.id === targetId);
+    if (!node) return null;
+
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
+    const newId = `node_${node.type}_${Math.random().toString(36).substring(2, 9)}`;
+    const clonedConfig = JSON.parse(JSON.stringify(node.data?.config || {}));
+
+    const newNode: Node = {
+      id: newId,
+      type: node.type,
+      position: {
+        x: (node.position?.x ?? 0) + 40,
+        y: (node.position?.y ?? 0) + 40,
+      },
+      data: {
+        label: node.data?.label ? `${node.data.label} (Copy)` : getDefaultLabel(node.type as NodeType),
+        type: node.type,
+        config: clonedConfig,
+      },
+    };
+
+    set({
+      ...historyUpdate,
+      nodes: [...get().nodes, newNode],
+      selectedNodeId: newId,
+      isDirty: true,
+    });
+
+    return newId;
+  },
+
+  copyNode: (id) => {
+    const targetId = id || get().selectedNodeId;
+    if (!targetId) return;
+
+    const node = get().nodes.find((n) => n.id === targetId);
+    if (!node) return;
+
+    set({
+      clipboardNode: {
+        type: node.type as NodeType,
+        label: (node.data?.label as string) || getDefaultLabel(node.type as NodeType),
+        config: JSON.parse(JSON.stringify(node.data?.config || {})),
+      },
+    });
+  },
+
+  pasteNode: (position) => {
+    const { clipboardNode, selectedNodeId, nodes } = get();
+    if (!clipboardNode) return null;
+
+    const historyUpdate = pushHistory(get().past, get().nodes, get().edges);
+    const newId = `node_${clipboardNode.type}_${Math.random().toString(36).substring(2, 9)}`;
+
+    let targetPos: XYPosition;
+    if (position) {
+      targetPos = position;
+    } else if (selectedNodeId) {
+      const selNode = nodes.find((n) => n.id === selectedNodeId);
+      targetPos = selNode
+        ? { x: (selNode.position?.x ?? 0) + 40, y: (selNode.position?.y ?? 0) + 40 }
+        : { x: 260 + Math.random() * 40, y: 160 + Math.random() * 40 };
+    } else {
+      targetPos = { x: 260 + Math.random() * 40, y: 160 + Math.random() * 40 };
+    }
+
+    const newNode: Node = {
+      id: newId,
+      type: clipboardNode.type,
+      position: targetPos,
+      data: {
+        label: clipboardNode.label,
+        type: clipboardNode.type,
+        config: JSON.parse(JSON.stringify(clipboardNode.config)),
+      },
+    };
+
+    set({
+      ...historyUpdate,
+      nodes: [...get().nodes, newNode],
+      selectedNodeId: newId,
+      isDirty: true,
+    });
+
+    return newId;
+  },
+
+  undo: () => {
+    const { past, future, nodes, edges } = get();
+    if (past.length === 0) return;
+
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+
+    set({
+      nodes: previous.nodes,
+      edges: previous.edges,
+      past: newPast,
+      future: [currentSnapshot, ...future].slice(0, MAX_HISTORY_LENGTH),
+      canUndo: newPast.length > 0,
+      canRedo: true,
+      selectedNodeId: null,
+      isDirty: true,
+    });
+  },
+
+  redo: () => {
+    const { past, future, nodes, edges } = get();
+    if (future.length === 0) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+    const newPast = [...past, currentSnapshot].slice(-MAX_HISTORY_LENGTH);
+
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      past: newPast,
+      future: newFuture,
+      canUndo: true,
+      canRedo: newFuture.length > 0,
+      selectedNodeId: null,
       isDirty: true,
     });
   },
@@ -383,6 +573,10 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
       nodes,
       edges,
       selectedNodeId: null,
+      past: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
       isDirty: false,
       isRunning: false,
       nodeStatuses: {},
