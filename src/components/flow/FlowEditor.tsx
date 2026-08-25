@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   ReactFlow, Controls, Background, MiniMap, BackgroundVariant, useReactFlow, ReactFlowProvider,
 } from '@xyflow/react';
@@ -49,6 +49,8 @@ const edgeTypes = {
   deletable: DeletableEdge,
 };
 
+import { CommandPalette } from './CommandPalette';
+
 const FlowEditorContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -60,12 +62,90 @@ const FlowEditorContent: React.FC = () => {
   const onConnect = usePipelineStore((s) => s.onConnect);
   const addNode = usePipelineStore((s) => s.addNode);
   const selectNode = usePipelineStore((s) => s.selectNode);
+  const selectedNodeId = usePipelineStore((s) => s.selectedNodeId);
   const setHoveredNodeType = usePipelineStore((s) => s.setHoveredNodeType);
   const edgeToDeleteId = usePipelineStore((s) => s.edgeToDeleteId);
   const setEdgeToDeleteId = usePipelineStore((s) => s.setEdgeToDeleteId);
   const removeEdge = usePipelineStore((s) => s.removeEdge);
 
+  const undo = usePipelineStore((s) => s.undo);
+  const redo = usePipelineStore((s) => s.redo);
+  const duplicateNode = usePipelineStore((s) => s.duplicateNode);
+  const copyNode = usePipelineStore((s) => s.copyNode);
+  const pasteNode = usePipelineStore((s) => s.pasteNode);
+  const isCommandPaletteOpen = usePipelineStore((s) => s.isCommandPaletteOpen);
+  const setCommandPaletteOpen = usePipelineStore((s) => s.setCommandPaletteOpen);
+
   const [hoveredNode, setHoveredNode] = useState<{ id: string; type: string; label: string; x: number; y: number } | null>(null);
+
+  // Global Keyboard Shortcuts (Undo, Redo, Duplicate, Copy, Paste, Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept shortcuts when user is typing inside text fields
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+
+      if (isInput) return;
+
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifier && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(!isCommandPaletteOpen);
+        return;
+      }
+
+      if (modifier && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      if (
+        (modifier && e.shiftKey && e.key.toLowerCase() === 'z') ||
+        (modifier && e.key.toLowerCase() === 'y')
+      ) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      if (modifier && e.key.toLowerCase() === 'd') {
+        if (selectedNodeId) {
+          e.preventDefault();
+          duplicateNode(selectedNodeId);
+        }
+        return;
+      }
+
+      if (modifier && e.key.toLowerCase() === 'c') {
+        // If there's an active text selection on screen, let default copy work
+        if (window.getSelection() && String(window.getSelection()).length > 0) {
+          return;
+        }
+        if (selectedNodeId) {
+          e.preventDefault();
+          copyNode(selectedNodeId);
+        }
+        return;
+      }
+
+      if (modifier && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        pasteNode();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, duplicateNode, copyNode, pasteNode, selectedNodeId, isCommandPaletteOpen, setCommandPaletteOpen]);
 
   const onNodeMouseEnter = useCallback((event: React.MouseEvent, node: any) => {
     setHoveredNode({
@@ -102,6 +182,21 @@ const FlowEditorContent: React.FC = () => {
       const type = event.dataTransfer.getData('application/reactflow') as NodeType;
       if (!type) return;
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      addNode(type, position);
+    },
+    [screenToFlowPosition, addNode]
+  );
+
+  const handlePaletteSelectNode = useCallback(
+    (type: NodeType) => {
+      let position = { x: 260, y: 160 };
+      if (reactFlowWrapper.current) {
+        const rect = reactFlowWrapper.current.getBoundingClientRect();
+        position = screenToFlowPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        });
+      }
       addNode(type, position);
     },
     [screenToFlowPosition, addNode]
@@ -146,6 +241,13 @@ const FlowEditorContent: React.FC = () => {
           className="hidden sm:block"
         />
       </ReactFlow>
+
+      {/* Command Palette (⌘K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onSelectNode={handlePaletteSelectNode}
+      />
 
       {edgeToDeleteId && (
         <ConfirmDialog

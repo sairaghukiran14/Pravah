@@ -5,7 +5,8 @@ import {
   Mic, Languages, Volume2, 
   FileText, Image, Video, Link as LinkIcon, FileUp, 
   Brain, AlignLeft, Smile, Key, Tags, 
-  Monitor, PlayCircle, Download, Mail, FileAudio, Keyboard
+  Monitor, PlayCircle, Download, Mail, FileAudio, Keyboard,
+  Undo2, Redo2, Search, Plus, Sparkles
 } from 'lucide-react';
 import { NodeType } from '@/types/pipeline';
 import { usePipelineStore } from '@/store/pipelineStore';
@@ -77,6 +78,12 @@ interface HoveredTooltip {
 export const Toolbar: React.FC = () => {
   const addNode = usePipelineStore((s) => s.addNode);
   const setHoveredNodeType = usePipelineStore((s) => s.setHoveredNodeType);
+  const undo = usePipelineStore((s) => s.undo);
+  const redo = usePipelineStore((s) => s.redo);
+  const canUndo = usePipelineStore((s) => s.canUndo);
+  const canRedo = usePipelineStore((s) => s.canRedo);
+  const setCommandPaletteOpen = usePipelineStore((s) => s.setCommandPaletteOpen);
+
   const [tooltip, setTooltip] = useState<HoveredTooltip | null>(null);
 
   const handleDragStart = (e: React.DragEvent, type: NodeType) => {
@@ -143,7 +150,46 @@ export const Toolbar: React.FC = () => {
   }
 
   return (
-    <div className="w-full h-14 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 flex items-center overflow-x-auto px-2 shrink-0 z-20">
+    <div className="w-full h-14 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 flex items-center overflow-x-auto px-2 shrink-0 z-20 gap-1">
+      {/* Quick Productivity Controls (Undo, Redo, Search) */}
+      <div className="flex items-center gap-1 px-2 py-1 border-r border-gray-200 shrink-0">
+        <button
+          onClick={() => setCommandPaletteOpen(true)}
+          title="Quick Search & Insert Nodes (⌘K)"
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-indigo-50/80 border border-indigo-200/80 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-medium shadow-2xs cursor-pointer select-none"
+        >
+          <Search className="h-3.5 w-3.5 text-indigo-600" />
+          <span className="hidden sm:inline">Add Node</span>
+          <kbd className="text-[10px] font-mono px-1 py-0.5 rounded bg-white text-indigo-700 border border-indigo-200 shadow-2xs ml-0.5">⌘K</kbd>
+        </button>
+
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          title="Undo (⌘Z)"
+          className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+            canUndo
+              ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
+              : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+          }`}
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </button>
+
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          title="Redo (⌘⇧Z)"
+          className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+            canRedo
+              ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
+              : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+          }`}
+        >
+          <Redo2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
       {renderNodeGroup('Inputs', inputNodes)}
       {renderNodeGroup('Processing', processingNodes)}
       {renderNodeGroup('Logic', logicNodes)}
@@ -171,3 +217,4 @@ export const Toolbar: React.FC = () => {
     </div>
   );
 };
+

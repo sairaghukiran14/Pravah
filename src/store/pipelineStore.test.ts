@@ -71,3 +71,156 @@ describe('isPersistedChange', () => {
     expect([{ type: 'select' }, { type: 'position' }].some(isPersistedChange)).toBe(true);
   });
 });
+
+describe('usePipelineStore history & clipboard actions', () => {
+  it('handles undo and redo for adding and removing nodes', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+    
+    // Reset store state
+    usePipelineStore.setState({
+      nodes: [],
+      edges: [],
+      past: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+      selectedNodeId: null,
+    });
+
+    expect(usePipelineStore.getState().canUndo).toBe(false);
+    expect(usePipelineStore.getState().canRedo).toBe(false);
+
+    // 1. Add STT Node
+    usePipelineStore.getState().addNode('stt', { x: 100, y: 100 });
+    expect(usePipelineStore.getState().nodes.length).toBe(1);
+    expect(usePipelineStore.getState().canUndo).toBe(true);
+    expect(usePipelineStore.getState().canRedo).toBe(false);
+
+    const firstNodeId = usePipelineStore.getState().nodes[0].id;
+
+    // 2. Add Translate Node
+    usePipelineStore.getState().addNode('translate', { x: 300, y: 100 });
+    expect(usePipelineStore.getState().nodes.length).toBe(2);
+
+    // 3. Undo adding Translate
+    usePipelineStore.getState().undo();
+    expect(usePipelineStore.getState().nodes.length).toBe(1);
+    expect(usePipelineStore.getState().nodes[0].id).toBe(firstNodeId);
+    expect(usePipelineStore.getState().canUndo).toBe(true);
+    expect(usePipelineStore.getState().canRedo).toBe(true);
+
+    // 4. Redo adding Translate
+    usePipelineStore.getState().redo();
+    expect(usePipelineStore.getState().nodes.length).toBe(2);
+    expect(usePipelineStore.getState().canRedo).toBe(false);
+
+    // 5. Remove first node
+    usePipelineStore.getState().removeNode(firstNodeId);
+    expect(usePipelineStore.getState().nodes.length).toBe(1);
+
+    // 6. Undo node removal
+    usePipelineStore.getState().undo();
+    expect(usePipelineStore.getState().nodes.length).toBe(2);
+    expect(usePipelineStore.getState().nodes.some((n) => n.id === firstNodeId)).toBe(true);
+  });
+
+  it('duplicates a selected node with offset position and cloned config', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+    
+    usePipelineStore.setState({
+      nodes: [],
+      edges: [],
+      past: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+      selectedNodeId: null,
+    });
+
+    usePipelineStore.getState().addNode('tts', { x: 150, y: 200 });
+    const originalNode = usePipelineStore.getState().nodes[0];
+
+    // Update config on original
+    usePipelineStore.getState().updateNodeConfig(originalNode.id, { speaker: 'ritu', pace: 1.25 });
+
+    // Select and duplicate
+    usePipelineStore.getState().selectNode(originalNode.id);
+    const duplicatedId = usePipelineStore.getState().duplicateNode();
+
+    expect(duplicatedId).toBeTruthy();
+    expect(usePipelineStore.getState().nodes.length).toBe(2);
+
+    const dupNode = usePipelineStore.getState().nodes.find((n) => n.id === duplicatedId);
+    expect(dupNode).toBeDefined();
+    expect(dupNode?.position.x).toBe(190);
+    expect(dupNode?.position.y).toBe(240);
+    expect((dupNode?.data.config as any).speaker).toBe('ritu');
+    expect((dupNode?.data.config as any).pace).toBe(1.25);
+    expect(usePipelineStore.getState().selectedNodeId).toBe(duplicatedId);
+  });
+
+  it('copies and pastes a node via clipboard actions', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+    
+    usePipelineStore.setState({
+      nodes: [],
+      edges: [],
+      past: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+      selectedNodeId: null,
+      clipboardNode: null,
+    });
+
+    usePipelineStore.getState().addNode('llm', { x: 50, y: 50 });
+    const node = usePipelineStore.getState().nodes[0];
+    usePipelineStore.getState().updateNodeConfig(node.id, { prompt: 'Custom prompt for test' });
+
+    // Copy
+    usePipelineStore.getState().copyNode(node.id);
+    expect(usePipelineStore.getState().clipboardNode).toBeDefined();
+    expect(usePipelineStore.getState().clipboardNode?.type).toBe('llm');
+    expect(usePipelineStore.getState().clipboardNode?.config.prompt).toBe('Custom prompt for test');
+
+    // Paste
+    const pastedId = usePipelineStore.getState().pasteNode({ x: 400, y: 300 });
+    expect(pastedId).toBeTruthy();
+    expect(usePipelineStore.getState().nodes.length).toBe(2);
+
+    const pastedNode = usePipelineStore.getState().nodes.find((n) => n.id === pastedId);
+    expect(pastedNode?.position).toEqual({ x: 400, y: 300 });
+    expect((pastedNode?.data.config as any).prompt).toBe('Custom prompt for test');
+  });
+
+  it('caps history stack to a maximum of 30 snapshots', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+    
+    usePipelineStore.setState({
+      nodes: [],
+      edges: [],
+      past: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+
+    // Add 35 nodes sequentially
+    for (let i = 0; i < 35; i++) {
+      usePipelineStore.getState().addNode('text_input', { x: i * 10, y: i * 10 });
+    }
+
+    expect(usePipelineStore.getState().past.length).toBe(30);
+  });
+
+  it('toggles command palette open state', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+
+    usePipelineStore.getState().setCommandPaletteOpen(true);
+    expect(usePipelineStore.getState().isCommandPaletteOpen).toBe(true);
+
+    usePipelineStore.getState().setCommandPaletteOpen(false);
+    expect(usePipelineStore.getState().isCommandPaletteOpen).toBe(false);
+  });
+});
+
