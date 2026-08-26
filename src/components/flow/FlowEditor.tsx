@@ -13,6 +13,11 @@ import { TTSNode } from './nodes/TTSNode';
 import { GenericNode } from './nodes/GenericNode';
 import { DeletableEdge } from './nodes/DeletableEdge';
 import { NodeType } from '@/types/pipeline';
+import { CommandPalette } from './CommandPalette';
+import { TemplatesModal } from './TemplatesModal';
+import { ShortcutsModal } from './ShortcutsModal';
+import { Sparkles, Plus, Search, Workflow, Play, Mic, HelpCircle } from 'lucide-react';
+import { PIPELINE_TEMPLATES } from '@/lib/templates';
 
 const nodeTypes = { 
   stt: STTNode, 
@@ -49,11 +54,9 @@ const edgeTypes = {
   deletable: DeletableEdge,
 };
 
-import { CommandPalette } from './CommandPalette';
-
 const FlowEditorContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
 
   const nodes = usePipelineStore((s) => s.nodes);
   const edges = usePipelineStore((s) => s.edges);
@@ -67,6 +70,7 @@ const FlowEditorContent: React.FC = () => {
   const edgeToDeleteId = usePipelineStore((s) => s.edgeToDeleteId);
   const setEdgeToDeleteId = usePipelineStore((s) => s.setEdgeToDeleteId);
   const removeEdge = usePipelineStore((s) => s.removeEdge);
+  const loadTemplateGraph = usePipelineStore((s) => s.loadTemplateGraph);
 
   const undo = usePipelineStore((s) => s.undo);
   const redo = usePipelineStore((s) => s.redo);
@@ -77,11 +81,12 @@ const FlowEditorContent: React.FC = () => {
   const setCommandPaletteOpen = usePipelineStore((s) => s.setCommandPaletteOpen);
 
   const [hoveredNode, setHoveredNode] = useState<{ id: string; type: string; label: string; x: number; y: number } | null>(null);
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
-  // Global Keyboard Shortcuts (Undo, Redo, Duplicate, Copy, Paste, Cmd+K)
+  // Global Keyboard Shortcuts (Undo, Redo, Duplicate, Copy, Paste, Cmd+K, Cmd+0, Shortcuts helper)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept shortcuts when user is typing inside text fields
       const target = e.target as HTMLElement | null;
       const isInput =
         target &&
@@ -98,6 +103,18 @@ const FlowEditorContent: React.FC = () => {
       if (modifier && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setCommandPaletteOpen(!isCommandPaletteOpen);
+        return;
+      }
+
+      if (modifier && e.key === '0') {
+        e.preventDefault();
+        fitView({ duration: 300 });
+        return;
+      }
+
+      if (e.key === '?' || (modifier && e.key === '/')) {
+        e.preventDefault();
+        setIsShortcutsModalOpen((prev) => !prev);
         return;
       }
 
@@ -125,7 +142,6 @@ const FlowEditorContent: React.FC = () => {
       }
 
       if (modifier && e.key.toLowerCase() === 'c') {
-        // If there's an active text selection on screen, let default copy work
         if (window.getSelection() && String(window.getSelection()).length > 0) {
           return;
         }
@@ -145,7 +161,7 @@ const FlowEditorContent: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, duplicateNode, copyNode, pasteNode, selectedNodeId, isCommandPaletteOpen, setCommandPaletteOpen]);
+  }, [undo, redo, duplicateNode, copyNode, pasteNode, selectedNodeId, isCommandPaletteOpen, setCommandPaletteOpen, fitView]);
 
   const onNodeMouseEnter = useCallback((event: React.MouseEvent, node: any) => {
     setHoveredNode({
@@ -242,11 +258,71 @@ const FlowEditorContent: React.FC = () => {
         />
       </ReactFlow>
 
+      {/* Empty Canvas Starter Hero */}
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
+          <div className="pointer-events-auto max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200/80 p-6 shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-xs">
+              <Workflow className="h-6 w-6" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Your Canvas is Ready</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Drag nodes from the top toolbar, start with a pre-configured template, or press <kbd className="font-mono px-1 py-0.5 bg-gray-100 rounded border text-gray-700">⌘K</kbd>.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => setIsTemplatesModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Browse Templates
+              </button>
+
+              <button
+                onClick={() => setCommandPaletteOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-medium transition-all cursor-pointer"
+              >
+                <Search className="h-3.5 w-3.5 text-gray-500" />
+                Add Node (⌘K)
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+              <span className="flex items-center gap-1">
+                💡 <button onClick={() => loadTemplateGraph(PIPELINE_TEMPLATES[0])} className="text-indigo-600 hover:underline font-medium">Quick load Voice Dubber</button>
+              </span>
+              <button
+                onClick={() => setIsShortcutsModalOpen(true)}
+                className="flex items-center gap-1 text-gray-400 hover:text-gray-600"
+              >
+                <HelpCircle className="h-3 w-3" /> Shortcuts
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Command Palette (⌘K) */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         onSelectNode={handlePaletteSelectNode}
+      />
+
+      {/* Templates Modal */}
+      <TemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={() => setIsTemplatesModalOpen(false)}
+      />
+
+      {/* Shortcuts Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
       />
 
       {edgeToDeleteId && (

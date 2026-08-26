@@ -11,6 +11,7 @@ import {
   XYPosition,
 } from '@xyflow/react';
 import { NodeType, RunStatus, SerializedNode, SerializedEdge, PipelineData } from '@/types/pipeline';
+import { computeAutoLayout, createGraphFromTemplate, PipelineTemplate } from '@/lib/templates';
 
 export interface HistorySnapshot {
   nodes: Node[];
@@ -71,6 +72,10 @@ export interface PipelineStoreState {
   selectNode: (id: string | null) => void;
   setHoveredNodeType: (type: NodeType | null) => void;
   setEdgeToDeleteId: (id: string | null) => void;
+  applyAutoLayout: () => void;
+  clearCanvas: () => void;
+  loadTemplateGraph: (template: PipelineTemplate) => void;
+  importPipelineData: (data: { nodes: Node[]; edges: Edge[]; name?: string }) => void;
 
   // Pipeline lifecycle actions
   loadPipeline: (pipeline: PipelineData) => void;
@@ -492,6 +497,91 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
 
   setEdgeToDeleteId: (id) => {
     set({ edgeToDeleteId: id });
+  },
+
+  applyAutoLayout: () => {
+    const { nodes, edges, past } = get();
+    if (nodes.length === 0) return;
+
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+    const newPast = [...past, currentSnapshot].slice(-MAX_HISTORY_LENGTH);
+    const organizedNodes = computeAutoLayout(nodes, edges);
+
+    set({
+      nodes: organizedNodes,
+      past: newPast,
+      future: [],
+      canUndo: true,
+      canRedo: false,
+      isDirty: true,
+    });
+  },
+
+  clearCanvas: () => {
+    const { nodes, edges, past } = get();
+    if (nodes.length === 0 && edges.length === 0) return;
+
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+    const newPast = [...past, currentSnapshot].slice(-MAX_HISTORY_LENGTH);
+
+    set({
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      edgeToDeleteId: null,
+      past: newPast,
+      future: [],
+      canUndo: true,
+      canRedo: false,
+      isDirty: true,
+    });
+  },
+
+  loadTemplateGraph: (template: PipelineTemplate) => {
+    const { nodes, edges, past } = get();
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+    const newPast = [...past, currentSnapshot].slice(-MAX_HISTORY_LENGTH);
+
+    const graph = createGraphFromTemplate(template);
+
+    set({
+      nodes: graph.nodes,
+      edges: graph.edges,
+      selectedNodeId: null,
+      edgeToDeleteId: null,
+      past: newPast,
+      future: [],
+      canUndo: true,
+      canRedo: false,
+      isDirty: true,
+      pipelineName: template.name.replace(/^[^\w]+/, '').trim() || get().pipelineName,
+    });
+  },
+
+  importPipelineData: (data: { nodes: Node[]; edges: Edge[]; name?: string }) => {
+    const { nodes, edges, past } = get();
+    const currentSnapshot = cloneSnapshot(nodes, edges);
+    const newPast = [...past, currentSnapshot].slice(-MAX_HISTORY_LENGTH);
+
+    const formattedEdges: Edge[] = (data.edges || []).map((e) => ({
+      ...e,
+      type: 'deletable',
+      animated: true,
+      style: { stroke: '#6366f1', strokeWidth: 2 },
+    }));
+
+    set({
+      nodes: data.nodes || [],
+      edges: formattedEdges,
+      selectedNodeId: null,
+      edgeToDeleteId: null,
+      past: newPast,
+      future: [],
+      canUndo: true,
+      canRedo: false,
+      isDirty: true,
+      ...(data.name ? { pipelineName: data.name } : {}),
+    });
   },
 
   setPipelineName: (name) => {

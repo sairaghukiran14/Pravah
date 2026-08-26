@@ -222,5 +222,54 @@ describe('usePipelineStore history & clipboard actions', () => {
     usePipelineStore.getState().setCommandPaletteOpen(false);
     expect(usePipelineStore.getState().isCommandPaletteOpen).toBe(false);
   });
+
+  it('clears canvas and preserves undo history', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+
+    usePipelineStore.setState({
+      nodes: [{ id: 'n1', type: 'stt', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+      past: [],
+      future: [],
+    });
+
+    usePipelineStore.getState().clearCanvas();
+    expect(usePipelineStore.getState().nodes.length).toBe(0);
+    expect(usePipelineStore.getState().canUndo).toBe(true);
+
+    usePipelineStore.getState().undo();
+    expect(usePipelineStore.getState().nodes.length).toBe(1);
+  });
+
+  it('loads pre-built template graph and sets state', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+    const { PIPELINE_TEMPLATES } = await import('@/lib/templates');
+
+    usePipelineStore.setState({
+      nodes: [],
+      edges: [],
+      past: [],
+    });
+
+    usePipelineStore.getState().loadTemplateGraph(PIPELINE_TEMPLATES[0]);
+    expect(usePipelineStore.getState().nodes.length).toBe(PIPELINE_TEMPLATES[0].nodes.length);
+    expect(usePipelineStore.getState().edges.length).toBe(PIPELINE_TEMPLATES[0].edges.length);
+    expect(usePipelineStore.getState().canUndo).toBe(true);
+  });
+
+  it('imports pipeline JSON data and marks dirty', async () => {
+    const { usePipelineStore } = await import('./pipelineStore');
+
+    usePipelineStore.getState().importPipelineData({
+      name: 'Imported Workflow',
+      nodes: [{ id: 'imp-1', type: 'translate', position: { x: 50, y: 50 }, data: {} }],
+      edges: [],
+    });
+
+    expect(usePipelineStore.getState().pipelineName).toBe('Imported Workflow');
+    expect(usePipelineStore.getState().nodes.length).toBe(1);
+    expect(usePipelineStore.getState().isDirty).toBe(true);
+  });
 });
+
 

@@ -11,9 +11,9 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)](https://www.prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql)](https://neon.tech/)
-[![Vitest](https://img.shields.io/badge/Tests-326%20Passing-brightgreen?logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-333%20Passing-brightgreen?logo=vitest)](https://vitest.dev/)
 
-[Features](#-key-features) • [Canvas Velocity](#-canvas-velocity--shortcuts) • [Architecture](#-system-architecture) • [Deep Dive Docs](#-documentation--handbooks) • [Getting Started](#-getting-started) • [Tech Stack](#%EF%B8%8F-tech-stack)
+[Features](#-key-features) • [Canvas Velocity](#-canvas-velocity--shortcuts) • [Templates](#-pre-built-pipeline-templates) • [Architecture](#-system-architecture) • [Deep Dive Docs](#-documentation--handbooks) • [Getting Started](#-getting-started) • [Tech Stack](#%EF%B8%8F-tech-stack)
 
 </div>
 
@@ -30,9 +30,18 @@ Built on top of React Flow (`@xyflow/react`), Zustand, Next.js 16 (App Router), 
 ## 🚀 Key Features
 
 ### ⚡ Flow Velocity & Modern Canvas UX
-* **Multi-Step Undo / Redo History**: Complete state history stack (`Cmd+Z` / `Cmd+Shift+Z`) with deep-cloned snapshot batching, preventing unintentional state loss.
-* **Instant Command Palette (`Cmd+K`)**: Rapidly search, filter, and insert nodes directly onto the canvas at cursor coordinates, trigger canvas actions, or execute pipelines.
-* **Keyboard Hotkeys & Canvas Controls**: Fast node/edge deletion (`Delete`/`Backspace`), selection management (`Cmd+A`), canvas auto-fit, layout auto-arrange, and zoom controls.
+* **Multi-Step Undo / Redo History**: Complete state history stack (`⌘Z` / `⌘⇧Z`) with deep-cloned snapshot batching, preventing unintentional state loss.
+* **Instant Command Palette (`⌘K`)**: Rapidly search, filter, and insert nodes directly onto the canvas at cursor coordinates, trigger canvas actions, or execute pipelines.
+* **Topological Auto-Layout ("Tidy DAG")**: Layered rank BFS auto-layout algorithm that cleanly reorganizes chaotic or overlapping graphs into structured horizontal columns with vertical centering.
+* **Pipeline JSON Export & Import**: Single-click export of complete workflow schemas to `.json` files and instant import to restore nodes and connections.
+* **Empty Canvas Starter State**: Interactive watermark hero card offering 1-click access to templates, node search, and quick starter actions for blank pipelines.
+* **Keyboard Hotkeys & Canvas Controls**: Fast node/edge deletion (`Delete`/`Backspace`), selection management (`⌘A`), canvas auto-fit (`⌘0`), zoom controls, and visual shortcut help (`?`).
+
+### 📦 Pre-Built Indic AI Templates
+* **🎙️ Voice Dubber & Translator**: `Audio Upload` ➔ `Saaras STT` ➔ `Mayura Translate` ➔ `Bulbul TTS` ➔ `Audio Out`
+* **📄 Multilingual Document OCR & Summary**: `Document Input` ➔ `Sarvam Vision OCR` ➔ `Summarizer` ➔ `Text Out`
+* **🎧 2-Speaker Indic Podcast Generator**: `Topic Prompt` ➔ `Conversational Podcast (2 hosts)` ➔ `Podcast Audio Out`
+* **📊 Customer Audio Sentiment Analyzer**: `Customer Call Audio` ➔ `Saaras STT` ➔ `Sentiment Classifier` ➔ `Sentiment Report`
 
 ### 🎙️ Conversational AI Pipeline Builder
 * **Natural Language Pipeline Generation**: Powered by Sarvam Sovereign LLM (`sarvam-105b`), allowing users to describe workflow requirements via text or voice to receive auto-configured visual flow previews.
@@ -49,7 +58,7 @@ Built on top of React Flow (`@xyflow/react`), Zustand, Next.js 16 (App Router), 
 
 ### ⚙️ Topological DAG Execution Engine
 * **Dependency-Resolved Graph Execution**: Custom topological sorting algorithm (`Kahn's Algorithm`) that resolves node dependencies, detects circular dependencies, and executes parallelizable branches asynchronously.
-* **Live Execution Sidebar**: Real-time streaming logs, node status indicators (idle, running, success, error), live execution timers, and node output preview.
+* **Live Execution Stopwatch & Monitor**: Real-time streaming logs, node status indicators (idle, running, success, error), live stopwatch timer (`⏱ 00:04.2s`), and 1-click clipboard copy for node outputs.
 * **Payload Inspection & Downloads**: Instant preview and single-click downloading of generated audio, translated text, and OCR artifacts.
 
 ### 🛡️ Granular Error Diagnostics & Self-Healing
@@ -72,8 +81,13 @@ Built on top of React Flow (`@xyflow/react`), Zustand, Next.js 16 (App Router), 
 | Action | macOS Shortcut | Windows / Linux Shortcut | Description |
 | :--- | :--- | :--- | :--- |
 | **Command Palette** | `⌘ + K` | `Ctrl + K` | Search & insert nodes, run pipeline, fit view |
+| **Zoom to Fit View** | `⌘ + 0` | `Ctrl + 0` | Center and fit graph within screen |
+| **Keyboard Help** | `?` or `⌘ + /` | `?` or `Ctrl + /` | Open keyboard shortcuts modal |
 | **Undo** | `⌘ + Z` | `Ctrl + Z` | Revert the last canvas change |
 | **Redo** | `⌘ + ⇧ + Z` | `Ctrl + Y` / `Ctrl + ⇧ + Z` | Reapply the reverted canvas change |
+| **Duplicate Node** | `⌘ + D` | `Ctrl + D` | Clone selected node with config |
+| **Copy Node** | `⌘ + C` | `Ctrl + C` | Copy node to clipboard buffer |
+| **Paste Node** | `⌘ + V` | `Ctrl + V` | Paste copied node onto canvas |
 | **Run Pipeline** | `⌘ + ↵` | `Ctrl + Enter` | Trigger pipeline execution |
 | **Save Flow** | `⌘ + S` | `Ctrl + S` | Persist pipeline changes |
 | **Delete Selected** | `Backspace` / `Delete` | `Delete` | Remove selected nodes or edges |
@@ -86,7 +100,7 @@ Built on top of React Flow (`@xyflow/react`), Zustand, Next.js 16 (App Router), 
 
 ```mermaid
 graph TD
-    A[User / Client] -->|Visual Flow Editor / Cmd+K| B[Zustand Pipeline Store]
+    A[User / Client] -->|Visual Flow Editor / Cmd+K / Templates| B[Zustand Pipeline Store]
     A -->|Natural Language / Voice Prompt| C[AI Pipeline Builder]
     C -->|Sarvam-105b LLM| B
     
@@ -101,7 +115,7 @@ graph TD
     
     I -->|Audio / Text / Vision Results| G
     G -->|Deduct Actual Usage / Refund| H
-    G -->|Execution Logs & Status| A
+    G -->|Execution Logs & Status (SSE)| A
 ```
 
 ---
@@ -123,13 +137,13 @@ Deep-dive technical guides and architectural specifications are available in the
 | :--- | :--- |
 | **Runtime & Framework** | Node.js 24.x, Next.js 16 (App Router), React 19, TypeScript 5 |
 | **Flow Canvas & UI** | `@xyflow/react` (React Flow), Tailwind CSS 4, Lucide React, WaveSurfer.js |
-| **State Management** | Zustand 5 with custom snapshot history stack |
+| **State Management** | Zustand 5 with custom snapshot history stack & auto-layout engine |
 | **Database & ORM** | Neon Serverless PostgreSQL, Prisma ORM 6 |
 | **Authentication** | Auth.js / NextAuth v5 (Google OAuth & Credentials) |
 | **AI & Indic Processing**| Sarvam AI (STT, TTS, Translate, Transliterate, Vision OCR, Sarvam-105b LLM) |
 | **Storage & Caching** | Cloudflare R2 (S3-compatible SDK), Upstash Redis (Distributed Rate Limiting) |
 | **Payments** | Razorpay SDK with `HmacSHA256` webhook/order verification |
-| **Testing & Quality** | Vitest 3, ESLint 9 |
+| **Testing & Quality** | Vitest 3 (333 Tests), ESLint 9 |
 
 ---
 
@@ -217,7 +231,7 @@ Deep-dive technical guides and architectural specifications are available in the
 Pravah comes with a comprehensive Vitest suite covering execution engine topology, node error diagnostics, rate limiting, audio encoding, credit metering, and state store history.
 
 ```bash
-# Run all unit and integration tests
+# Run all unit and integration tests (333 tests)
 npm test
 
 # Run tests in watch mode
@@ -247,16 +261,19 @@ npm run check
 │   │   ├── flow/               # React Flow canvas, Toolbar, ConfigPanel, NodeErrorDialog
 │   │   │   ├── nodes/          # Custom node types (STT, TTS, Translate, Generic, Base)
 │   │   │   ├── AIPipelineBuilder.tsx # Conversational AI builder with voice input
-│   │   │   └── CommandPalette.tsx    # Fast search & insertion palette
+│   │   │   ├── CommandPalette.tsx    # Fast search & insertion palette
+│   │   │   ├── TemplatesModal.tsx    # Pre-built Indic pipeline templates picker
+│   │   │   └── ShortcutsModal.tsx    # Keyboard shortcuts cheat sheet
 │   │   └── layout/             # Navigation header, modals, notifications
 │   ├── lib/
 │   │   ├── api/                # Rate limiting, pricing, retention, and error utilities
 │   │   ├── audio/              # WAV encoding, limits, normalization & chunking
 │   │   ├── documents/          # Document & OCR page count utilities
 │   │   ├── execution.ts        # Topological DAG engine & Kahn's sorting algorithm
-│   │   └── sarvam.ts           # Sarvam AI API client integration
+│   │   ├── sarvam.ts           # Sarvam AI API client integration
+│   │   └── templates.ts        # Pipeline presets catalog & auto-layout algorithm
 │   └── store/
-│       └── pipelineStore.ts    # Zustand canvas state & undo/redo snapshot history
+│       └── pipelineStore.ts    # Zustand canvas state, history stack & DAG operations
 ├── prisma/
 │   └── schema.prisma           # Prisma database schema and models
 └── public/                     # Static assets and brand logos
