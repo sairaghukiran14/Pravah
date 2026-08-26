@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { Badge } from '@/components/ui/Badge';
-import { Terminal, FileText, GripVertical, X } from 'lucide-react';
+import { Terminal, FileText, GripVertical, X, Clock, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
@@ -19,6 +19,33 @@ export const ExecutionSidebar: React.FC = () => {
   const [width, setWidth] = useState(320);
   const [isDragging, setIsDragging] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
+
+  const startTimeRef = useRef<number | null>(null);
+
+  // Stopwatch timer when isRunning
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isRunning) {
+      startTimeRef.current = Date.now();
+      setElapsedSeconds(0);
+      timer = setInterval(() => {
+        if (startTimeRef.current) {
+          setElapsedSeconds((Date.now() - startTimeRef.current) / 1000);
+        }
+      }, 100);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRunning]);
+
+  const formatTimer = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = (secs % 60).toFixed(1);
+    return `${mins > 0 ? `${mins}m ` : ''}${remainingSecs}s`;
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -29,7 +56,6 @@ export const ExecutionSidebar: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Handle resizing
   const startResizing = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
     e.preventDefault();
@@ -41,7 +67,6 @@ export const ExecutionSidebar: React.FC = () => {
 
   const resize = useCallback((e: MouseEvent) => {
     if (isDragging) {
-      // Calculate new width: viewport width - mouse X position
       const newWidth = document.body.clientWidth - e.clientX;
       if (newWidth > 250 && newWidth < 800) {
         setWidth(newWidth);
@@ -60,12 +85,17 @@ export const ExecutionSidebar: React.FC = () => {
     };
   }, [isDragging, resize, stopResizing]);
 
-  // Determine if it should be visible
   const isVisible = executionLogs.length > 0 || isRunning;
 
   const totalNodes = Object.keys(nodeStatuses).length;
   const completedNodes = Object.values(nodeStatuses).filter((st) => st === 'completed').length;
   const progressPercent = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+
+  const handleCopyText = (nodeId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedNodeId(nodeId);
+    setTimeout(() => setCopiedNodeId(null), 2000);
+  };
 
   return (
     <div
@@ -78,10 +108,7 @@ export const ExecutionSidebar: React.FC = () => {
         borderWidth: isVisible ? '1px' : '0px'
       }}
     >
-      <aside
-        className="relative flex-shrink-0 flex h-full bg-white min-w-0 w-full"
-      >
-        {/* Resize Handle */}
+      <aside className="relative flex-shrink-0 flex h-full bg-white min-w-0 w-full">
         {!isMobile && (
           <div
             className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 z-10 transition-colors"
@@ -96,6 +123,12 @@ export const ExecutionSidebar: React.FC = () => {
               <Terminal className="h-4 w-4 text-gray-500" />
               <span className="text-sm font-semibold text-gray-900">Execution Monitor</span>
               <Badge status={isRunning ? 'running' : 'completed'} />
+              {elapsedSeconds > 0 && (
+                <span className="flex items-center gap-1 text-[11px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                  <Clock className="h-3 w-3 text-gray-400" />
+                  {formatTimer(elapsedSeconds)}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {pipelineId && (
@@ -111,7 +144,7 @@ export const ExecutionSidebar: React.FC = () => {
 
           {/* Progress Bar */}
           <div className="w-full bg-gray-100 h-1 shrink-0">
-            <div className="h-full bg-gray-900 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
           </div>
 
           {/* Content */}
@@ -142,23 +175,36 @@ export const ExecutionSidebar: React.FC = () => {
                 {Object.entries(nodeOutputs).map(([nodeId, output]) => {
                   const node = nodes.find((n) => n.id === nodeId);
                   const nodeLabel = (node?.data as any)?.label || nodeId;
+                  const textOutput = typeof output === 'string'
+                    ? output
+                    : (output.name ? `Uploaded file: ${output.name}` : null)
+                    || output.response
+                    || output.translated_text
+                    || output.transcript
+                    || output.text
+                    || (output.url ? `File URL: ${output.url}` : null)
+                    || 'Audio Output Generated';
+
                   return (
                     <div key={nodeId} className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm flex flex-col gap-2">
                       <div>
-                        <div className="flex justify-between items-baseline gap-2 mb-1.5  pb-1">
+                        <div className="flex justify-between items-baseline gap-2 mb-1.5 pb-1">
                           <span className="text-gray-900 font-semibold font-sans text-[13px]">{nodeLabel}</span>
-                          <span className="text-[9px] text-gray-400 font-mono select-none lowercase">({node?.type || 'node'})</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] text-gray-400 font-mono select-none lowercase">({node?.type || 'node'})</span>
+                            {textOutput && (
+                              <button
+                                onClick={() => handleCopyText(nodeId, textOutput)}
+                                title="Copy node output"
+                                className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                              >
+                                {copiedNodeId === nodeId ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <span className="text-gray-600 break-words whitespace-pre-wrap text-[13px] leading-relaxed">
-                          {typeof output === 'string'
-                            ? output
-                            : (output.name ? `Uploaded file: ${output.name}` : null)
-                            || output.response
-                            || output.translated_text
-                            || output.transcript
-                            || output.text
-                            || (output.url ? `File URL: ${output.url}` : null)
-                            || 'Audio Output Generated'}
+                          {textOutput}
                         </span>
                       </div>
                       {typeof output !== 'string' && output.audio_r2_key ? (

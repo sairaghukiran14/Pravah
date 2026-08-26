@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Mic, Languages, Volume2, 
-  FileText, Image, Video, Link as LinkIcon, FileUp, 
+  FileText, Image, Video, Link as LinkIcon, 
   Brain, AlignLeft, Smile, Key, Tags, 
   Monitor, PlayCircle, Download, Mail, FileAudio, Keyboard,
-  Undo2, Redo2, Search, Plus, Sparkles
+  Undo2, Redo2, Search, Sparkles, LayoutGrid, Upload, Trash2, HelpCircle
 } from 'lucide-react';
 import { NodeType } from '@/types/pipeline';
 import { usePipelineStore } from '@/store/pipelineStore';
+import { TemplatesModal } from './TemplatesModal';
+import { ShortcutsModal } from './ShortcutsModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ToolbarItem {
   type: NodeType;
@@ -83,13 +86,24 @@ export const Toolbar: React.FC = () => {
   const canUndo = usePipelineStore((s) => s.canUndo);
   const canRedo = usePipelineStore((s) => s.canRedo);
   const setCommandPaletteOpen = usePipelineStore((s) => s.setCommandPaletteOpen);
+  const applyAutoLayout = usePipelineStore((s) => s.applyAutoLayout);
+  const clearCanvas = usePipelineStore((s) => s.clearCanvas);
+  const importPipelineData = usePipelineStore((s) => s.importPipelineData);
+  const nodes = usePipelineStore((s) => s.nodes);
+  const edges = usePipelineStore((s) => s.edges);
+  const pipelineName = usePipelineStore((s) => s.pipelineName);
 
   const [tooltip, setTooltip] = useState<HoveredTooltip | null>(null);
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragStart = (e: React.DragEvent, type: NodeType) => {
     e.dataTransfer.setData('application/reactflow', type);
     e.dataTransfer.effectAllowed = 'move';
-    setTooltip(null); // Clear tooltip during drag
+    setTooltip(null);
     setHoveredNodeType(null);
   };
 
@@ -108,11 +122,55 @@ export const Toolbar: React.FC = () => {
     setHoveredNodeType(null);
   };
 
-  const renderNodeGroup = (title: string, nodes: ToolbarItem[]) => (
+  const handleExportJSON = () => {
+    const data = {
+      name: pipelineName || 'Pravah Pipeline',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      nodes,
+      edges,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(pipelineName || 'pipeline').toLowerCase().replace(/\s+/g, '-')}-flow.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+          importPipelineData({
+            name: parsed.name,
+            nodes: parsed.nodes,
+            edges: parsed.edges,
+          });
+        } else {
+          alert('Invalid pipeline JSON format. Must contain "nodes" and "edges" arrays.');
+        }
+      } catch (err) {
+        alert('Failed to parse JSON file.');
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const renderNodeGroup = (title: string, nodesList: ToolbarItem[]) => (
     <div className="flex items-center gap-2 px-3 py-1 border-r border-gray-200 last:border-r-0">
       <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider shrink-0 mr-1 select-none">{title}</span>
       <div className="flex items-center gap-1.5">
-        {nodes.map((item) => (
+        {nodesList.map((item) => (
           <div
             key={item.type}
             draggable
@@ -138,83 +196,178 @@ export const Toolbar: React.FC = () => {
     </div>
   );
 
-  // Compute safe bounding limits to keep tooltip on-screen
   let tooltipLeft = 0;
-  let caretLeftOffset = 104; // default center caret offset
+  let caretLeftOffset = 104;
   if (tooltip) {
     const center = tooltip.rect.left + (tooltip.rect.width / 2) - 104;
     const maxLeft = typeof window !== 'undefined' ? window.innerWidth - 216 : 1000;
     tooltipLeft = Math.max(8, Math.min(center, maxLeft));
-    // Adjust the pointing caret if the tooltip is shifted/bounded
     caretLeftOffset = (tooltip.rect.left + (tooltip.rect.width / 2)) - tooltipLeft;
   }
 
   return (
-    <div className="w-full h-14 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 flex items-center overflow-x-auto px-2 shrink-0 z-20 gap-1">
-      {/* Quick Productivity Controls (Undo, Redo, Search) */}
-      <div className="flex items-center gap-1 px-2 py-1 border-r border-gray-200 shrink-0">
-        <button
-          onClick={() => setCommandPaletteOpen(true)}
-          title="Quick Search & Insert Nodes (⌘K)"
-          className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-indigo-50/80 border border-indigo-200/80 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-medium shadow-2xs cursor-pointer select-none"
-        >
-          <Search className="h-3.5 w-3.5 text-indigo-600" />
-          <span className="hidden sm:inline">Add Node</span>
-          <kbd className="text-[10px] font-mono px-1 py-0.5 rounded bg-white text-indigo-700 border border-indigo-200 shadow-2xs ml-0.5">⌘K</kbd>
-        </button>
+    <>
+      <div className="w-full h-14 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 flex items-center overflow-x-auto px-2 shrink-0 z-20 gap-1">
+        {/* Quick Productivity Controls (Search, Templates, AutoLayout, Undo, Redo) */}
+        <div className="flex items-center gap-1 px-2 py-1 border-r border-gray-200 shrink-0">
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            title="Quick Search & Insert Nodes (⌘K)"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-indigo-50/80 border border-indigo-200/80 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-medium shadow-2xs cursor-pointer select-none"
+          >
+            <Search className="h-3.5 w-3.5 text-indigo-600" />
+            <span className="hidden sm:inline">Add Node</span>
+            <kbd className="text-[10px] font-mono px-1 py-0.5 rounded bg-white text-indigo-700 border border-indigo-200 shadow-2xs ml-0.5">⌘K</kbd>
+          </button>
 
-        <button
-          onClick={undo}
-          disabled={!canUndo}
-          title="Undo (⌘Z)"
-          className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
-            canUndo
-              ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
-              : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
-          }`}
-        >
-          <Undo2 className="h-3.5 w-3.5" />
-        </button>
+          <button
+            onClick={() => setIsTemplatesModalOpen(true)}
+            title="Choose a Pre-Built Workflow Template"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all text-xs font-medium shadow-2xs cursor-pointer select-none"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            <span className="hidden sm:inline">Templates</span>
+          </button>
 
-        <button
-          onClick={redo}
-          disabled={!canRedo}
-          title="Redo (⌘⇧Z)"
-          className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
-            canRedo
-              ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
-              : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
-          }`}
-        >
-          <Redo2 className="h-3.5 w-3.5" />
-        </button>
+          <button
+            onClick={applyAutoLayout}
+            disabled={nodes.length === 0}
+            title="Auto-Layout / Tidy DAG"
+            className={`flex items-center gap-1.5 h-8 px-2 rounded-md border transition-all text-xs font-medium ${
+              nodes.length > 0
+                ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 cursor-pointer shadow-2xs'
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5 text-gray-500" />
+            <span className="hidden lg:inline">Tidy</span>
+          </button>
+
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (⌘Z)"
+            className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+              canUndo
+                ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (⌘⇧Z)"
+            className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+              canRedo
+                ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs'
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Redo2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {renderNodeGroup('Inputs', inputNodes)}
+        {renderNodeGroup('Processing', processingNodes)}
+        {renderNodeGroup('Logic', logicNodes)}
+        {renderNodeGroup('RAG', ragNodes)}
+        {renderNodeGroup('Regional', regionalNodes)}
+        {renderNodeGroup('Connectors', connectorNodes)}
+        {renderNodeGroup('Outputs', outputNodes)}
+
+        {/* Workflow Tools (Export, Import, Clear, Shortcuts) */}
+        <div className="flex items-center gap-1 px-2 py-1 border-l border-gray-200 shrink-0 ml-auto">
+          <button
+            onClick={handleExportJSON}
+            disabled={nodes.length === 0}
+            title="Export Workflow as JSON"
+            className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+              nodes.length > 0
+                ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 cursor-pointer shadow-2xs'
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+
+          <label
+            title="Import Workflow from JSON"
+            className="flex items-center justify-center h-8 w-8 rounded-md border bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 cursor-pointer shadow-2xs transition-all"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImportJSON}
+              className="hidden"
+            />
+          </label>
+
+          <button
+            onClick={() => setIsClearConfirmOpen(true)}
+            disabled={nodes.length === 0 && edges.length === 0}
+            title="Clear Canvas"
+            className={`flex items-center justify-center h-8 w-8 rounded-md border transition-all ${
+              nodes.length > 0 || edges.length > 0
+                ? 'bg-white border-gray-200 text-red-500 hover:bg-red-50 hover:border-red-200 cursor-pointer shadow-2xs'
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-300 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            onClick={() => setIsShortcutsModalOpen(true)}
+            title="Keyboard Shortcuts (? or ⌘/)"
+            className="flex items-center justify-center h-8 w-8 rounded-md border bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 cursor-pointer shadow-2xs transition-all"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Viewport Fixed Tooltip Overlay */}
+        {tooltip && (
+          <div 
+            className="fixed z-50 w-52 p-2.5 rounded-xl bg-gray-950/95 text-[10px] text-white/95 leading-normal shadow-lg backdrop-blur-xs border border-white/5 pointer-events-none tooltip-fade"
+            style={{
+              top: `${tooltip.rect.bottom + 8}px`,
+              left: `${tooltipLeft}px`,
+            }}
+          >
+            {tooltip.desc}
+            <div 
+              className="absolute -top-1 w-2 h-2 bg-gray-950 rotate-45 border-t border-l border-white/5" 
+              style={{ left: `${caretLeftOffset - 4}px` }} 
+            />
+          </div>
+        )}
       </div>
 
-      {renderNodeGroup('Inputs', inputNodes)}
-      {renderNodeGroup('Processing', processingNodes)}
-      {renderNodeGroup('Logic', logicNodes)}
-      {renderNodeGroup('RAG', ragNodes)}
-      {renderNodeGroup('Regional', regionalNodes)}
-      {renderNodeGroup('Connectors', connectorNodes)}
-      {renderNodeGroup('Outputs', outputNodes)}
+      <TemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={() => setIsTemplatesModalOpen(false)}
+      />
 
-      {/* Viewport Fixed Tooltip Overlay */}
-      {tooltip && (
-        <div 
-          className="fixed z-50 w-52 p-2.5 rounded-xl bg-gray-950/95 text-[10px] text-white/95 leading-normal shadow-lg backdrop-blur-xs border border-white/5 pointer-events-none tooltip-fade"
-          style={{
-            top: `${tooltip.rect.bottom + 8}px`,
-            left: `${tooltipLeft}px`,
-          }}
-        >
-          {tooltip.desc}
-          <div 
-            className="absolute -top-1 w-2 h-2 bg-gray-950 rotate-45 border-t border-l border-white/5" 
-            style={{ left: `${caretLeftOffset - 4}px` }} 
-          />
-        </div>
-      )}
-    </div>
+      <ShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={isClearConfirmOpen}
+        title="Clear Entire Canvas?"
+        message="Are you sure you want to remove all nodes and edges from this canvas? (You can still undo this with ⌘Z)."
+        confirmText="Clear Canvas"
+        onConfirm={() => {
+          clearCanvas();
+          setIsClearConfirmOpen(false);
+        }}
+        onCancel={() => setIsClearConfirmOpen(false)}
+      />
+    </>
   );
 };
-
