@@ -153,17 +153,21 @@ model PipelineRun {
 }
 
 model NodeRun {
-  id         String      @id @default(cuid())
-  runId      String
-  nodeId     String
-  nodeType   String
-  status     String      @default("pending")
-  input      Json?
-  output     Json?
-  error      String?
-  startedAt  DateTime?
-  finishedAt DateTime?
-  run        PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  id          String      @id @default(cuid())
+  runId       String
+  nodeId      String
+  nodeType    String
+  status      String      @default("pending")
+  input       Json?
+  output      Json?
+  error       String?
+  durationMs  Int?
+  retryCount  Int         @default(0)
+  cost        Float       @default(0)
+  tokenUsage  Json?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  run         PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@index([runId])
   @@index([nodeId])

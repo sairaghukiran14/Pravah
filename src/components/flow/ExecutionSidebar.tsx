@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { Badge } from '@/components/ui/Badge';
-import { Terminal, FileText, GripVertical, X, Clock, Copy, Check } from 'lucide-react';
+import { Terminal, FileText, GripVertical, X, Clock, Copy, Check, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
@@ -14,6 +14,7 @@ export const ExecutionSidebar: React.FC = () => {
   const nodeOutputs = usePipelineStore((s) => s.nodeOutputs);
   const nodes = usePipelineStore((s) => s.nodes);
   const pipelineId = usePipelineStore((s) => s.pipelineId);
+  const latestRunId = usePipelineStore((s) => s.latestRunId);
   const resetExecution = usePipelineStore((s) => s.resetExecution);
 
   const [width, setWidth] = useState(320);
@@ -215,6 +216,18 @@ export const ExecutionSidebar: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {latestRunId && pipelineId && !isRunning && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <Link
+                  href={`/pipeline/${pipelineId}/traces/${latestRunId}`}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-sans font-semibold text-xs border border-blue-200 transition-colors shadow-2xs"
+                >
+                  <Activity className="h-4 w-4" />
+                  <span>Inspect Trace & Waterfall</span>
+                </Link>
               </div>
             )}
           </div>

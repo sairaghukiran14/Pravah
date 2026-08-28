@@ -340,6 +340,17 @@ export interface NodeExecutionResult {
   output: any;
   error?: string;
   durationMs: number;
+  retryCount?: number;
+  tokenUsage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    charCount?: number;
+    audioDurationSec?: number;
+    pageCount?: number;
+    segments?: number;
+    [key: string]: any;
+  };
   /**
    * What the node actually consumed, for nodes whose billable size only exists
    * once they have run. Settlement prices from this; the projection cannot.
@@ -1089,13 +1100,55 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
     }
 
     const durationMs = Date.now() - startTime;
+
+    // Calculate node token & capacity metrics
+    const inputPayload = dynamicInputPayload ? { payload: dynamicInputPayload } : { text: upstreamInputText };
+    const rawInputText = typeof upstreamInputText === 'string' ? upstreamInputText : JSON.stringify(upstreamInputText || '');
+    const rawOutputText = typeof output === 'string' ? output : (output?.text || output?.translated_text || output?.transcript || output?.response || JSON.stringify(output || ''));
+    
+    let tokenUsageData: Record<string, any> = {
+      charCount: rawInputText.length + rawOutputText.length,
+      inputChars: rawInputText.length,
+      outputChars: rawOutputText.length,
+    };
+
+    if (node.type === 'llm' || node.type === 'summarize' || node.type === 'sentiment' || node.type === 'keyword_extraction' || node.type === 'classification') {
+      const promptTokens = Math.ceil(rawInputText.length / 4);
+      const completionTokens = Math.ceil(rawOutputText.length / 4);
+      tokenUsageData = {
+        ...tokenUsageData,
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+      };
+    } else if (node.type === 'stt') {
+      const audioDuration = dynamicInputPayload?.durationSeconds || node.config?.duration_seconds || 1.5;
+      tokenUsageData = {
+        ...tokenUsageData,
+        audioDurationSec: audioDuration,
+        segments: Math.max(1, Math.ceil(audioDuration / 30)),
+      };
+    } else if (node.type === 'tts' || node.type === 'podcast') {
+      tokenUsageData = {
+        ...tokenUsageData,
+        speechChars: usage?.speechChars || rawInputText.length,
+      };
+    } else if (node.type === 'ocr' || node.type === 'pdf_splitter') {
+      tokenUsageData = {
+        ...tokenUsageData,
+        pageCount: dynamicInputPayload?.pageCount || 1,
+      };
+    }
+
     return {
       nodeId: node.id,
       nodeType: node.type,
       status: 'completed',
-      input: dynamicInputPayload ? { payload: dynamicInputPayload } : { text: upstreamInputText },
+      input: inputPayload,
       output,
       durationMs,
+      retryCount: 0,
+      tokenUsage: tokenUsageData,
       usage,
     };
   } catch (error: any) {
@@ -1104,10 +1157,12 @@ Keep the tone natural and original meaning fully intact. Return ONLY the polishe
       nodeId: node.id,
       nodeType: node.type,
       status: 'failed',
-      input: { text: upstreamInputText },
+      input: dynamicInputPayload ? { payload: dynamicInputPayload } : { text: upstreamInputText },
       output: null,
       error: error.message || 'Node execution failed',
       durationMs,
+      retryCount: 0,
+      tokenUsage: { inputChars: String(upstreamInputText || '').length },
     };
   }
 }

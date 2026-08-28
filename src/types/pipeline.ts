@@ -85,6 +85,10 @@ export interface NodeRunData {
   input?: any;
   output?: any;
   error?: string | null;
+  durationMs?: number | null;
+  retryCount?: number;
+  cost?: number;
+  tokenUsage?: any;
   startedAt?: string | null;
   finishedAt?: string | null;
 }
@@ -96,5 +100,7 @@ export interface PipelineRunData {
   input?: any;
   startedAt: string;
   finishedAt?: string | null;
+  costBreakdown?: Record<string, number> | null;
+  reservedCredits?: number | null;
   nodeRuns: NodeRunData[];
 }
