@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PipelineRunData } from '@/types/pipeline';
 import { Badge } from '@/components/ui/Badge';
 import { NodeRunDetails } from './NodeRunDetails';
-import { ChevronDown, ChevronRight, PlayCircle, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, PlayCircle, Clock, Activity } from 'lucide-react';
 
 interface RunsTableProps {
   runs: PipelineRunData[];
@@ -77,17 +77,36 @@ export const RunsTable: React.FC<RunsTableProps> = ({ runs }) => {
                 </div>
               </div>
 
-              <div className="text-right text-xs text-gray-400 hidden sm:block">
-                <span>{run.nodeRuns?.length || 0} Nodes Executed</span>
+              <div className="flex items-center gap-3">
+                <div className="text-right text-xs text-gray-500 hidden sm:block">
+                  <span>{run.nodeRuns?.length || 0} Nodes Executed</span>
+                </div>
+
+                <a
+                  href={`/pipeline/${run.pipelineId}/traces/${run.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-blue-200/80 shadow-2xs"
+                >
+                  <Activity className="h-3.5 w-3.5" />
+                  <span>Trace</span>
+                </a>
               </div>
             </div>
 
             {/* Expanded Node Runs Breakdown */}
             {isExpanded && (
               <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                  Node Execution Flow & Output Logs
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Node Execution Flow & Output Logs
+                  </h4>
+                  <a
+                    href={`/pipeline/${run.pipelineId}/traces/${run.id}`}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    Open Full Trace & Waterfall <Activity className="h-3 w-3" />
+                  </a>
+                </div>
                 {run.nodeRuns && run.nodeRuns.length > 0 ? (
                   run.nodeRuns.map((nodeRun) => (
                     <NodeRunDetails key={nodeRun.id} nodeRun={nodeRun} />

@@ -3,7 +3,7 @@
 import React from 'react';
 import { NodeRunData } from '@/types/pipeline';
 import { Badge } from '@/components/ui/Badge';
-import { Mic, Languages, Volume2, Clock } from 'lucide-react';
+import { Mic, Languages, Volume2, Clock, Coins, RotateCcw, Zap } from 'lucide-react';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
 interface NodeRunDetailsProps {
@@ -17,7 +17,7 @@ export const NodeRunDetails: React.FC<NodeRunDetailsProps> = ({ nodeRun }) => {
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3 shadow-sm">
+    <div className="rounded-xl border border-gray-200/80 bg-white p-4 space-y-3 shadow-2xs">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {nodeRun.nodeType === 'stt' && <div className="p-1 rounded bg-emerald-50"><Mic className="h-3.5 w-3.5 text-emerald-600" /></div>}
@@ -26,6 +26,23 @@ export const NodeRunDetails: React.FC<NodeRunDetailsProps> = ({ nodeRun }) => {
           <span className="text-xs font-semibold text-gray-900">
             Node: {nodeRun.nodeId} ({nodeRun.nodeType})
           </span>
+          {nodeRun.durationMs !== undefined && nodeRun.durationMs !== null && (
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+              {nodeRun.durationMs}ms
+            </span>
+          )}
+          {nodeRun.cost !== undefined && nodeRun.cost > 0 && (
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 flex items-center gap-0.5">
+              <Coins className="h-2.5 w-2.5" />
+              ₹{nodeRun.cost.toFixed(3)}
+            </span>
+          )}
+          {nodeRun.retryCount !== undefined && nodeRun.retryCount > 0 && (
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 flex items-center gap-0.5">
+              <RotateCcw className="h-2.5 w-2.5" />
+              {nodeRun.retryCount}
+            </span>
+          )}
         </div>
         <Badge status={nodeRun.status} />
       </div>
@@ -36,7 +53,7 @@ export const NodeRunDetails: React.FC<NodeRunDetailsProps> = ({ nodeRun }) => {
           <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold block mb-1">
             Node Input
           </span>
-          <pre className="text-gray-700 font-mono text-[11px] whitespace-pre-wrap">
+          <pre className="text-gray-700 font-mono text-[11px] whitespace-pre-wrap max-h-32 overflow-y-auto">
             {JSON.stringify(nodeRun.input || {}, null, 2)}
           </pre>
         </div>

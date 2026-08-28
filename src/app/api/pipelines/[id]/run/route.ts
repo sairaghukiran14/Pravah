@@ -374,6 +374,10 @@ function streamRun({
                   status: 'completed',
                   input: result.input,
                   output: result.output,
+                  durationMs: result.durationMs,
+                  retryCount: result.retryCount ?? 0,
+                  cost: spent,
+                  tokenUsage: (result.tokenUsage as any) ?? undefined,
                   finishedAt: new Date(),
                 },
               })
@@ -384,6 +388,9 @@ function streamRun({
               nodeType: node.type,
               output: result.output,
               durationMs: result.durationMs,
+              cost: spent,
+              retryCount: result.retryCount ?? 0,
+              tokenUsage: result.tokenUsage ?? null,
             });
           } else {
             anyFailed = true;
@@ -396,6 +403,10 @@ function streamRun({
                   status: 'failed',
                   input: result.input || {},
                   error: result.error,
+                  durationMs: result.durationMs,
+                  retryCount: result.retryCount ?? 0,
+                  cost: 0,
+                  tokenUsage: (result.tokenUsage as any) ?? undefined,
                   finishedAt: new Date(),
                 },
               })
@@ -408,6 +419,8 @@ function streamRun({
               nodeType: node.type,
               label: node.label || node.type,
               error: result.error,
+              durationMs: result.durationMs,
+              retryCount: result.retryCount ?? 0,
               failure: classifyNodeError(result.error, node.type),
             });
           }

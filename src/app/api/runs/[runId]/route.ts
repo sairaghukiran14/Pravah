@@ -7,7 +7,18 @@ type Params = { runId: string };
 export const GET = route<undefined, undefined, Params>({}, async ({ userId, params }) => {
   const run = await prisma.pipelineRun.findFirst({
     where: { id: params.runId, pipeline: { project: { userId } } },
-    include: { nodeRuns: true, pipeline: true },
+    include: {
+      nodeRuns: true,
+      pipeline: {
+        include: {
+          nodes: true,
+          edges: true,
+          project: {
+            select: { id: true, name: true },
+          },
+        },
+      },
+    },
   });
 
   if (!run) throw notFound('Run record not found');
