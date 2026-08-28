@@ -9,7 +9,7 @@ const compareSchema = z.object({
   candidateRunId: z.string(),
 });
 
-export const POST = route<z.infer<typeof compareSchema>, undefined, undefined>(
+export const POST = route<z.infer<typeof compareSchema>, undefined, Record<string, never>>(
   { body: compareSchema },
   async ({ userId, body }) => {
     const { baselineRunId, candidateRunId } = body;
