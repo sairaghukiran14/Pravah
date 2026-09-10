@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pravah AI — Master System Architecture & Interactive Diagram</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #111827;
+      --bg-card-hover: #1f293d;
+      --bg-card-glass: rgba(17, 24, 39, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      
+      --accent-purple: #6366f1;
+      --accent-indigo: #4f46e5;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-teal: #14b8a6;
+      --accent-emerald: #10b981;
+      --accent-sarvam: #ff6b35;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 20%, rgba(255, 107, 53, 0.10) 0%, transparent 45%),
+        radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 50%);
+    }
+
+    /* Grid background pattern */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Layout structure */
+    .app-container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #ff6b35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #ffffff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Nav tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(17, 24, 39, 0.7);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-input-wrap {
+      position: relative;
+    }
+
+    .search-input {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 7px 12px 7px 32px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+      outline: none;
+      width: 180px;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      width: 240px;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Main Workspace */
+    .main-workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Center Canvas Stage */
+    .canvas-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 24px 32px;
+      position: relative;
+    }
+
+    .view-section {
+      display: none;
+      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .view-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Section Headers */
+    .section-title-bar {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title-bar h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title-bar p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .badge-count {
+      background: rgba(99, 102, 241, 0.18);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    /* Mermaid Container Card */
+    .diagram-card {
+      background: var(--bg-card-glass);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+      margin-bottom: 28px;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .diagram-card:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .diagram-tools {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .zoom-btn {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .zoom-btn:hover {
+      color: #fff;
+      background: rgba(99, 102, 241, 0.3);
+      border-color: var(--accent-purple);
+    }
+
+    /* Grid of Architectural Modules */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .module-card {
+      background: rgba(17, 24, 39, 0.75);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .module-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .module-card:hover {
+      transform: translateY(-3px);
+      background: var(--bg-card-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 0 15px rgba(99, 102, 241, 0.15);
+    }
+
+    .module-card:hover::before {
+      opacity: 1;
+    }
+
+    .module-card.selected {
+      border-color: var(--accent-purple);
+      background: rgba(30, 38, 59, 0.9);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+    }
+
+    .module-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .module-icon-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .module-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .icon-client { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+    .icon-engine { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .icon-sarvam { background: rgba(255, 107, 53, 0.15); color: #ff8555; border: 1px solid rgba(255, 107, 53, 0.3); }
+    .icon-finance { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .icon-db { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .icon-sec { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+    .module-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .module-badge {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-muted);
+    }
+
+    .module-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    .module-meta-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    .module-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cbd5e1;
+    }
+
+    .meta-bullet {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent-purple);
+    }
+
+    .file-ref {
+      color: #93c5fd;
+      background: rgba(59, 130, 246, 0.12);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    /* Technical Detail Sidebar / Inspector Drawer */
+    .inspector-sidebar {
+      width: 420px;
+      background: rgba(13, 19, 32, 0.95);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      backdrop-filter: blur(20px);
+      transition: all 0.3s ease;
+    }
+
+    .inspector-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(13, 19, 32, 0.98);
+      z-index: 5;
+    }
+
+    .inspector-header h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .inspector-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .detail-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .detail-card h4 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-purple);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .code-block {
+      background: #06090e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    .code-accent { color: #818cf8; }
+    .code-str { color: #34d399; }
+    .code-kw { color: #f43f5e; }
+    .code-fn { color: #38bdf8; }
+    .code-num { color: #fbbf24; }
+
+    /* Interactive Pipeline Simulator bar */
+    .pipeline-simulator {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(255, 107, 53, 0.1));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .sim-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sim-btn {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      border: none;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .sim-steps {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-step {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .sim-step.active {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: var(--accent-purple);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+    }
+
+    .sim-step.done {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    /* Key Specs Metric Ribbon */
+    .metric-ribbon {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: rgba(17, 24, 39, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width: 1080px) {
+      .app-container { height: auto; min-height: 100vh; }
+      .main-workspace { flex-direction: column; }
+      .inspector-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="app-container">
+    <!-- Top Nav Header -->
+    <header>
+      <div class="brand-group">
+        <div class="logo-badge">⚡</div>
+        <div class="brand-text">
+          <h1>Pravah AI <span class="status-pill"><span class="status-dot"></span> v2.4 Live Architecture</span></h1>
+          <p>Visual Multimodal Indic AI Workflow Studio & DAG Engine</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('master')">🏛️ Master Topology</button>
+        <button class="tab-btn" onclick="switchTab('dag')">⚙️ DAG & SSE Stream</button>
+        <button class="tab-btn" onclick="switchTab('sarvam')">🌐 Sarvam Indic AI</button>
+        <button class="tab-btn" onclick="switchTab('ledger')">💳 2-Phase Ledger</button>
+        <button class="tab-btn" onclick="switchTab('erd')">🗄️ Database ERD</button>
+        <button class="tab-btn" onclick="switchTab('security')">🛡️ Security Gateway</button>
+      </nav>
+
+      <!-- Action Controls -->
+      <div class="header-actions">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="componentSearch" class="search-input" placeholder="Search component, node, API..." oninput="handleSearch(this.value)">
+        </div>
+        <button class="btn-action" onclick="window.print()">🖨️ Export PDF</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="main-workspace">
+      
+      <!-- Canvas / Viewport Section -->
+      <main class="canvas-viewport" id="canvasViewport">
+
+        <!-- Top Metrics Ribbon -->
+        <div class="metric-ribbon">
+          <div class="metric-card">
+            <div class="metric-val" style="color: #818cf8;">25+ Nodes</div>
+            <div class="metric-label">React Flow Canvas Library</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val" style="color: #ff8555;">23 Languages</div>
+            <div class="metric-label">Sarvam Indic AI Models</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val" style="color: #34d399;">2-Phase Lock</div>
+            <div class="metric-label">Atomic Wallet Ledger Hold</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val" style="color: #38bdf8;">16kHz PCM</div>
+            <div class="metric-label">In-Browser WAV Encoder</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val" style="color: #f43f5e;">333 Tests</div>
+            <div class="metric-label">Vitest Automated Suite</div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 1: MASTER SYSTEM TOPOLOGY ==================== -->
+        <div id="tab-master" class="view-section active">
+          <div class="section-title-bar">
+            <div>
+              <h2>🏛️ Complete End-to-End System Blueprint <span class="badge-count">6 Tiers</span></h2>
+              <p>Comprehensive layout spanning React 19 Frontend, Defensive Route Gateway, Topological DAG Engine, Sarvam Indic AI, and 2-Phase Ledger.</p>
+            </div>
+          </div>
+
+          <!-- Mermaid Render Card -->
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('master-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('master-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('master-mermaid')">🔄</button>
+            </div>
+            <div id="master-mermaid" class="mermaid">
+graph TB
+    %% Master Subgraphs
+    subgraph CLIENT["🖥️ 1. Client & Presentation (Next.js 16 + React 19)"]
+        UI["Flow Canvas Studio & Toolbar (/pipeline/[id])"]
+        ZS["Zustand Store (30-State Undo/Redo Ring Buffer)"]
+        CP["Command Palette (⌘K) & Layered BFS Auto-Layout"]
+        WA["16kHz PCM WAV Audio Encoder & WaveSurfer Scrubber"]
+        NL["AI Flow Generator (Sarvam-105B Voice/Text Prompts)"]
+        UI <--> ZS
+        ZS <--> CP & WA & NL
+    end
+
+    subgraph GATEWAY["🛡️ 2. Security & Defensive Edge Gateway"]
+        MW["Edge Middleware (Session Cookie & Revocation Check)"]
+        NA["NextAuth v5 (Google OAuth, JWT + sessionsRevokedAt)"]
+        RW["route.ts Wrapper (Opt-out Auth, Zod Validation, Sanitizer)"]
+        RL["Distributed Rate Limiter (Upstash Redis Token Bucket)"]
+        MW --> NA & RW
+        RW --> RL
+    end
+
+    subgraph ENGINE["⚙️ 3. Topological DAG Engine & Realtime SSE"]
+        DAG["Kahn's Topological Sorting Engine (execution.ts)"]
+        VAR["Dynamic Variable Resolver ({{node.prop}})"]
+        PRN["Router Pruner (Branch Pruning & Skip Propagation)"]
+        SSE["SSE Real-time Streamer (/api/pipelines/[id]/run)"]
+        EVAL["Eval & Regression Suite (WER, BLEU, LLM Judge)"]
+        DAG --> VAR --> PRN --> SSE
+        DAG <--> EVAL
+    end
+
+    subgraph SARVAM["🌐 4. Indic AI Foundation Layer (Sarvam AI)"]
+        SDK["Sarvam API Client with Exponential Backoff & 25s Timeout"]
+        STT["Saaras:v3 STT (Auto 30s Chunking)"]
+        TTS["Bulbul:v3 TTS (Sentence Slicing & WAV Splicer)"]
+        TR["Mayura:v1 Translate (22+ Indic Languages)"]
+        LLM["Sarvam-105B LLM (JSON Extraction & Reasoning)"]
+        OCR["Document AI OCR (Multipage PDF / Image Extraction)"]
+        LID["Transliteration & Language Identification"]
+        SDK --> STT & TTS & TR & LLM & OCR & LID
+    end
+
+    subgraph FINANCES["💳 5. Financial Ledger & Wallet Engine"]
+        RZ["Razorpay Gateway (HmacSHA256 Timing-Safe Verification)"]
+        HOLD["2-Phase Ledger (RUN_RESERVATION 25 cr Upfront Hold)"]
+        METER["Dynamic Cost Metering (Per-Second, Per-Char, Per-Page)"]
+        REAP["Stale Run Auto-Reaper Cron Daemon"]
+        RZ --> HOLD
+        HOLD <--> METER
+        REAP -.-> HOLD
+    end
+
+    subgraph DATA["🗄️ 6. Storage & Database Persistence Layer"]
+        PG[("Neon Serverless PostgreSQL (Prisma 6 ORM)")]
+        R2[("Cloudflare R2 S3 Object Storage (Private Bucket)")]
+        REDIS[("Upstash Redis Cache (Rate Limits & Tokens)")]
+    end
+
+    %% Cross-Tier Connections
+    CLIENT -->|Save / Run Requests| MW
+    RW -->|Dispatch Pipeline Run| DAG
+    RL <--> REDIS
+    DAG -->|Reserve Upfront Credits| HOLD
+    HOLD <--> PG
+    PRN -->|Execute Node Task| SDK
+    SDK -->|Persist Media Run Outputs| R2
+    SDK -->|Node Finished Payloads| DAG
+    DAG -->|Deduct Actual Usage / Refund Hold| HOLD
+    DAG -->|Stream Node Spans via SSE| UI
+    RZ <--> PG
+    DAG -->|Persist PipelineRuns & NodeRuns| PG
+            </div>
+          </div>
+
+          <!-- Interactive Module Grid -->
+          <div class="modules-grid">
+            
+            <div class="module-card" onclick="inspectComponent('zustand-store')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-client">🎨</div>
+                  <div class="module-title">Canvas State Machine</div>
+                </div>
+                <span class="module-badge">Zustand 5</span>
+              </div>
+              <p class="module-desc">30-state deep-cloned ring buffer for ⌘Z/⌘⇧Z time travel, atomic selectors, and smart <code>isPersistedChange</code> filter preventing unnecessary re-renders.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/store/pipelineStore.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Features: Tidy DAG Layout (BFS), ⌘K Palette</li>
+              </ul>
+            </div>
+
+            <div class="module-card" onclick="inspectComponent('dag-engine')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-engine">⚙️</div>
+                  <div class="module-title">Topological DAG Engine</div>
+                </div>
+                <span class="module-badge">Kahn's Sort</span>
+              </div>
+              <p class="module-desc">In-degree dependency resolution, cycle detection, dynamic <code>{{nodeId.prop}}</code> variable templating, and dead-edge conditional branch pruning.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/lib/execution.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Streaming: SSE <code>text/event-stream</code></li>
+              </ul>
+            </div>
+
+            <div class="module-card" onclick="inspectComponent('sarvam-integration')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-sarvam">🎙️</div>
+                  <div class="module-title">Sarvam AI Foundation</div>
+                </div>
+                <span class="module-badge">Indic AI v3</span>
+              </div>
+              <p class="module-desc">Full suite of Indic models: Saaras STT (30s chunking), Bulbul TTS (binary WAV header splicing), Mayura translation (22+ languages), and Sarvam-105B LLM.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/lib/sarvam.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Resiliency: Exponential Backoff & 25s Abort</li>
+              </ul>
+            </div>
+
+            <div class="module-card" onclick="inspectComponent('credit-ledger')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-finance">💳</div>
+                  <div class="module-title">2-Phase Credit Ledger</div>
+                </div>
+                <span class="module-badge">Double-Entry</span>
+              </div>
+              <p class="module-desc">Atomic upfront balance hold (<code>RUN_RESERVATION = 25.0</code>), real-time character/audio metering, automatic refund settlements, and zombie-run reaper.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/lib/api/credits.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Protection: Race condition locks & Reaper cron</li>
+              </ul>
+            </div>
+
+            <div class="module-card" onclick="inspectComponent('audio-engine')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-client">🎧</div>
+                  <div class="module-title">In-Browser PCM WAV Engine</div>
+                </div>
+                <span class="module-badge">Web Audio API</span>
+              </div>
+              <p class="module-desc">Generates 16kHz mono 16-bit PCM WAV binary blobs directly from Float32Array microphone buffers with standard 44-byte RIFF headers for instant chunking.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/lib/audio/wav.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Scrubber: WaveSurfer.js + Object URL cleanup</li>
+              </ul>
+            </div>
+
+            <div class="module-card" onclick="inspectComponent('r2-gateway')">
+              <div class="module-header">
+                <div class="module-icon-title">
+                  <div class="module-icon icon-db">📦</div>
+                  <div class="module-title">Cloudflare R2 Gateway</div>
+                </div>
+                <span class="module-badge">S3 Range Proxy</span>
+              </div>
+              <p class="module-desc">Private artifact storage with HTTP 206 Partial Content Range streaming proxy for instant browser audio seeking without downloading full multi-MB files.</p>
+              <ul class="module-meta-list">
+                <li class="module-meta-item"><span class="meta-bullet"></span> File: <span class="file-ref">src/app/api/audio/[filename]/route.ts</span></li>
+                <li class="module-meta-item"><span class="meta-bullet"></span> Auth: Session verification on all reads</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== TAB 2: DAG & SSE STREAM ==================== -->
+        <div id="tab-dag" class="view-section">
+          <div class="section-title-bar">
+            <div>
+              <h2>⚙️ Topological DAG Execution & SSE Streaming Protocol</h2>
+              <p>Detailed sequence of how Kahn's algorithm parses the graph, resolves variables, streams telemetry spans, and handles cancellations.</p>
+            </div>
+          </div>
+
+          <!-- Interactive Live Simulator Demo Card -->
+          <div class="pipeline-simulator">
+            <div class="sim-info">
+              <span style="font-size: 20px;">⚡</span>
+              <div>
+                <strong style="font-size: 0.85rem; color: #fff;">Interactive Execution Simulator</strong>
+                <p style="font-size: 0.72rem; color: var(--text-muted);">Step through a Voice Dubbing Pipeline: Audio ➔ Saaras STT ➔ Mayura Translate ➔ Bulbul TTS</p>
+              </div>
+            </div>
+            <div class="sim-steps" id="simStepsList">
+              <div class="sim-step" id="step-0">1. Reserve (25 cr)</div>
+              <div class="sim-step" id="step-1">2. Audio Upload</div>
+              <div class="sim-step" id="step-2">3. Saaras STT</div>
+              <div class="sim-step" id="step-3">4. Mayura Translate</div>
+              <div class="sim-step" id="step-4">5. Bulbul TTS</div>
+              <div class="sim-step" id="step-5">6. Settle (+21.4 cr)</div>
+            </div>
+            <button class="sim-btn" id="runSimBtn" onclick="runPipelineSimulation()">▶ Run Step-by-Step</button>
+          </div>
+
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('dag-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('dag-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('dag-mermaid')">🔄</button>
+            </div>
+            <div id="dag-mermaid" class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Client as Browser (React Flow Canvas)
+    participant API as POST /api/pipelines/[id]/run
+    participant Ledger as Credit Ledger Engine
+    participant DB as Neon PostgreSQL (Prisma)
+    participant DAG as Kahn's Topological Engine
+    participant Sarvam as Sarvam Indic AI APIs
+    participant R2 as Cloudflare R2 Gateway
+
+    Client->>API: POST /api/pipelines/[id]/run { overrides, inputs }
+    API->>API: Validate Session Token & Upstash Rate Limit Bucket
+    API->>Ledger: reserveCredits(userId, runId, 25.0)
+    Ledger->>DB: Atomic Hold: User.credits -= 25.0, Save RUN_RESERVATION
+    DB-->>Ledger: Reservation Succeeded
+    API-->>Client: HTTP 200 OK (Content-Type: text/event-stream)
+
+    API->>DAG: Build In-Degree Map & Linearize Nodes (Kahn's Sort)
+    DAG->>Client: event: run_started { runId, totalNodes, timestamp }
+
+    loop For each topological node level
+        DAG->>DAG: Resolve variable expressions (e.g. {{stt_1.transcript}})
+        DAG->>Client: event: node_started { nodeId, nodeType }
+        
+        alt Node is Sarvam Indic Task (STT / Translate / TTS / OCR)
+            DAG->>Sarvam: Dispatch payload with exponential retry wrapper
+            Sarvam-->>DAG: Return artifact payload (audio buffer / text string)
+            opt If media payload (audio/pdf)
+                DAG->>R2: Stream to Cloudflare R2 bucket
+                R2-->>DAG: Return private storage path key
+            end
+        else Node is Router / Conditional Gate
+            DAG->>DAG: Evaluate rule (e.g. sentiment == 'positive')
+            DAG->>DAG: Disable unchosen branch & mark downstream as 'skipped'
+            DAG->>Client: event: node_skipped { nodeId, reason: "router_condition_unmet" }
+        end
+
+        DAG->>DB: Persist NodeRun (status, durationMs, input, output, cost)
+        DAG->>Client: event: node_completed { nodeId, output, durationMs, cost }
+    end
+
+    DAG->>Ledger: settleCredits(userId, runId, actualCost: 3.60)
+    Ledger->>DB: Balance Correction (Refund: 25.0 - 3.60 = +21.40 credits)
+    DAG->>Client: event: run_completed { runId, totalCost: 3.60, durationMs: 4200 }
+    API-->>Client: Close EventStream
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 3: SARVAM INDIC AI ==================== -->
+        <div id="tab-sarvam" class="view-section">
+          <div class="section-title-bar">
+            <div>
+              <h2>🌐 Sarvam AI Multi-Modal Subsystem & Audio Processing</h2>
+              <p>Deep-dive architecture into Saaras STT chunking, Bulbul TTS sentence slicing, Mayura translation, and in-browser WAV encoding.</p>
+            </div>
+          </div>
+
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('sarvam-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('sarvam-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('sarvam-mermaid')">🔄</button>
+            </div>
+            <div id="sarvam-mermaid" class="mermaid">
+flowchart TB
+    subgraph CLIENT_AUDIO["1. Client-Side 16kHz PCM WAV Audio Engine (wav.ts)"]
+        MIC["Microphone / AudioContext"] --> FLOAT["Float32Array PCM Samples"]
+        FLOAT --> WAV_ENC["16-bit 16kHz PCM WAV Encoder\n(44-byte RIFF Header)"]
+        WAV_ENC --> BLOB["audio/wav In-Memory Blob"]
+    end
+
+    subgraph STT_SUBSYSTEM["2. Saaras:v3 Speech-to-Text & Chunking"]
+        BLOB --> CHK_DUR{"Audio Duration > 30s?"}
+        CHK_DUR -->|Yes| SLICE["Slice into Byte-Aligned 30s WAV Chunks"]
+        CHK_DUR -->|No| SINGLE_STT["Single Saaras:v3 Request"]
+        SLICE --> PARALLEL_STT["Parallel Saaras:v3 STT Calls"]
+        PARALLEL_STT --> MERGE_TRANSCRIPT["Merge Transcripts & Timestamps"]
+        SINGLE_STT --> MERGE_TRANSCRIPT
+    end
+
+    subgraph TRANSLATE_SUBSYSTEM["3. Mayura Translation Engine"]
+        MERGE_TRANSCRIPT --> MAYURA["Mayura:v1 Translation\n(22+ Indian Languages)"]
+        MAYURA --> TARGET_TEXT["Target Language Text (Hindi, Telugu, Tamil, etc.)"]
+    end
+
+    subgraph TTS_SUBSYSTEM["4. Bulbul:v3 Text-to-Speech & Header Splicing"]
+        TARGET_TEXT --> SPLIT_SENTENCES["Split Text into Sentence Batches (<500 chars)"]
+        SPLIT_SENTENCES --> PARALLEL_TTS["Parallel Bulbul:v3 Synthesis"]
+        PARALLEL_TTS --> WAV_SPLICER["Binary WAV Header Splicer\n(Strip subsequent RIFF headers & concat PCM bytes)"]
+        WAV_SPLICER --> MASTER_AUDIO["Single Unified Broadcast Audio File"]
+    end
+
+    subgraph STORAGE_STREAMING["5. Artifact Storage & Range Proxy"]
+        MASTER_AUDIO --> R2_BUCKET["Cloudflare R2 Object Storage"]
+        R2_BUCKET --> RANGE_ROUTE["GET /api/audio/[filename]\n(HTTP 206 Partial Content Range Streaming)"]
+        RANGE_ROUTE --> WAVESURFER["Browser WaveSurfer.js Scrubber"]
+    end
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 4: 2-PHASE LEDGER & BILLING ==================== -->
+        <div id="tab-ledger" class="view-section">
+          <div class="section-title-bar">
+            <div>
+              <h2>💳 Financial Integrity, 2-Phase Wallet Ledger & Razorpay</h2>
+              <p>Immutable double-entry balance reservations, dynamic usage cost calculation, HMAC signature validation, and stale run recovery.</p>
+            </div>
+          </div>
+
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('ledger-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('ledger-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('ledger-mermaid')">🔄</button>
+            </div>
+            <div id="ledger-mermaid" class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as Client Browser
+    participant API_Order as POST /api/payment/order
+    participant Razorpay as Razorpay API
+    participant DB as PostgreSQL (Prisma)
+    participant API_Verify as POST /api/payment/verify
+    participant Reaper as Stale Run Auto-Reaper Daemon
+
+    User->>API_Order: Initiate Top-Up (e.g. ₹500)
+    API_Order->>Razorpay: orders.create({ amount: 50000 paise, currency: "INR" })
+    Razorpay-->>API_Order: Return order_id: 'order_98374'
+    API_Order->>DB: Insert PaymentOrder (id: 'order_98374', status: 'created', amount: 500)
+    API_Order-->>User: Return order_id & Razorpay Public Key
+
+    User->>User: Complete Payment in Razorpay Modal
+    User->>API_Verify: POST { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+    
+    API_Verify->>API_Verify: Calculate HmacSHA256(order_id + "|" + payment_id, SECRET)
+    API_Verify->>API_Verify: Timing-Safe Buffer Comparison (crypto.timingSafeEqual)
+    
+    API_Verify->>DB: $transaction: PaymentOrder='paid', User.credits += 500, CreditTransaction='TOPUP'
+    DB-->>API_Verify: Atomic Transaction Committed
+    API_Verify-->>User: Top-Up Confirmed (New Balance: 520.00)
+
+    Note over DB,Reaper: Background Stale Run Recovery (Cron Daemon)
+    Reaper->>DB: Query PipelineRuns WHERE status='running' AND startedAt < (NOW - 120s)
+    loop For each hung/crashed pipeline run
+        Reaper->>DB: Settle run: status='failed', User.credits += reservedCredits
+        Reaper->>DB: Clear reservedCredits on PipelineRun row (Prevent double refund)
+    end
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 5: DATABASE ERD ==================== -->
+        <div id="tab-erd" class="view-section">
+          <div class="section-title-bar">
+            <div>
+              <h2>🗄️ Database Entity Relationship Diagram (ERD)</h2>
+              <p>Relational schema modeled in Prisma ORM 6 and hosted on Serverless Neon PostgreSQL.</p>
+            </div>
+          </div>
+
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('erd-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('erd-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('erd-mermaid')">🔄</button>
+            </div>
+            <div id="erd-mermaid" class="mermaid">
+erDiagram
+    User ||--o{ Account : "authenticates via"
+    User ||--o{ Session : "maintains"
+    User ||--o{ Project : "owns"
+    User ||--o{ CreditTransaction : "has transactions"
+    User ||--o{ PaymentOrder : "places"
+    User ||--o{ AuditLog : "triggers"
+    User ||--o{ EvalDataset : "creates"
+
+    Project ||--o{ Pipeline : "contains"
+
+    Pipeline ||--o{ PipelineNode : "composed of"
+    Pipeline ||--o{ PipelineEdge : "connected by"
+    Pipeline ||--o{ PipelineRun : "executes as"
+    Pipeline ||--o{ PipelineVersion : "versioned as"
+    Pipeline ||--o{ EvalRun : "evaluated by"
+
+    PipelineRun ||--o{ NodeRun : "spans"
+    
+    EvalDataset ||--o{ EvalDatasetItem : "contains test cases"
+    EvalDataset ||--o{ EvalRun : "tested against"
+    EvalRun ||--o{ EvalResult : "produces scores"
+    EvalDatasetItem ||--o{ EvalResult : "evaluated on"
+
+    User {
+        string id PK
+        string email UK
+        string name
+        float credits
+        datetime sessionsRevokedAt
+        boolean onboardingCompleted
+        datetime createdAt
+    }
+
+    Pipeline {
+        string id PK
+        string name
+        string projectId FK
+        string seedFingerprint
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    PipelineNode {
+        string id PK
+        string pipelineId FK
+        string type
+        string label
+        float positionX
+        float positionY
+        json config
+    }
+
+    PipelineEdge {
+        string id PK
+        string pipelineId FK
+        string source
+        string target
+        string sourceHandle
+        string targetHandle
+    }
+
+    PipelineRun {
+        string id PK
+        string pipelineId FK
+        string status
+        float reservedCredits
+        json costBreakdown
+        datetime startedAt
+        datetime finishedAt
+    }
+
+    NodeRun {
+        string id PK
+        string runId FK
+        string nodeId
+        string nodeType
+        string status
+        json input
+        json output
+        string error
+        int durationMs
+        float cost
+    }
+
+    PaymentOrder {
+        string id PK
+        string userId FK
+        float amount
+        string currency
+        string status
+        string razorpayPaymentId UK
+        string razorpaySignature
+    }
+
+    CreditTransaction {
+        string id PK
+        string userId FK
+        float amount
+        string type
+        string description
+        datetime createdAt
+    }
+
+    EvalRun {
+        string id PK
+        string pipelineId FK
+        string datasetId FK
+        string userId
+        string status
+        json summary
+    }
+
+    EvalResult {
+        string id PK
+        string evalRunId FK
+        string datasetItemId FK
+        string status
+        json scores
+        string judgeReasoning
+    }
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 6: SECURITY GATEWAY ==================== -->
+        <div id="tab-security" class="view-section">
+          <div class="section-title-bar">
+            <div>
+              <h2>🛡️ Defensive Gateway & Security Perimeter</h2>
+              <p>Secure-by-default API wrapper, instant session revocation claims, and token-bucket rate limiting.</p>
+            </div>
+          </div>
+
+          <div class="diagram-card">
+            <div class="diagram-tools">
+              <button class="zoom-btn" onclick="zoomDiagram('security-mermaid', 1.15)">➕</button>
+              <button class="zoom-btn" onclick="zoomDiagram('security-mermaid', 0.85)">➖</button>
+              <button class="zoom-btn" onclick="resetDiagram('security-mermaid')">🔄</button>
+            </div>
+            <div id="security-mermaid" class="mermaid">
+flowchart TD
+    REQ["Incoming HTTP Request"] --> MW["Edge Middleware (src/middleware.ts)"]
+    
+    subgraph EDGE_VERIFY["1. Edge Token & Path Inspection"]
+        MW --> CHK_PATH{"Is Route Protected?\n(/dashboard, /pipeline, /profile)"}
+        CHK_PATH -->|Yes| CHK_COOKIE{"Secure Cookie Present?\n(authjs.session-token)"}
+        CHK_PATH -->|No| PASS_PUBLIC["Pass to Public Handler"]
+        CHK_COOKIE -->|No| REDIRECT_LOGIN["Redirect 302 -> /login?callbackUrl=..."]
+        CHK_COOKIE -->|Yes| WRAPPER["Pass to route.ts Wrapper"]
+    end
+
+    subgraph DEFENSIVE_WRAPPER["2. Defensive route() Handler Wrapper (src/lib/api/route.ts)"]
+        WRAPPER --> CHK_AUTH_OPT{"auth: false\nexplicitly set?"}
+        CHK_AUTH_OPT -->|No (Default: Secure)| VERIFY_JWT["Verify NextAuth v5 JWT & Check User.sessionsRevokedAt"]
+        CHK_AUTH_OPT -->|Yes| BYPASS_AUTH["Proceed Unauthenticated"]
+        
+        VERIFY_JWT --> RATE_LIMIT["Token Bucket Rate Limiter (Upstash Redis)"]
+        BYPASS_AUTH --> RATE_LIMIT_IP["Rate Limit by Client IP"]
+        
+        RATE_LIMIT --> ZOD_PARSE{"Zod Schema Validation\n(Body & Query Params)"}
+        RATE_LIMIT_IP --> ZOD_PARSE
+        
+        ZOD_PARSE -->|Invalid| ERR_400["Return 400 Bad Request (Formatted Zod Errors)"]
+        ZOD_PARSE -->|Valid| BIZ_HANDLER["Execute Protected Controller Logic"]
+    end
+
+    subgraph ERROR_SHIELD["3. Exception Shielding & Audit Logging"]
+        BIZ_HANDLER -->|Success| RES_200["Return 200 OK + Standard Headers"]
+        BIZ_HANDLER -->|Exception| SANITIZE["Sanitize Error into Generic 500\n(Prevent Stack Trace Leakage)"]
+        SANITIZE --> AUDIT["Asynchronously Write to AuditLog (Best-effort)"]
+        AUDIT --> RES_500["Return 500 Internal Server Error"]
+    end
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- Right Inspector Drawer (Active Component Deep Dive) -->
+      <aside class="inspector-sidebar" id="inspectorSidebar">
+        <div class="inspector-header">
+          <h3>🔍 Component Inspector</h3>
+          <span class="module-badge" id="inspectorBadge">Zustand 5</span>
+        </div>
+
+        <div class="inspector-body" id="inspectorContent">
+          <!-- Dynamic Content Loaded via JS -->
+          <div class="detail-card">
+            <h4 id="compTitle">🎨 Canvas State Machine & History</h4>
+            <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45;" id="compDesc">
+              Maintains all visual canvas state, nodes, and edges in an external Zustand store. Sub-components use atomic selectors to isolate rendering.
+            </p>
+          </div>
+
+          <div class="detail-card">
+            <h4>📁 Source File Reference</h4>
+            <div class="code-block" id="compFiles">src/store/pipelineStore.ts<br>src/components/flow/FlowEditor.tsx</div>
+          </div>
+
+          <div class="detail-card">
+            <h4>⚡ Key Methods & Protocols</h4>
+            <div class="code-block" id="compMethods">
+<span class="code-fn">addNode</span>(type, position)<br>
+<span class="code-fn">undo</span>() / <span class="code-fn">redo</span>() <span class="code-str">// 30-state buffer</span><br>
+<span class="code-fn">tidyLayout</span>() <span class="code-str">// Layered BFS Auto-Layout</span><br>
+<span class="code-fn">isPersistedChange</span>(changes) <span class="code-str">// Filter</span>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <h4>🛡️ Resiliency & Design Decisions</h4>
+            <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;" id="compDecisions">
+              Prevents whole-canvas re-renders on node drag. Structured clones prevent pointer mutation bugs during time travel.
+            </p>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script>
+    // Initialize Mermaid with Dark Modern Styling
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0e1422',
+        primaryColor: '#6366f1',
+        primaryTextColor: '#ffffff',
+        primaryBorderColor: '#4f46e5',
+        lineColor: '#818cf8',
+        secondaryColor: '#ff6b35',
+        tertiaryColor: '#10b981',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px'
+      }
+    });
+
+    // Component Registry for Inspector Sidebar
+    const componentData = {
+      'zustand-store': {
+        title: '🎨 Canvas State Machine & History',
+        badge: 'Zustand 5',
+        desc: 'Maintains all visual canvas nodes, edges, selections, and viewport state. Uses a 30-state deep-cloned ring buffer for instant ⌘Z/⌘⇧Z undo/redo time travel.',
+        files: 'src/store/pipelineStore.ts\nsrc/components/flow/FlowEditor.tsx\nsrc/components/flow/Toolbar.tsx',
+        methods: `addNode(type, position: XYPosition)\nundo() / redo() // Ring buffer (max 30)\ntidyLayout() // BFS Layered DAG auto-layout\nisPersistedChange(changes) // Smart filter`,
+        decisions: 'Isolates state from React component hierarchy using atomic selectors (usePipelineStore(s => s.nodes)). Ignores measurement/selection changes to avoid dirty state bugs.'
+      },
+      'dag-engine': {
+        title: '⚙️ Topological DAG Execution Engine',
+        badge: "Kahn's Algorithm",
+        desc: "Resolves node execution schedules using Kahn's topological sort algorithm, detects circular cycles, resolves {{nodeId.property}} dynamic template expressions, and evaluates conditional router gates.",
+        files: 'src/lib/execution.ts\nsrc/app/api/pipelines/[id]/run/route.ts',
+        methods: `topologicalSort(nodes, edges)\nreplaceVariables(template, upstreamResults)\nevaluateCondition(operator, valA, valB)\nstreamExecution(ReadableStream, controller)`,
+        decisions: 'Prunes dead-end edges on router branching, automatically marking dependent downstream nodes as skipped without crashing the pipeline.'
+      },
+      'sarvam-integration': {
+        title: '🎙️ Sarvam AI Multi-Modal Subsystem',
+        badge: 'Indic AI v3',
+        desc: 'High-resilience client wrapper for Sarvam AI foundation models spanning Saaras STT, Bulbul TTS, Mayura translation (22+ Indic languages), and Sarvam-105B LLM.',
+        files: 'src/lib/sarvam.ts\nsrc/lib/audio/normalize.ts\nsrc/lib/documents/pageCount.ts',
+        methods: `speechToText(audioBlob, { language, chunk: true })\ntextToSpeech(text, { speaker, pacing })\ntranslate(text, { sourceLang, targetLang })\nchatCompletions(messages, schema)`,
+        decisions: 'Wraps all network calls in fetchWithRetry() with exponential backoff, jitter, and a strict 25-second AbortController timeout to eliminate hanging serverless threads.'
+      },
+      'credit-ledger': {
+        title: '💳 2-Phase Double-Entry Credit Ledger',
+        badge: 'Atomic Ledger',
+        desc: 'Financial subsystem ensuring strict zero-leakage credit accounting. Holds upfront reservation (25 credits) before run starts, dynamically meters consumption, and refunds balance.',
+        files: 'src/lib/api/credits.ts\nsrc/lib/api/pricing.ts\nsrc/scripts/reaper.ts',
+        methods: `reserveCredits(userId, runId, 25.0)\nsettleCredits(userId, runId, actualCost)\ncalculateCost(nodeType, usageMetrics)\nreapStaleRuns() // Periodic cron cleaner`,
+        decisions: 'Eliminates double-spending race conditions by enforcing atomic SQL holds. Stale run reaper daemon sweeps hung executions after 120 seconds and auto-refunds holds.'
+      },
+      'audio-engine': {
+        title: '🎧 In-Browser 16kHz PCM WAV Audio Engine',
+        badge: 'Web Audio API',
+        desc: 'Records raw Float32Array PCM microphone samples in-browser and directly compiles standard 44-byte RIFF/WAVE headers at 16kHz Mono, enabling duration-independent sentence chunking.',
+        files: 'src/lib/audio/wav.ts\nsrc/components/flow/AIPipelineBuilder.tsx',
+        methods: `encodeWAV(samples: Float32Array, sampleRate: 16000)\nwriteRIFFHeader(dataView, totalDataLength)\nsliceWAV(buffer, maxSeconds: 30)\nspliceWAVHeaders(wavBlobs: Blob[])`,
+        decisions: 'Bypasses compressed WebM byte-slicing limitations. Integrated with WaveSurfer.js featuring automatic object URL revocation to prevent native heap leaks.'
+      },
+      'r2-gateway': {
+        title: '📦 Cloudflare R2 Range Proxy & Storage',
+        badge: 'Private S3 Bucket',
+        desc: 'Private object storage proxy serving audio, PDF, and OCR pipeline artifacts with full HTTP 206 Partial Content Range streaming support for fast browser scrubbing.',
+        files: 'src/lib/r2.ts\nsrc/app/api/audio/[filename]/route.ts',
+        methods: `uploadArtifact(key, buffer, contentType)\nstreamRange(key, rangeHeader: string)\ngetSignedDownloadUrl(key, expiresIn: 3600)`,
+        decisions: 'Validates user authentication on every artifact read request. Allows instant seeking without downloading multi-MB audio files completely.'
+      }
+    };
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
+    }
+
+    function inspectComponent(compId) {
+      const data = componentData[compId];
+      if (!data) return;
+
+      document.querySelectorAll('.module-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+
+      document.getElementById('inspectorBadge').textContent = data.badge;
+      document.getElementById('compTitle').textContent = data.title;
+      document.getElementById('compDesc').textContent = data.desc;
+      document.getElementById('compFiles').innerHTML = data.files.replace(/\n/g, '<br>');
+      document.getElementById('compMethods').innerHTML = data.methods.replace(/\n/g, '<br>');
+      document.getElementById('compDecisions').textContent = data.decisions;
+    }
+
+    // Zoom and pan functions for diagrams
+    const zoomLevels = {};
+    function zoomDiagram(id, factor) {
+      if (!zoomLevels[id]) zoomLevels[id] = 1;
+      zoomLevels[id] *= factor;
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.transform = `scale(${zoomLevels[id]})`;
+        el.style.transformOrigin = 'top left';
+        el.style.transition = 'transform 0.2s ease';
+      }
+    }
+
+    function resetDiagram(id) {
+      zoomLevels[id] = 1;
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.transform = 'scale(1)';
+      }
+    }
+
+    // Interactive Pipeline Simulation Demo
+    let simStep = 0;
+    let simInterval = null;
+    function runPipelineSimulation() {
+      const btn = document.getElementById('runSimBtn');
+      simStep = 0;
+      btn.disabled = true;
+      btn.textContent = '⏳ Executing Run...';
+
+      document.querySelectorAll('.sim-step').forEach(s => {
+        s.className = 'sim-step';
+      });
+
+      if (simInterval) clearInterval(simInterval);
+
+      simInterval = setInterval(() => {
+        if (simStep > 0) {
+          const prev = document.getElementById('step-' + (simStep - 1));
+          if (prev) {
+            prev.className = 'sim-step done';
+          }
+        }
+
+        if (simStep < 6) {
+          const curr = document.getElementById('step-' + simStep);
+          if (curr) {
+            curr.className = 'sim-step active';
+          }
+          simStep++;
+        } else {
+          clearInterval(simInterval);
+          btn.disabled = false;
+          btn.textContent = '🔄 Re-run Simulation';
+          const last = document.getElementById('step-5');
+          if (last) last.className = 'sim-step done';
+        }
+      }, 750);
+    }
+
+    // Real-time search filter
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      document.querySelectorAll('.module-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (text.includes(q) || q === '') {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

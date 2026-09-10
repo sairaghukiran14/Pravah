@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { route } from '@/lib/api/route';
 import { ApiError, badRequest, notFound } from '@/lib/api/errors';
 
+import { creditWalletOrder } from '@/lib/api/paymentSettlement';
+
 /**
  * Confirms a Razorpay top-up and credits the user's wallet.
  *
@@ -52,13 +54,14 @@ export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }
   const isMockOrder = razorpay_order_id.startsWith('order_mock_');
 
   if (isServerMockMode && isMockOrder) {
-    const user = await creditWallet({
+    const user = await creditWalletOrder({
       userId,
       orderId: razorpay_order_id,
       amount,
       paymentId: razorpay_payment_id || 'mock_payment',
       signature: null,
       description: `Wallet top-up (Mock Payment: ${razorpay_payment_id || 'manual'})`,
+      source: 'mock',
     });
     return { success: true, isMock: true, credits: user.credits };
   }
@@ -109,13 +112,14 @@ export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }
     throw badRequest('Payment could not be confirmed as captured for this order');
   }
 
-  const user = await creditWallet({
+  const user = await creditWalletOrder({
     userId,
     orderId: razorpay_order_id,
     amount,
     paymentId: razorpay_payment_id,
     signature: razorpay_signature,
     description: `Wallet top-up via Razorpay (Ref: ${razorpay_payment_id})`,
+    source: 'client_verify',
   });
 
   return { success: true, isMock: false, credits: user.credits };
@@ -125,65 +129,4 @@ async function markFailed(orderId: string): Promise<void> {
   await prisma.paymentOrder
     .update({ where: { id: orderId }, data: { status: 'failed' } })
     .catch((e) => console.warn('Failed to mark order as failed:', e));
-}
-
-/**
- * Credits the wallet and settles the order in one transaction. The status guard
- * inside the transaction makes concurrent verify calls safe: only the first
- * transitions 'created' -> 'paid' and credits the balance.
- */
-async function creditWallet({
-  userId,
-  orderId,
-  amount,
-  paymentId,
-  signature,
-  description,
-}: {
-  userId: string;
-  orderId: string;
-  amount: number;
-  paymentId: string;
-  signature: string | null;
-  description: string;
-}) {
-  return prisma.$transaction(async (tx) => {
-    const settled = await tx.paymentOrder.updateMany({
-      where: { id: orderId, status: { not: 'paid' } },
-      data: {
-        status: 'paid',
-        razorpayPaymentId: paymentId,
-        ...(signature ? { razorpaySignature: signature } : {}),
-      },
-    });
-
-    // A concurrent request already settled this order — do not double-credit.
-    if (settled.count === 0) {
-      return tx.user.findUniqueOrThrow({ where: { id: userId }, select: { credits: true } });
-    }
-
-    const user = await tx.user.update({
-      where: { id: userId },
-      data: { credits: { increment: amount } },
-    });
-
-    await tx.creditTransaction.create({
-      data: { userId, amount, type: 'purchase', description },
-    });
-
-    // Inside the transaction that actually moved the money, so the audit line
-    // exists only for a credit that was genuinely applied — this is the one
-    // place where a best-effort write would be the wrong choice.
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: 'payment.credit',
-        targetType: 'order',
-        targetId: orderId,
-        metadata: { amount, paymentId, mock: signature === null },
-      },
-    });
-
-    return user;
-  });
 }
