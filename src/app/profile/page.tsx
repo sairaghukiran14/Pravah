@@ -150,11 +150,11 @@ export default function ProfilePage() {
   const handleTopup = async (amount: number) => {
     if (isTopupLoading !== null) return;
 
-    if (!amount || isNaN(amount) || amount < 50 || amount > 10000) {
+    if (!amount || isNaN(amount) || amount < 25 || amount > 10000) {
       setSuccessModal({
         isOpen: true,
         title: 'Invalid Amount',
-        message: 'Top-up amount must be between ₹50 and ₹10,000.',
+        message: 'Top-up amount must be between ₹25 and ₹10,000.',
         isError: true,
       });
       return;
@@ -268,7 +268,7 @@ export default function ProfilePage() {
     if (authStatus === 'authenticated') {
       fetchProfile();
       fetchTransactions();
-      
+
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('pravah_user_onboarding');
         if (saved) {
@@ -324,10 +324,10 @@ export default function ProfilePage() {
   const hasChanged = profile && editName.trim() !== (profile.name || '');
   const memberSince = profile
     ? new Date(profile.createdAt).toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
     : '';
 
   if (authStatus === 'loading' || isLoading) {
@@ -350,10 +350,10 @@ export default function ProfilePage() {
       <main className="min-h-[calc(100vh-56px)] bg-[#fafafa] pb-24 relative overflow-hidden">
         {/* Subtle grid background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-        
+
         {/* Main Content Area — Expansive Container Width */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8 relative z-10">
-          
+
           {/* Header & Back Action */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
@@ -428,10 +428,10 @@ export default function ProfilePage() {
 
           {/* Responsive Layout Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
+
             {/* LEFT COLUMN: Profile Details & Wallet Billing (Takes 2 columns) */}
             <div className="lg:col-span-2 space-y-8">
-              
+
               {/* Account Details Card — Spacious Container */}
               <div className="bg-white rounded-3xl border border-slate-200/80 p-7 sm:p-9 space-y-6 shadow-2xs">
                 <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
@@ -530,7 +530,7 @@ export default function ProfilePage() {
                   <div className="lg:col-span-5 xl:col-span-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white border border-slate-800/90 shadow-md flex flex-col justify-between relative overflow-hidden group">
                     {/* Background subtle radial glow */}
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                    
+
                     <div className="flex items-center justify-between gap-2 relative z-10">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
                         Available Balance
@@ -563,13 +563,13 @@ export default function ProfilePage() {
                         <p className="text-[11px] text-slate-500 font-normal truncate">Instant refill via UPI, Cards, NetBanking</p>
                       </div>
                       <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs whitespace-nowrap">
-                        Min: ₹50 • Max: ₹10,000
+                        Min: ₹25 • Max: ₹10,000
                       </span>
                     </div>
 
                     {/* Quick Amount Selection Pills */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[50, 200, 500, 1000].map((amt) => {
+                      {[25, 100, 500, 1000].map((amt) => {
                         const isSelected = Number(customAmount) === amt;
                         const loading = isTopupLoading === amt;
                         return (
@@ -581,11 +581,10 @@ export default function ProfilePage() {
                               setCustomAmountError('');
                             }}
                             disabled={isTopupLoading !== null}
-                            className={`relative group flex items-center justify-center py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 whitespace-nowrap ${
-                              isSelected
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                                : 'bg-white hover:bg-slate-100/90 text-slate-750 hover:text-slate-950 border-slate-200/90 hover:border-slate-300 shadow-2xs'
-                            }`}
+                            className={`relative group flex items-center justify-center py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 whitespace-nowrap ${isSelected
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                              : 'bg-white hover:bg-slate-100/90 text-slate-750 hover:text-slate-950 border-slate-200/90 hover:border-slate-300 shadow-2xs'
+                              }`}
                           >
                             {amt === 500 && (
                               <span className="absolute -top-1.5 right-1.5 px-1 rounded-full bg-emerald-500 text-[8px] font-bold text-white tracking-wider uppercase leading-tight shadow-2xs">
@@ -603,8 +602,8 @@ export default function ProfilePage() {
                       onSubmit={(e) => {
                         e.preventDefault();
                         const num = Number(customAmount);
-                        if (!num || isNaN(num) || num < 50 || num > 10000) {
-                          setCustomAmountError('Amount must be between ₹50 and ₹10,000');
+                        if (!num || isNaN(num) || num < 25 || num > 10000) {
+                          setCustomAmountError('Amount must be between ₹25 and ₹10,000');
                           return;
                         }
                         setCustomAmountError('');
@@ -617,7 +616,7 @@ export default function ProfilePage() {
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
                           <input
                             type="number"
-                            min={50}
+                            min={25}
                             max={10000}
                             step="any"
                             placeholder="Enter amount (e.g. 250)"
@@ -714,13 +713,12 @@ export default function ProfilePage() {
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <div
-                                  className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                                    isDeduction
-                                      ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                                      : isSignup
+                                  className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border ${isDeduction
+                                    ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                    : isSignup
                                       ? 'bg-purple-50 text-purple-600 border-purple-100'
                                       : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                                  }`}
+                                    }`}
                                 >
                                   {isDeduction ? (
                                     <Zap className="h-4 w-4" />
@@ -744,11 +742,10 @@ export default function ProfilePage() {
                               </div>
                               <div className="text-right pl-3 shrink-0 flex flex-col items-end">
                                 <span
-                                  className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${
-                                    isDeduction
-                                      ? 'text-slate-700 bg-slate-100 border border-slate-200/60'
-                                      : 'text-emerald-700 bg-emerald-50/90 border border-emerald-200/70'
-                                  }`}
+                                  className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${isDeduction
+                                    ? 'text-slate-700 bg-slate-100 border border-slate-200/60'
+                                    : 'text-emerald-700 bg-emerald-50/90 border border-emerald-200/70'
+                                    }`}
                                 >
                                   {isDeduction ? '-' : '+'}₹{Math.abs(tx.amount).toFixed(2)}
                                 </span>
@@ -774,7 +771,7 @@ export default function ProfilePage() {
 
             {/* RIGHT COLUMN: Platform Activity & Onboarding Selections (Takes 1 column) */}
             <div className="space-y-8">
-              
+
               {/* Statistics/Metrics Card — Spacious Container */}
               <div className="bg-white rounded-3xl border border-slate-200/80 p-7 sm:p-9 space-y-6 shadow-2xs">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
@@ -903,7 +900,7 @@ export default function ProfilePage() {
           <div className="bg-white rounded-3xl border border-slate-100 max-w-sm w-full p-6 shadow-xl relative overflow-hidden animate-slide-up">
             {/* Top decorative gradient bar */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-purple-600" />
-            
+
             <div className="flex flex-col items-center text-center space-y-4 pt-2">
               {/* Brand Logo/Header */}
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-semibold text-xs select-none">

@@ -5,7 +5,7 @@
  *
  * Tested Scenarios & Business Rules:
  * 1. Financial Bounds & Input Validation:
- *    - Rejection of amounts below minimum threshold (< ₹50) with HTTP 400.
+ *    - Rejection of amounts below minimum threshold (< ₹25) with HTTP 400.
  *    - Rejection of amounts above ceiling (> ₹10,000) with HTTP 400.
  *    - Rejection of invalid / non-numeric bodies with HTTP 400.
  * 2. Paise Unit Conversion:
@@ -67,8 +67,8 @@ describe('Payment Order Creation (POST /api/payment/order)', () => {
   });
 
   describe('1. Top-Up Bounds & Schema Validation', () => {
-    it.each([0, 10, 49, -50, -1])(
-      'rejects top-up amount ₹%i below minimum ₹50 with 400',
+    it.each([0, 10, 24, -25, -1])(
+      'rejects top-up amount ₹%i below minimum ₹25 with 400',
       async (amount) => {
         const req = createOrderRequest({ amount });
         const res = await POST(req);
@@ -76,7 +76,7 @@ describe('Payment Order Creation (POST /api/payment/order)', () => {
         expect(res.status).toBe(400);
         const json = await res.json();
         expect(json.error).toBe('Invalid request');
-        expect(json.details[0].message).toContain('Top-up amount must be at least ₹50');
+        expect(json.details[0].message).toContain('Top-up amount must be at least ₹25');
       }
     );
 
@@ -107,7 +107,7 @@ describe('Payment Order Creation (POST /api/payment/order)', () => {
   });
 
   describe('2. Successful Order Creation & Gateway Interfacing', () => {
-    it.each([50, 100, 500, 1000, 10000])(
+    it.each([25, 50, 100, 500, 1000, 10000])(
       'creates order for valid amount ₹%i and converts to exact paise',
       async (amount) => {
         const req = createOrderRequest({ amount });
