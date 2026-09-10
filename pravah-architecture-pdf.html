@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pravah AI — Complete Architecture, Decisions, Integrations & Pricing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #1e293b;
+      line-height: 1.6;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 44px 48px;
+      page-break-after: always;
+      position: relative;
+    }
+    .page:last-child { page-break-after: auto; }
+
+    @media screen {
+      .page { margin-bottom: 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.1); }
+      body { background: #f1f5f9; padding: 24px 0; }
+    }
+
+    /* Typography */
+    h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.03em; color: #0f172a; }
+    h2 {
+      font-size: 16px; font-weight: 800; color: #0f172a;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    h3 { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    h4 { font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+    p, li { font-size: 11px; color: #475569; line-height: 1.6; }
+    strong { color: #1e293b; }
+    code {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      background: #f1f5f9; padding: 1px 4px; border-radius: 3px;
+      color: #6366f1; border: 1px solid #e2e8f0;
+    }
+
+    .spacer { height: 20px; }
+    .spacer-sm { height: 10px; }
+    .spacer-lg { height: 28px; }
+
+    .footer {
+      position: absolute; bottom: 24px; left: 48px; right: 48px;
+      display: flex; justify-content: space-between;
+      font-size: 8.5px; color: #94a3b8;
+      border-top: 1px solid #f1f5f9; padding-top: 6px;
+    }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(155deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center; padding: 60px;
+    }
+    .cover h1 { color: #fff; font-size: 40px; margin-bottom: 10px; }
+    .cover-sub { font-size: 15px; color: #94a3b8; font-weight: 500; max-width: 480px; line-height: 1.6; margin-bottom: 40px; }
+    .cover-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 48px; }
+    .chip {
+      font-size: 10px; font-weight: 600; padding: 5px 12px; border-radius: 16px;
+      background: rgba(255,255,255,0.1); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.15);
+    }
+    .cover-logo {
+      width: 72px; height: 72px; border-radius: 18px;
+      background: linear-gradient(135deg, #6366f1, #f97316);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; margin-bottom: 28px;
+      box-shadow: 0 8px 32px rgba(99,102,241,0.4);
+    }
+    .cover-bottom {
+      position: absolute; bottom: 44px; left: 60px; right: 60px;
+      display: flex; justify-content: space-between;
+      font-size: 9.5px; color: #64748b;
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 4px; }
+    thead th {
+      text-align: left; padding: 7px 8px; background: #f8fafc;
+      font-weight: 700; font-size: 9.5px; color: #475569;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Callout */
+    .callout {
+      border-radius: 8px; padding: 10px 14px; font-size: 10.5px;
+      line-height: 1.55; display: flex; gap: 8px; align-items: flex-start;
+      margin-bottom: 4px;
+    }
+    .callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .co-blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+    .co-purple { background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6; }
+    .co-green  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .co-orange { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; }
+    .co-rose   { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+    .co-amber  { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+    /* Tier boxes */
+    .tier { border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+    .tier h4 { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .tier ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+    .tier li { font-size: 10px; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 6px; }
+    .tier li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+
+    .t-indigo { background: #eef2ff; border: 1.5px solid #c7d2fe; }
+    .t-indigo h4 { color: #4338ca; } .t-indigo li { color: #4338ca; } .t-indigo li::before { background: #6366f1; }
+    .t-rose { background: #fff1f2; border: 1.5px solid #fecdd3; }
+    .t-rose h4 { color: #be123c; } .t-rose li { color: #9f1239; } .t-rose li::before { background: #f43f5e; }
+    .t-teal { background: #f0fdfa; border: 1.5px solid #99f6e4; }
+    .t-teal h4 { color: #115e59; } .t-teal li { color: #115e59; } .t-teal li::before { background: #14b8a6; }
+    .t-orange { background: #fff7ed; border: 1.5px solid #fed7aa; }
+    .t-orange h4 { color: #c2410c; } .t-orange li { color: #9a3412; } .t-orange li::before { background: #f97316; }
+    .t-emerald { background: #ecfdf5; border: 1.5px solid #a7f3d0; }
+    .t-emerald h4 { color: #065f46; } .t-emerald li { color: #065f46; } .t-emerald li::before { background: #10b981; }
+    .t-amber { background: #fffbeb; border: 1.5px solid #fde68a; }
+    .t-amber h4 { color: #92400e; } .t-amber li { color: #92400e; } .t-amber li::before { background: #f59e0b; }
+
+    .tier-row { display: flex; gap: 10px; }
+    .tier-row > .tier { flex: 1; }
+
+    .arrow-down { display: flex; justify-content: center; padding: 2px 0; }
+    .arrow-down span {
+      display: block; width: 2px; height: 14px; background: #cbd5e1; position: relative;
+    }
+    .arrow-down span::after {
+      content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+      border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #cbd5e1;
+    }
+
+    /* Pipeline flow */
+    .flow { display: flex; align-items: center; justify-content: center; gap: 0; padding: 12px 0; flex-wrap: wrap; }
+    .fn {
+      padding: 8px 12px; border-radius: 6px; font-size: 10px; font-weight: 600;
+      text-align: center; min-width: 90px; line-height: 1.3;
+    }
+    .fn small { font-weight: 400; opacity: 0.7; font-size: 9px; }
+    .fa { padding: 0 2px; color: #94a3b8; font-size: 16px; }
+    .fn-i { background: #eef2ff; border: 1.5px solid #c7d2fe; color: #4338ca; }
+    .fn-o { background: #fff7ed; border: 1.5px solid #fed7aa; color: #9a3412; }
+    .fn-g { background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; }
+    .fn-b { background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1e40af; }
+    .fn-r { background: #fff1f2; border: 1.5px solid #fecdd3; color: #9f1239; }
+    .fn-a { background: #fffbeb; border: 1.5px solid #fde68a; color: #92400e; }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; padding-left: 18px; border-left: 2px solid #e2e8f0; margin-left: 10px; }
+    .step { position: relative; padding: 8px 0 8px 20px; }
+    .step::before {
+      content: attr(data-n); position: absolute; left: -28px; top: 8px;
+      width: 20px; height: 20px; border-radius: 50%;
+      font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .step h4 { font-size: 11px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+    .step p { font-size: 10px; color: #64748b; }
+    .s-i::before { background: #6366f1; } .s-r::before { background: #f43f5e; }
+    .s-g::before { background: #10b981; } .s-o::before { background: #f97316; }
+    .s-b::before { background: #3b82f6; } .s-a::before { background: #f59e0b; }
+
+    /* Metrics */
+    .metrics { display: flex; gap: 10px; margin-bottom: 4px; }
+    .m-box { flex: 1; border-radius: 8px; padding: 10px 12px; text-align: center; }
+    .m-box .v { font-size: 18px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+    .m-box .l { font-size: 8.5px; font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .m-i { background: #eef2ff; border: 1.5px solid #c7d2fe; } .m-i .v { color: #4338ca; } .m-i .l { color: #6366f1; }
+    .m-o { background: #fff7ed; border: 1.5px solid #fed7aa; } .m-o .v { color: #c2410c; } .m-o .l { color: #ea580c; }
+    .m-g { background: #ecfdf5; border: 1.5px solid #a7f3d0; } .m-g .v { color: #065f46; } .m-g .l { color: #059669; }
+    .m-b { background: #eff6ff; border: 1.5px solid #bfdbfe; } .m-b .v { color: #1e40af; } .m-b .l { color: #2563eb; }
+    .m-r { background: #fff1f2; border: 1.5px solid #fecdd3; } .m-r .v { color: #9f1239; } .m-r .l { color: #e11d48; }
+
+    /* Decision cards */
+    .decision {
+      background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 10px; page-break-inside: avoid;
+    }
+    .decision h4 { font-size: 11.5px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .decision .tag {
+      display: inline-block; font-size: 8.5px; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; text-transform: uppercase; margin-right: 6px; margin-bottom: 4px;
+    }
+    .tag-why { background: #dbeafe; color: #1d4ed8; }
+    .tag-what { background: #dcfce7; color: #15803d; }
+    .tag-alt { background: #fef3c7; color: #92400e; }
+
+    /* ERD mini cards */
+    .erd-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .erd-e { border-radius: 6px; border: 1.5px solid #e2e8f0; overflow: hidden; }
+    .erd-h { padding: 5px 8px; font-size: 10px; font-weight: 800; color: #fff; }
+    .erd-b { padding: 6px 8px; background: #fff; }
+    .erd-f {
+      font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #475569;
+      padding: 2px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #f8fafc;
+    }
+    .erd-f:last-child { border-bottom: none; }
+    .erd-t { font-size: 7.5px; font-weight: 700; padding: 1px 3px; border-radius: 2px; text-transform: uppercase; }
+    .pk { background: #dbeafe; color: #1d4ed8; } .fk { background: #fef3c7; color: #92400e; }
+    .uk { background: #ede9fe; color: #6d28d9; }
+    .eh-i { background: #6366f1; } .eh-o { background: #f97316; } .eh-g { background: #10b981; }
+    .eh-r { background: #f43f5e; } .eh-b { background: #3b82f6; } .eh-a { background: #f59e0b; }
+    .eh-s { background: #64748b; }
+
+    /* Two-col layout */
+    .two-col { display: flex; gap: 14px; }
+    .two-col > div { flex: 1; }
+
+    hr.divider { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
+    ul.bullet { padding-left: 16px; }
+    ul.bullet li { font-size: 10.5px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 1: COVER
+════════════════════════════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-logo">⚡</div>
+  <h1 style="color:#fff; font-size:42px;">Pravah AI</h1>
+  <p class="cover-sub">Complete System Architecture, Design Decisions,<br>Integrations, Cost Analysis & Pricing Model</p>
+  <div class="cover-chips">
+    <span class="chip">Next.js 16</span>
+    <span class="chip">React 19</span>
+    <span class="chip">TypeScript 5</span>
+    <span class="chip">React Flow</span>
+    <span class="chip">Zustand 5</span>
+    <span class="chip">Prisma 6</span>
+    <span class="chip">Neon PostgreSQL</span>
+    <span class="chip">Sarvam AI</span>
+    <span class="chip">Cloudflare R2</span>
+    <span class="chip">Upstash Redis</span>
+    <span class="chip">Razorpay</span>
+  </div>
+  <div class="cover-bottom">
+    <span>Architecture & Business Document v2.4</span>
+    <span>September 2026</span>
+    <span>Confidential</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 2: OVERVIEW & METRICS
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>📖 What is Pravah?</h2>
+  <p><strong>Pravah</strong> is a full-stack visual workflow studio that lets users drag-and-drop AI building blocks onto an infinite canvas, connect them with wires, and click "Run" to execute entire multi-step Indian language AI pipelines — without writing backend code.</p>
+  <div class="spacer-sm"></div>
+  <div class="callout co-blue">
+    <span class="callout-icon">💡</span>
+    <div><strong>Think of it as Figma meets Zapier, but for Indian Language AI.</strong> Drop an Audio Upload box → connect to Speech-to-Text → Translate → AI Voice → Run → get your translated audio in seconds.</div>
+  </div>
+
+  <div class="spacer"></div>
+  <h2>📊 Platform Metrics at a Glance</h2>
+  <div class="metrics">
+    <div class="m-box m-i"><div class="v">25+</div><div class="l">AI Node Types</div></div>
+    <div class="m-box m-o"><div class="v">23</div><div class="l">Indic Languages</div></div>
+    <div class="m-box m-g"><div class="v">2-Phase</div><div class="l">Credit Ledger</div></div>
+    <div class="m-box m-b"><div class="v">16kHz</div><div class="l">PCM WAV Encoder</div></div>
+    <div class="m-box m-r"><div class="v">333</div><div class="l">Automated Tests</div></div>
+  </div>
+
+  <div class="spacer"></div>
+  <h2>🧩 Example: Voice Dubbing Pipeline</h2>
+  <p style="margin-bottom:8px;">Hindi audio in → Tamil audio out, fully automated:</p>
+  <div class="flow">
+    <div class="fn fn-i">🎙️ Audio Upload<br><small>Hindi Recording</small></div>
+    <div class="fa">→</div>
+    <div class="fn fn-o">📝 Saaras STT<br><small>Speech → Text</small></div>
+    <div class="fa">→</div>
+    <div class="fn fn-b">🌐 Mayura<br><small>Hindi → Tamil</small></div>
+    <div class="fa">→</div>
+    <div class="fn fn-g">🔊 Bulbul TTS<br><small>Tamil Voice</small></div>
+    <div class="fa">→</div>
+    <div class="fn fn-r">📥 Audio Out<br><small>Download / Play</small></div>
+  </div>
+
+  <div class="spacer"></div>
+  <h2>🏗️ The 6 Architectural Layers</h2>
+  <table>
+    <thead><tr><th>#</th><th>Layer</th><th>Responsibility</th><th>Key Technologies</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1</strong></td><td><strong>Client & Canvas</strong></td><td>Visual editor, drag-drop nodes, undo/redo, shortcuts, mic recording</td><td>React 19, React Flow, Zustand, Web Audio</td></tr>
+      <tr><td><strong>2</strong></td><td><strong>Security Gateway</strong></td><td>Auth, rate limiting, input validation, error shielding</td><td>NextAuth v5, Upstash Redis, Zod</td></tr>
+      <tr><td><strong>3</strong></td><td><strong>DAG Execution Engine</strong></td><td>Dependency sorting, variable resolution, conditional routing, SSE</td><td>Kahn's Algorithm, ReadableStream</td></tr>
+      <tr><td><strong>4</strong></td><td><strong>Indic AI Foundation</strong></td><td>STT, translation, TTS, OCR, LLM reasoning</td><td>Sarvam AI (Saaras, Mayura, Bulbul, 105B)</td></tr>
+      <tr><td><strong>5</strong></td><td><strong>Financial Ledger</strong></td><td>Credit holds, usage metering, payment verification, refunds</td><td>Razorpay, HMAC-SHA256, Double-Entry</td></tr>
+      <tr><td><strong>6</strong></td><td><strong>Storage & Database</strong></td><td>Relational persistence, media artifacts, distributed cache</td><td>Neon PostgreSQL, Prisma 6, R2, Redis</td></tr>
+    </tbody>
+  </table>
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 2</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 3: MASTER ARCHITECTURE DIAGRAM
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>🏛️ Master System Architecture Diagram</h2>
+  <p style="margin-bottom:12px;">Complete 6-tier architecture with data flows and interconnections:</p>
+
+  <div class="tier t-indigo">
+    <h4>🖥️ Tier 1 — Client & Canvas (Next.js 16 + React 19)</h4>
+    <ul>
+      <li>React Flow (@xyflow/react) infinite canvas with 25+ custom AI node types across 7 categories</li>
+      <li>Zustand 5 state machine with 30-state deep-cloned undo/redo ring buffer (⌘Z / ⌘⇧Z)</li>
+      <li>Command Palette (⌘K) with fuzzy search & layered BFS DAG auto-layout ("Tidy DAG")</li>
+      <li>In-browser 16kHz mono 16-bit PCM WAV encoder from Web Audio API Float32Array buffers</li>
+      <li>AI Pipeline Generator: natural language / voice description → auto-configured DAG preview</li>
+    </ul>
+  </div>
+  <div class="arrow-down"><span></span></div>
+  <div class="tier t-rose">
+    <h4>🛡️ Tier 2 — Defensive Security Gateway</h4>
+    <ul>
+      <li>Edge Middleware: intercepts /dashboard, /pipeline, /profile → verifies session cookie or redirects</li>
+      <li>NextAuth v5 (Google OAuth + Credentials) with instant revocation via User.sessionsRevokedAt</li>
+      <li>route.ts wrapper: all routes are authenticated by default — must explicitly set auth: false to open</li>
+      <li>Upstash Redis sliding-window rate limiter: 120 cost-weighted tokens per 60s per user/IP</li>
+    </ul>
+  </div>
+  <div class="arrow-down"><span></span></div>
+  <div class="tier t-teal">
+    <h4>⚙️ Tier 3 — Topological DAG Execution Engine & Realtime SSE</h4>
+    <ul>
+      <li>Kahn's Algorithm: computes in-degree map → linearizes topological execution order</li>
+      <li>Dynamic variable resolver: substitutes {{nodeId.property}} from upstream outputs before dispatch</li>
+      <li>Router/conditional gate: evaluates rules, disables dead-end edges, propagates skip to descendants</li>
+      <li>SSE Streamer (text/event-stream): run_started → node_started → node_completed → run_completed</li>
+    </ul>
+  </div>
+  <div class="arrow-down"><span></span></div>
+  <div class="tier-row">
+    <div class="tier t-orange">
+      <h4>🌐 Tier 4 — Sarvam Indic AI</h4>
+      <ul>
+        <li>Saaras:v3 STT (auto 30s chunking)</li>
+        <li>Bulbul:v3 TTS (sentence slicing)</li>
+        <li>Mayura:v1 Translation (22+ langs)</li>
+        <li>Sarvam-105B LLM reasoning</li>
+        <li>Document AI OCR (multipage)</li>
+        <li>fetchWithRetry (backoff + 25s abort)</li>
+      </ul>
+    </div>
+    <div class="tier t-emerald">
+      <h4>💳 Tier 5 — Financial Ledger</h4>
+      <ul>
+        <li>Razorpay order + HMAC-SHA256 verify</li>
+        <li>Upfront RUN_RESERVATION hold</li>
+        <li>Per-second / per-char / per-page metering</li>
+        <li>Atomic settlement & refund</li>
+        <li>Stale-run auto-reaper (15 min timeout)</li>
+        <li>500 credit/day blast-radius ceiling</li>
+      </ul>
+    </div>
+  </div>
+  <div class="arrow-down"><span></span></div>
+  <div class="tier t-amber">
+    <h4>🗄️ Tier 6 — Storage & Database Persistence</h4>
+    <ul>
+      <li>Neon Serverless PostgreSQL via Prisma 6 ORM — 15 models (Users, Pipelines, Runs, Ledger, Evals)</li>
+      <li>Cloudflare R2 S3 Object Storage — private audio/PDF artifacts with HTTP 206 range streaming proxy</li>
+      <li>Upstash Redis — distributed rate limit buckets (sliding window, 120 tokens/min, cost-weighted)</li>
+    </ul>
+  </div>
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 3</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 4: ARCHITECTURE DECISIONS & APPROACHES
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>🧠 Architecture Decisions & Approaches</h2>
+  <p style="margin-bottom:12px;">Every major technical choice was made deliberately. Below are the 8 core decisions, why each alternative was rejected, and the trade-offs accepted.</p>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 1</span></div>
+    <h4>Server-Sent Events (SSE) over WebSockets for Execution Streaming</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Unidirectional <code>text/event-stream</code> via standard HTTP POST response.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> Pipeline runs are short-lived (2–45s). A full duplex WebSocket adds connection setup overhead for a single burst. SSE maps natively to serverless HTTP lifecycles with no socket leak risk.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> WebSockets — require persistent connection, break on Vercel's 60s serverless ceiling, and need explicit reconnection logic. SSE reconnects natively via browser <code>EventSource</code> protocol.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 2</span></div>
+    <h4>Opt-Out Security Wrapper (Secure by Default)</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Generic <code>route&lt;TBody, TQuery&gt;()</code> wrapper in <code>src/lib/api/route.ts</code> that enforces authentication, rate limiting, and Zod validation on every endpoint.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> A developer must explicitly write <code>auth: false</code> to expose a public route. This structural convention prevents unauthenticated data exposure if a new route file is created without manual verification code.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> Opt-in middleware per route — high risk of forgotten auth checks on new endpoints, especially under deadline pressure.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 3</span></div>
+    <h4>2-Phase Atomic Credit Reservation → Settlement</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Before any paid work, atomically hold <code>RUN_RESERVATION</code> (configurable, default 10 credits) from the wallet. After the run, refund the unused difference.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> Prevents double-spending race conditions: a user with 15 credits cannot trigger two ₹10 runs simultaneously because the atomic SQL <code>WHERE credits >= 10</code> serializes on the row.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> Post-execution billing — if the server crashes mid-run, the user consumes paid API calls without ever being charged. The hold-first model ensures revenue is never lost.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 4</span></div>
+    <h4>Topological DAG Engine (Kahn's Algorithm) for Execution Order</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Parse the visual graph into an adjacency list, compute in-degree, and linearize execution schedule. Router nodes prune dead-end branches; only live paths execute.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> Guarantees a Translation node never runs before its upstream STT node produces text. Independent branches (e.g., two separate STT streams) can execute in parallel safely.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> Simple linear queue — cannot parallelize independent branches, and has no concept of conditional routing or dead-edge pruning.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 5</span></div>
+    <h4>Private R2 Storage Gateway with Range-Request Proxy</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Audio and document artifacts are stored in a <strong>private</strong> Cloudflare R2 bucket with zero public read access. A Next.js route (<code>/api/audio/[filename]</code>) validates the user's session and streams only the requested byte range.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> User-generated audio recordings and OCR outputs may contain sensitive PII. Public URLs would expose them to anyone with the link. Range streaming enables instant audio seeking without downloading full multi-MB files.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> Signed URLs with expiry — still expose the file to anyone who intercepts the URL during its validity window. The proxy ensures every access is session-verified.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 6</span></div>
+    <h4>In-Browser PCM WAV Encoding over Compressed WebM</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Capture raw <code>Float32Array</code> samples via Web Audio API and write a 44-byte RIFF/WAVE header at 16kHz mono, producing an <code>audio/wav</code> blob in-memory.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-why">Why</span> Browser <code>MediaRecorder</code> produces compressed WebM chunks that cannot be byte-sliced at sentence boundaries. Uncompressed WAV allows clean 30s chunking for Sarvam's STT endpoint without re-encoding.</p>
+  </div>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 4</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 5: MORE DECISIONS + OPERATIONAL APPROACH
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>🧠 Architecture Decisions (continued)</h2>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 7</span></div>
+    <h4>Cost-Weighted Rate Limiting (Not Per-Request)</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Upstash Redis sliding-window rate limiter consumes variable "cost" tokens per request. A pipeline run costs 25 tokens; a profile read costs 1 token. Budget: 120 tokens per 60 seconds per user.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> A pipeline run fans out into a dozen paid Sarvam calls, while a profile read hits only our DB. Treating both as "one request" under-protects the expensive operation. Cost-weighting prevents API abuse while allowing normal browsing.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Rejected</span> Flat per-request limiting — a user could exhaust all Sarvam quota by triggering 120 pipeline runs/minute while reading a single profile page also counted equally.</p>
+  </div>
+
+  <div class="decision">
+    <div><span class="tag tag-what">Decision 8</span></div>
+    <h4>Stale Run Auto-Reaper Daemon</h4>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><strong>Approach:</strong> Before each new run, sweep the user's pipeline runs stuck in <code>running</code> status for over 15 minutes. Claim their reservation (atomically — prevents double-refund), mark as <code>failed</code>, and refund held credits.</p>
+    <p style="font-size:10px; color:#475569; margin-bottom:4px;"><span class="tag tag-why">Why</span> Serverless functions killed at Vercel's timeout boundary never reach the <code>finally</code> block. Without the reaper, those runs would hold credit permanently and block the user's 3-run concurrency limit forever.</p>
+    <p style="font-size:10px; color:#475569;"><span class="tag tag-alt">Claim mechanism</span> Both the settlement logic and the reaper try to clear <code>PipelineRun.reservedCredits</code> via <code>updateMany WHERE reservedCredits IS NOT NULL</code>. Only the first caller succeeds — the second becomes a no-op. This eliminates all double-refund race conditions.</p>
+  </div>
+
+  <hr class="divider">
+
+  <h2>⚙️ Operational Guardrails & Limits</h2>
+  <table>
+    <thead><tr><th>Parameter</th><th>Default Value</th><th>Env Variable</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Run Reservation</strong></td><td>10 credits</td><td><code>RUN_RESERVATION_CREDITS</code></td><td>Upfront hold deducted before pipeline execution</td></tr>
+      <tr><td><strong>Max Concurrent Runs</strong></td><td>3 per user</td><td><code>MAX_CONCURRENT_RUNS</code></td><td>Limits parallel pipeline executions per account</td></tr>
+      <tr><td><strong>Stale Run Timeout</strong></td><td>15 minutes</td><td><code>STALE_RUN_MINUTES</code></td><td>Runs stuck longer are auto-reaped & refunded</td></tr>
+      <tr><td><strong>Daily Credit Ceiling</strong></td><td>500 credits/24h</td><td><code>DAILY_CREDIT_CEILING</code></td><td>Blast-radius limit — all tenants share one Sarvam key</td></tr>
+      <tr><td><strong>Rate Limit Budget</strong></td><td>120 tokens/60s</td><td><code>RATE_LIMIT_TOKENS_PER_MIN</code></td><td>Sliding-window token bucket per user or per IP</td></tr>
+      <tr><td><strong>Max Audio Upload</strong></td><td>50 MB</td><td><code>SARVAM_MAX_AUDIO_SIZE_MB</code></td><td>~27 min of 16kHz mono WAV</td></tr>
+      <tr><td><strong>STT Chunk Ceiling</strong></td><td>30 seconds</td><td>Hardcoded</td><td>Sarvam's synchronous STT endpoint hard limit</td></tr>
+      <tr><td><strong>Fetch Timeout</strong></td><td>25 seconds</td><td>Hardcoded</td><td>AbortController on every Sarvam API call</td></tr>
+      <tr><td><strong>Max Topup Amount</strong></td><td>₹1,00,000</td><td><code>MAX_TOPUP_AMOUNT</code></td><td>Upper bound on single Razorpay top-up</td></tr>
+      <tr><td><strong>New User Credits</strong></td><td>20 credits</td><td>Prisma default</td><td>Free credits on sign-up</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 5</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 6: INTEGRATIONS DEEP DIVE
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>🌐 Integrations Deep Dive</h2>
+  <p style="margin-bottom:12px;">Pravah integrates with 4 external service providers. Each integration, its purpose, contract, and failure handling is documented below.</p>
+
+  <h3>Integration 1: Sarvam AI — Indic Foundation Models</h3>
+  <div class="callout co-orange" style="margin-bottom:10px;">
+    <span class="callout-icon">🎙️</span>
+    <div><strong>7 model endpoints</strong> across speech, text, vision, and reasoning. All calls wrapped in <code>fetchWithRetry()</code> with exponential backoff, jitter, and 25s AbortController timeout. Auto-retries on <code>408, 425, 429, 500, 502, 503, 504</code>.</div>
+  </div>
+  <table>
+    <thead><tr><th>Model</th><th>Endpoint</th><th>What It Does</th><th>Key Implementation Detail</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Saaras:v3</strong></td><td><code>/speech-to-text</code></td><td>Transcribes audio to text (23 Indic languages)</td><td>Audio > 30s auto-sliced into WAV chunks, sent in parallel, transcripts merged</td></tr>
+      <tr><td><strong>Bulbul:v3</strong></td><td><code>/text-to-speech</code></td><td>Synthesizes natural human-like voice</td><td>Text split into sentence batches (< 500 chars), WAV headers stripped & PCM bytes concatenated</td></tr>
+      <tr><td><strong>Mayura:v1</strong></td><td><code>/translate</code></td><td>Translates between 22+ Indian languages</td><td>Auto-source detection, formal vs. colloquial modes</td></tr>
+      <tr><td><strong>Sarvam-105B</strong></td><td><code>/chat/completions</code></td><td>Sovereign LLM reasoning & extraction</td><td>Structured JSON system prompts, Markdown stripping, DAG topology generation</td></tr>
+      <tr><td><strong>Document AI</strong></td><td><code>/document-ai</code></td><td>OCR on scanned PDFs & images</td><td>Multi-page accounting, per-page cost billing</td></tr>
+      <tr><td><strong>Transliterate</strong></td><td><code>/transliterate</code></td><td>Phonetic script conversion</td><td>Latin → Devanagari, Telugu, Tamil, Bengali, etc.</td></tr>
+      <tr><td><strong>Language ID</strong></td><td><code>/language-identification</code></td><td>Detects language & script</td><td>Used for auto-routing in multilingual pipelines</td></tr>
+    </tbody>
+  </table>
+
+  <div class="spacer"></div>
+
+  <h3>Integration 2: Razorpay — Payment Gateway</h3>
+  <div class="callout co-purple" style="margin-bottom:10px;">
+    <span class="callout-icon">💳</span>
+    <div><strong>Server-side order creation + HMAC-SHA256 timing-safe signature verification.</strong> Razorpay checkout modal loaded dynamically on demand. Payment replay attacks are blocked by a unique DB constraint on <code>razorpayPaymentId</code>.</div>
+  </div>
+  <table>
+    <thead><tr><th>Step</th><th>Endpoint</th><th>What Happens</th></tr></thead>
+    <tbody>
+      <tr><td>1. Create Order</td><td><code>POST /api/payment/order</code></td><td>Server calls <code>razorpay.orders.create({ amount: paise })</code>, saves PaymentOrder row</td></tr>
+      <tr><td>2. User Pays</td><td>Razorpay Modal</td><td>Browser opens checkout UI; user pays via UPI / card / netbanking</td></tr>
+      <tr><td>3. Verify Signature</td><td><code>POST /api/payment/verify</code></td><td>Computes <code>HMAC-SHA256(order_id|payment_id, secret)</code>, compares with <code>crypto.timingSafeEqual</code></td></tr>
+      <tr><td>4. Credit Wallet</td><td>Prisma $transaction</td><td>Atomically: PaymentOrder→"paid", User.credits += amount, CreditTransaction record, AuditLog</td></tr>
+    </tbody>
+  </table>
+
+  <div class="spacer"></div>
+
+  <h3>Integration 3: Cloudflare R2 — Object Storage</h3>
+  <div class="callout co-green" style="margin-bottom:10px;">
+    <span class="callout-icon">📦</span>
+    <div><strong>S3-compatible private bucket</strong> for audio/PDF pipeline artifacts. All reads require session verification. Browser audio scrubbing uses HTTP 206 Partial Content Range streaming via <code>/api/audio/[filename]</code>.</div>
+  </div>
+
+  <h3>Integration 4: Upstash Redis — Distributed Rate Limiting</h3>
+  <div class="callout co-blue" style="margin-bottom:10px;">
+    <span class="callout-icon">⚡</span>
+    <div><strong>Sliding-window token bucket</strong> shared across all serverless instances. Keyed by <code>user:&lt;id&gt;</code> (authenticated) or <code>ip:&lt;address&gt;</code> (anonymous). Falls back to in-memory bucket if Redis is unavailable — never blocks API on a Redis outage.</div>
+  </div>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 6</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 7: PRICING MODEL & COST ANALYSIS
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>💰 Pricing Model — Per-Node Credit Costs</h2>
+  <p style="margin-bottom:6px;">Every node type has a granular, usage-based price. Rates are set at <strong>~1.5× Sarvam's wholesale cost</strong> to cover infrastructure overhead and margin. Extracted directly from <code>src/lib/api/pricing.ts</code>:</p>
+  <div class="spacer-sm"></div>
+
+  <table>
+    <thead><tr><th>Node Type</th><th>Rate</th><th>Billing Unit</th><th>Example Cost</th><th>Pricing Logic</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>🎙️ Speech-to-Text (STT)</strong></td>
+        <td><strong>0.375 credits</strong></td>
+        <td>Per 30-second segment</td>
+        <td>2 min audio = 4 segments = <strong>1.50 cr</strong></td>
+        <td><code>0.375 × ceil(duration / 30)</code></td>
+      </tr>
+      <tr>
+        <td><strong>🌐 Translation</strong></td>
+        <td><strong>3.00 credits</strong></td>
+        <td>Per 1,000 characters</td>
+        <td>500 chars = <strong>1.50 cr</strong></td>
+        <td><code>charCount × 0.003</code></td>
+      </tr>
+      <tr>
+        <td><strong>🔊 Text-to-Speech (TTS)</strong></td>
+        <td><strong>4.50 credits</strong></td>
+        <td>Per 1,000 characters</td>
+        <td>800 chars = <strong>3.60 cr</strong></td>
+        <td><code>charCount × 0.0045</code></td>
+      </tr>
+      <tr>
+        <td><strong>📄 Document OCR</strong></td>
+        <td><strong>0.75 credits</strong></td>
+        <td>Per page</td>
+        <td>10-page PDF = <strong>7.50 cr</strong></td>
+        <td><code>0.75 × pageCount</code></td>
+      </tr>
+      <tr>
+        <td><strong>🎧 Podcast Generator</strong></td>
+        <td><strong>0.50 + TTS rate</strong></td>
+        <td>Base + per TTS char</td>
+        <td>4 turns × 200 chars = <strong>4.10 cr</strong></td>
+        <td><code>0.5 + speechChars × 0.0045</code></td>
+      </tr>
+      <tr>
+        <td><strong>🔤 Language Detection</strong></td>
+        <td><strong>0.05 credits</strong></td>
+        <td>Per request</td>
+        <td>1 call = <strong>0.05 cr</strong></td>
+        <td>Flat rate (short classification)</td>
+      </tr>
+      <tr>
+        <td><strong>🤖 LLM / Other AI</strong></td>
+        <td><strong>0.50 credits</strong></td>
+        <td>Per node execution</td>
+        <td>1 call = <strong>0.50 cr</strong></td>
+        <td>Default fallback rate</td>
+      </tr>
+      <tr style="background: #f0fdf4;">
+        <td><strong>📥 I/O Nodes</strong></td>
+        <td><strong>Free (0 credits)</strong></td>
+        <td>—</td>
+        <td><strong>0.00 cr</strong></td>
+        <td>audio_input, audio_output, text_input, text_output</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="spacer"></div>
+  <h2>📊 Cost Analysis — Real Pipeline Examples</h2>
+  <p style="margin-bottom:8px;">What a user actually pays for common workflows:</p>
+
+  <div class="callout co-green" style="margin-bottom:12px;">
+    <span class="callout-icon">🎙️</span>
+    <div>
+      <strong>Example 1: Voice Dubber (1 min Hindi → Tamil audio)</strong><br>
+      <table style="margin-top:6px;">
+        <thead><tr><th>Node</th><th>Input</th><th>Calculation</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Audio Upload</td><td>60s WAV</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr><td>Saaras STT</td><td>60s audio</td><td>0.375 × ceil(60/30) = 0.375 × 2</td><td>0.75</td></tr>
+          <tr><td>Mayura Translate</td><td>~350 chars</td><td>350 × 0.003</td><td>1.05</td></tr>
+          <tr><td>Bulbul TTS</td><td>~350 chars</td><td>350 × 0.0045</td><td>1.58</td></tr>
+          <tr><td>Audio Output</td><td>—</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr style="background:#f0fdf4; font-weight:700;"><td colspan="3">Total Pipeline Cost</td><td><strong>3.38 credits</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout co-blue" style="margin-bottom:12px;">
+    <span class="callout-icon">📄</span>
+    <div>
+      <strong>Example 2: Multilingual Document OCR + Summary (5-page PDF)</strong><br>
+      <table style="margin-top:6px;">
+        <thead><tr><th>Node</th><th>Input</th><th>Calculation</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Document Input</td><td>5-page PDF</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr><td>Document OCR</td><td>5 pages</td><td>0.75 × 5</td><td>3.75</td></tr>
+          <tr><td>LLM Summarizer</td><td>~2000 chars</td><td>Default AI rate</td><td>0.50</td></tr>
+          <tr><td>Text Output</td><td>—</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr style="background:#eff6ff; font-weight:700;"><td colspan="3">Total Pipeline Cost</td><td><strong>4.25 credits</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout co-purple" style="margin-bottom:12px;">
+    <span class="callout-icon">🎧</span>
+    <div>
+      <strong>Example 3: 2-Speaker Indic Podcast (4 turns)</strong><br>
+      <table style="margin-top:6px;">
+        <thead><tr><th>Node</th><th>Input</th><th>Calculation</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Topic Prompt</td><td>Text</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr><td>Podcast Generator</td><td>4 turns × ~200 chars</td><td>0.5 + (800 × 0.0045)</td><td>4.10</td></tr>
+          <tr><td>Audio Output</td><td>—</td><td>Free I/O node</td><td>0.00</td></tr>
+          <tr style="background:#f5f3ff; font-weight:700;"><td colspan="3">Total Pipeline Cost</td><td><strong>4.10 credits</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 7</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 8: REVENUE MODEL & UNIT ECONOMICS
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>💳 Revenue Model & Unit Economics</h2>
+  <p style="margin-bottom:12px;">Pravah operates on a <strong>pre-paid credit wallet</strong> model with Razorpay-powered top-ups. The margin is built into the per-node pricing (1.5× wholesale cost).</p>
+
+  <div class="two-col" style="margin-bottom:16px;">
+    <div>
+      <h3>Revenue Sources</h3>
+      <ul class="bullet">
+        <li><strong>Credit Top-Ups:</strong> Users purchase credits via Razorpay (UPI, card, netbanking). Range: ₹1 – ₹1,00,000 per transaction.</li>
+        <li><strong>Free Tier:</strong> Every new user receives <strong>20 free credits</strong> on sign-up to encourage trial.</li>
+        <li><strong>Markup:</strong> Node pricing is set at ~1.5× Sarvam's wholesale billing rate (e.g. STT = 0.375 cr/30s vs Sarvam's ₹30/hour).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Cost Structure (Per Run)</h3>
+      <ul class="bullet">
+        <li><strong>Sarvam API Costs:</strong> The primary COGS — billed per audio second, per text character, and per document page.</li>
+        <li><strong>Infrastructure:</strong> Neon PostgreSQL (serverless), Cloudflare R2 (object storage), Upstash Redis (rate limits), Vercel (compute).</li>
+        <li><strong>Payment Gateway:</strong> Razorpay charges 2% per transaction on top-ups.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Gross Margin Analysis (Per Node Type)</h3>
+  <table>
+    <thead><tr><th>Node</th><th>Pravah Charges</th><th>Sarvam Wholesale</th><th>Gross Margin</th><th>Margin %</th></tr></thead>
+    <tbody>
+      <tr><td><strong>STT (30s)</strong></td><td>0.375 credits</td><td>~0.25 credits</td><td>0.125</td><td style="color:#059669; font-weight:700;">~33%</td></tr>
+      <tr><td><strong>Translation (1k chars)</strong></td><td>3.00 credits</td><td>~2.00 credits</td><td>1.00</td><td style="color:#059669; font-weight:700;">~33%</td></tr>
+      <tr><td><strong>TTS (1k chars)</strong></td><td>4.50 credits</td><td>~3.00 credits</td><td>1.50</td><td style="color:#059669; font-weight:700;">~33%</td></tr>
+      <tr><td><strong>OCR (per page)</strong></td><td>0.75 credits</td><td>~0.50 credits</td><td>0.25</td><td style="color:#059669; font-weight:700;">~33%</td></tr>
+      <tr><td><strong>LLM (per call)</strong></td><td>0.50 credits</td><td>~0.30 credits</td><td>0.20</td><td style="color:#059669; font-weight:700;">~40%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="spacer"></div>
+  <hr class="divider">
+
+  <h2>🔒 Anti-Fraud & Financial Safeguards</h2>
+  <table>
+    <thead><tr><th>Threat</th><th>Protection Mechanism</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Double-spending</strong> (2 concurrent runs with insufficient balance)</td>
+        <td>Atomic SQL hold with <code>WHERE credits >= amount</code></td>
+        <td>Concurrent callers serialize on the row; only one succeeds</td>
+      </tr>
+      <tr>
+        <td><strong>Payment replay attack</strong> (resubmitting same Razorpay payment)</td>
+        <td>Unique DB constraint on <code>razorpayPaymentId</code></td>
+        <td>Second insert fails at database level, regardless of app logic</td>
+      </tr>
+      <tr>
+        <td><strong>Timing attack on HMAC</strong> (leaking signature via response time)</td>
+        <td><code>crypto.timingSafeEqual</code> for signature comparison</td>
+        <td>Constant-time buffer comparison prevents timing side-channels</td>
+      </tr>
+      <tr>
+        <td><strong>Mock payment bypass</strong> (fake Razorpay keys in production)</td>
+        <td>Production guard on <code>RAZORPAY_KEY_ID</code></td>
+        <td>If key is <code>mock_key_id</code> and <code>NODE_ENV=production</code>, throw 500</td>
+      </tr>
+      <tr>
+        <td><strong>Zombie run credit lock</strong> (crashed run holds credits forever)</td>
+        <td>Auto-reaper daemon sweeps runs > 15 min</td>
+        <td>Claims reservation atomically, refunds, marks failed</td>
+      </tr>
+      <tr>
+        <td><strong>Double-refund race</strong> (reaper and settlement both refund)</td>
+        <td><code>claimReservation()</code> — first-writer-wins</td>
+        <td><code>updateMany WHERE reservedCredits IS NOT NULL</code> — second caller gets count=0</td>
+      </tr>
+      <tr>
+        <td><strong>API abuse / rate spike</strong></td>
+        <td>Cost-weighted rate limiting + daily ceiling</td>
+        <td>120 tokens/min + 500 credits/24h blast-radius cap</td>
+      </tr>
+      <tr>
+        <td><strong>SSRF via user-supplied URLs</strong></td>
+        <td><code>safeFetch.ts</code> — blocks private IPs, link-local, metadata endpoints</td>
+        <td>Pre-resolution DNS validation against RFC1918, CGNAT, 169.254.x.x ranges</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 8</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 9: EXECUTION FLOW & SSE PROTOCOL
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>⚙️ Pipeline Execution — Step-by-Step Sequence</h2>
+  <p style="margin-bottom:10px;">When a user clicks <strong>"Run Pipeline"</strong> (or presses <code>⌘ Enter</code>):</p>
+
+  <div class="timeline">
+    <div class="step s-i" data-n="1">
+      <h4>Client Sends Run Request</h4>
+      <p>Browser sends <code>POST /api/pipelines/[id]/run</code> with pipeline payload and node input overrides.</p>
+    </div>
+    <div class="step s-r" data-n="2">
+      <h4>Gateway Validates & Rate Limits</h4>
+      <p><code>route.ts</code> verifies NextAuth session, consumes rate limit tokens (cost: 25), validates body via Zod schema.</p>
+    </div>
+    <div class="step s-g" data-n="3">
+      <h4>Credit Reservation (Phase 1 — Hold)</h4>
+      <p>Atomically deduct <strong>10 credits</strong> as upfront hold. Check daily ceiling (500 cr/24h). Check concurrency limit (max 3 active runs). If insufficient: reject with <code>402</code>.</p>
+    </div>
+    <div class="step s-b" data-n="4">
+      <h4>Topological Sort & Graph Linearization</h4>
+      <p>Kahn's algorithm computes in-degree, detects cycles, produces execution schedule. SSE stream opens: <code>event: run_started</code>.</p>
+    </div>
+    <div class="step s-o" data-n="5">
+      <h4>Node-by-Node Execution (Topological Order)</h4>
+      <p>For each node: resolve <code>{{stt_1.transcript}}</code> variables → stream <code>node_started</code> → dispatch to Sarvam → upload media to R2 → persist NodeRun → stream <code>node_completed</code> with output, duration, and cost.</p>
+    </div>
+    <div class="step s-g" data-n="6">
+      <h4>Credit Settlement (Phase 2 — Refund)</h4>
+      <p>Compute actual cost (e.g. 3.38 cr). Refund: <code>10.00 − 3.38 = +6.62 credits</code>. Record CreditTransaction. Stream <code>event: run_completed</code>. Close stream.</p>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <h2>📡 SSE Event Protocol</h2>
+  <table>
+    <thead><tr><th>Event Name</th><th>When Emitted</th><th>Key Payload Fields</th></tr></thead>
+    <tbody>
+      <tr><td><code>run_started</code></td><td>Once, after graph linearization</td><td>runId, totalNodes, timestamp</td></tr>
+      <tr><td><code>node_started</code></td><td>Before each node executes</td><td>nodeId, nodeType, label</td></tr>
+      <tr><td><code>node_completed</code></td><td>After a node succeeds</td><td>nodeId, output, durationMs, cost</td></tr>
+      <tr><td><code>node_skipped</code></td><td>When a router bypasses a branch</td><td>nodeId, reason</td></tr>
+      <tr><td><code>node_failed</code></td><td>When a node errors</td><td>nodeId, error, httpStatus, remediation</td></tr>
+      <tr><td><code>run_completed</code></td><td>Once, after settlement</td><td>runId, totalCost, durationMs, outputMap</td></tr>
+    </tbody>
+  </table>
+
+  <div class="spacer"></div>
+  <div class="callout co-amber">
+    <span class="callout-icon">⚠️</span>
+    <div><strong>Client Cancellation:</strong> If the user aborts mid-run, the browser's <code>AbortController.abort()</code> fires. The server's <code>finally</code> block detects stream closure and immediately calls <code>settleCredits()</code> — refunding the full unused reservation. No credits are lost.</div>
+  </div>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 9</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 10: DATABASE ERD + API CATALOG
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>🗄️ Database Schema (ERD) — Prisma 6 on Neon PostgreSQL</h2>
+  <p style="margin-bottom:10px;">15 models across 4 domains: Auth, Pipelines, Financial, and Evaluation.</p>
+
+  <div class="erd-grid">
+    <div class="erd-e"><div class="erd-h eh-i">👤 User</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>email</span><span class="erd-t uk">UK</span></div>
+      <div class="erd-f"><span>credits (Float)</span></div>
+      <div class="erd-f"><span>sessionsRevokedAt</span></div>
+      <div class="erd-f"><span>onboardingCompleted</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-b">📁 Project</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>userId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>name / description</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-g">🔀 Pipeline</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>projectId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>name / seedFingerprint</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-g">📦 PipelineNode</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>pipelineId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>type / label / config (JSON)</span></div>
+      <div class="erd-f"><span>positionX / positionY</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-g">🔗 PipelineEdge</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>pipelineId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>source / target</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-o">▶️ PipelineRun</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>pipelineId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>status / reservedCredits</span></div>
+      <div class="erd-f"><span>costBreakdown (JSON)</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-o">⏱️ NodeRun</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>runId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>nodeType / status / cost</span></div>
+      <div class="erd-f"><span>input / output (JSON)</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-r">💳 PaymentOrder</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>userId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>amount / status</span></div>
+      <div class="erd-f"><span>razorpayPaymentId</span><span class="erd-t uk">UK</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-r">📒 CreditTransaction</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>userId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>amount / type / description</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-s">📋 AuditLog</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>userId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>action / targetType / ip</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-a">🧪 EvalRun</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>pipelineId / datasetId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>status / summary (JSON)</span></div>
+    </div></div>
+    <div class="erd-e"><div class="erd-h eh-a">📊 EvalResult</div><div class="erd-b">
+      <div class="erd-f"><span>id</span><span class="erd-t pk">PK</span></div>
+      <div class="erd-f"><span>evalRunId</span><span class="erd-t fk">FK</span></div>
+      <div class="erd-f"><span>status / scores / reasoning</span></div>
+    </div></div>
+  </div>
+
+  <div class="spacer"></div>
+  <h2>🌐 API Route Catalog (Summary)</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Method</th><th>Purpose</th><th>Rate Cost</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/pipelines</code></td><td>GET / POST</td><td>List or create pipelines</td><td>1</td></tr>
+      <tr><td><code>/api/pipelines/[id]</code></td><td>GET / PUT / DELETE</td><td>Read, update, or delete a pipeline</td><td>1</td></tr>
+      <tr><td><code>/api/pipelines/[id]/run</code></td><td>POST (SSE)</td><td>Execute pipeline, stream results</td><td>25</td></tr>
+      <tr><td><code>/api/pipelines/[id]/versions</code></td><td>GET / POST</td><td>List or save pipeline version snapshots</td><td>1</td></tr>
+      <tr><td><code>/api/runs/[runId]</code></td><td>GET</td><td>Fetch execution logs & cost breakdown</td><td>1</td></tr>
+      <tr><td><code>/api/payment/order</code></td><td>POST</td><td>Create Razorpay order for top-up</td><td>3</td></tr>
+      <tr><td><code>/api/payment/verify</code></td><td>POST</td><td>Verify payment signature & credit wallet</td><td>3</td></tr>
+      <tr><td><code>/api/audio/upload</code></td><td>POST</td><td>Upload audio to R2 storage</td><td>2</td></tr>
+      <tr><td><code>/api/audio/[filename]</code></td><td>GET</td><td>Stream audio with HTTP 206 range support</td><td>1</td></tr>
+      <tr><td><code>/api/sarvam/*</code></td><td>POST</td><td>Proxy Sarvam AI model endpoints</td><td>5</td></tr>
+      <tr><td><code>/api/evals/compare</code></td><td>POST</td><td>A/B regression diff between runs</td><td>3</td></tr>
+      <tr><td><code>/api/user/profile</code></td><td>GET / PATCH</td><td>Read or update user profile</td><td>1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 10</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 11: SOURCE FILE MAP
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2>📁 Source Code Map — Key Implementation Files</h2>
+  <p style="margin-bottom:10px;">Complete reference of core files, organized by architectural subsystem:</p>
+
+  <table>
+    <thead><tr><th>Subsystem</th><th>File Path</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Canvas State</strong></td><td><code>src/store/pipelineStore.ts</code></td><td>Zustand store, 30-state undo/redo, BFS auto-layout, smart change filter</td></tr>
+      <tr><td><strong>Flow Editor</strong></td><td><code>src/components/flow/FlowEditor.tsx</code></td><td>React Flow canvas wrapper, node rendering, edge connections, keyboard shortcuts</td></tr>
+      <tr><td><strong>Command Palette</strong></td><td><code>src/components/flow/CommandPalette.tsx</code></td><td>⌘K fuzzy search, node insertion at viewport center, action dispatch</td></tr>
+      <tr><td><strong>AI Builder</strong></td><td><code>src/components/flow/AIPipelineBuilder.tsx</code></td><td>Voice/text → DAG: captures audio, calls Sarvam-105B LLM, generates flow preview</td></tr>
+      <tr><td><strong>DAG Engine</strong></td><td><code>src/lib/execution.ts</code></td><td>Kahn's sort, variable resolution, router pruning, SSE streaming</td></tr>
+      <tr><td><strong>Sarvam Client</strong></td><td><code>src/lib/sarvam.ts</code></td><td>7 model endpoints: STT chunking, TTS slicing, translate, LLM, OCR, retry engine</td></tr>
+      <tr><td><strong>Credit Ledger</strong></td><td><code>src/lib/api/credits.ts</code></td><td>2-phase hold/settle, claim mechanism, reaper, concurrency & daily ceiling checks</td></tr>
+      <tr><td><strong>Pricing</strong></td><td><code>src/lib/api/pricing.ts</code></td><td>Per-node cost calculation: per-second, per-char, per-page, per-token rates</td></tr>
+      <tr><td><strong>API Wrapper</strong></td><td><code>src/lib/api/route.ts</code></td><td>Opt-out auth, rate limiting integration, Zod validation, error sanitization</td></tr>
+      <tr><td><strong>Rate Limiter</strong></td><td><code>src/lib/api/rateLimit.ts</code></td><td>Upstash Redis sliding-window, cost-weighted tokens, local fallback on outage</td></tr>
+      <tr><td><strong>SSRF Guard</strong></td><td><code>src/lib/api/safeFetch.ts</code></td><td>Blocks private IPs (RFC1918, CGNAT, link-local, metadata), DNS pre-resolution</td></tr>
+      <tr><td><strong>Audio Engine</strong></td><td><code>src/lib/audio/wav.ts</code></td><td>16kHz PCM WAV encoder, 44-byte RIFF header, Float32 → Int16 conversion</td></tr>
+      <tr><td><strong>Audio Limits</strong></td><td><code>src/lib/audio/limits.ts</code></td><td>STT_MAX_SECONDS (30s), MAX_AUDIO_SIZE_MB (50 MB / ~27 min)</td></tr>
+      <tr><td><strong>R2 Storage</strong></td><td><code>src/lib/r2.ts</code></td><td>S3-compatible upload/download, private bucket management</td></tr>
+      <tr><td><strong>R2 Range Proxy</strong></td><td><code>src/app/api/audio/[filename]/route.ts</code></td><td>HTTP 206 partial content streaming for browser audio seeking</td></tr>
+      <tr><td><strong>Auth Config</strong></td><td><code>src/auth.ts</code></td><td>NextAuth v5 setup, Google OAuth, credential provider, JWT callbacks</td></tr>
+      <tr><td><strong>Edge Middleware</strong></td><td><code>src/middleware.ts</code></td><td>Route interception, cookie verification, login redirects</td></tr>
+      <tr><td><strong>Node Errors</strong></td><td><code>src/lib/api/nodeErrors.ts</code></td><td>Structured error diagnostics with HTTP codes, provider mapping, remediation</td></tr>
+      <tr><td><strong>Audit Log</strong></td><td><code>src/lib/api/audit.ts</code></td><td>Best-effort async audit trail for security-relevant actions</td></tr>
+      <tr><td><strong>Eval Scoring</strong></td><td><code>src/lib/evals/scoring.ts</code></td><td>WER, BLEU, LLM-as-Judge semantic scoring algorithms</td></tr>
+      <tr><td><strong>Regression</strong></td><td><code>src/lib/evals/regression.ts</code></td><td>Baseline vs. candidate metric comparison and A/B diffing</td></tr>
+      <tr><td><strong>Page Count</strong></td><td><code>src/lib/documents/pageCount.ts</code></td><td>PDF page counting for OCR cost projection</td></tr>
+      <tr><td><strong>DB Client</strong></td><td><code>src/lib/prisma.ts</code></td><td>Singleton Prisma client with connection pooling for serverless</td></tr>
+      <tr><td><strong>DB Schema</strong></td><td><code>prisma/schema.prisma</code></td><td>15 models: User, Pipeline, PipelineRun, NodeRun, Ledger, Evals, etc.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="spacer-lg"></div>
+  <div style="text-align:center; padding: 20px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+    <p style="font-size:12px; font-weight:700; color:#0f172a; margin-bottom:4px;">End of Document</p>
+    <p style="font-size:10px; color:#64748b;">Pravah AI — Complete Architecture, Decisions, Integrations, Cost Analysis & Pricing Model</p>
+    <p style="font-size:9px; color:#94a3b8; margin-top:4px;">Generated September 2026 • Confidential</p>
+  </div>
+
+  <div class="footer"><span>Pravah AI — Architecture & Business Document</span><span>Page 11</span></div>
+</div>
+
+</body>
+</html>

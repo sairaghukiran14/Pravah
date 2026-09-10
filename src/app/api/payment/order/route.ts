@@ -4,13 +4,14 @@ import prisma from '@/lib/prisma';
 import { route } from '@/lib/api/route';
 import { ApiError } from '@/lib/api/errors';
 
-const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 100_000);
+const MIN_TOPUP = 50;
+const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 10_000);
 
 const bodySchema = z.object({
   amount: z
-    .number()
-    .positive('Enter a top-up amount greater than zero')
-    .max(MAX_TOPUP, `Top-up amount cannot exceed ${MAX_TOPUP}`),
+    .number({ message: 'Amount must be a valid number' })
+    .min(MIN_TOPUP, `Top-up amount must be at least ₹${MIN_TOPUP}`)
+    .max(MAX_TOPUP, `Top-up amount cannot exceed ₹${MAX_TOPUP}`),
 });
 
 export const POST = route({ cost: 3, body: bodySchema }, async ({ userId, body }) => {
