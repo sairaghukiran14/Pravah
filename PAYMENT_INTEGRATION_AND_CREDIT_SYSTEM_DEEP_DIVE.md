@@ -91,12 +91,13 @@ const loadRazorpayScript = (): Promise<boolean> => {
 ### Location: `src/app/api/payment/order/route.ts`
 
 ```typescript
-const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 100_000);
+const MIN_TOPUP = 25;
+const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 10_000);
 
 const bodySchema = z.object({
   amount: z
-    .number()
-    .positive('Enter a top-up amount greater than zero')
+    .number({ message: 'Amount must be a valid number' })
+    .min(MIN_TOPUP, `Top-up amount must be at least ₹${MIN_TOPUP}`)
     .max(MAX_TOPUP, `Top-up amount cannot exceed ₹${MAX_TOPUP}`),
 });
 

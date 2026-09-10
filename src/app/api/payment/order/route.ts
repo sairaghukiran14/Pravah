@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { route } from '@/lib/api/route';
 import { ApiError } from '@/lib/api/errors';
 
-const MIN_TOPUP = 50;
+const MIN_TOPUP = 25;
 const MAX_TOPUP = Number(process.env.MAX_TOPUP_AMOUNT || 10_000);
 
 const bodySchema = z.object({

@@ -329,7 +329,7 @@ This document provides a comprehensive catalogue of all API endpoints in **Prava
 * **Request Schema (Zod)**:
   ```typescript
   const orderSchema = z.object({
-    amount: z.number().min(100).max(10000) // topups restricted from ₹100 to ₹10,000
+    amount: z.number().min(25).max(10000) // topups restricted from ₹25 to ₹10,000
   });
   ```
 * **Success Response (`200 OK`)**:

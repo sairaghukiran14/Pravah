@@ -104,7 +104,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [isDemoRunning, setIsDemoRunning] = useState(false);
-  const [selectedTopup, setSelectedTopup] = useState(50);
+  const [selectedTopup, setSelectedTopup] = useState(25);
 
   // Interactive Flow Demo Controls
   const runDemoFlow = () => {
@@ -638,7 +638,7 @@ export default function LandingPage() {
               Pay-As-You-Go with ₹20 Free Credits
             </h2>
             <p className="text-sm sm:text-base text-slate-600">
-              No monthly lock-ins or recurring subscription fees. Sign up, get ₹20 free credits instantly, and top up starting at just ₹50.
+              No monthly lock-ins or recurring subscription fees. Sign up, get ₹20 free credits instantly, and top up starting at just ₹25.
             </p>
           </div>
 
@@ -708,7 +708,7 @@ export default function LandingPage() {
                 <div className="space-y-1">
                   <span className="text-xs font-normal uppercase tracking-wider text-blue-600">Pay-As-You-Go Top-Ups</span>
                   <h3 className="text-2xl font-normal text-slate-900 tracking-tight">
-                    Top Up Wallet Anytime Starting at ₹50
+                    Top Up Wallet Anytime Starting at ₹25
                   </h3>
                   <p className="text-xs text-slate-500">
                     Never worry about lost unspent monthly subscriptions. Buy credits when you need them.
@@ -719,7 +719,7 @@ export default function LandingPage() {
                 <div className="space-y-3 pt-2">
                   <span className="text-xs font-normal text-slate-700 block">Select Top-Up Credit Pack:</span>
                   <div className="grid grid-cols-4 gap-2.5">
-                    {[50, 100, 250, 500].map((amount) => (
+                    {[25, 100, 250, 500].map((amount) => (
                       <button
                         key={amount}
                         onClick={() => setSelectedTopup(amount)}
