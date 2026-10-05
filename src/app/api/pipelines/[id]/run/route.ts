@@ -62,7 +62,7 @@ const INITIAL_INPUT_TEXT = 'नमस्ते! भारत की कृत्
 export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
   // cost 25: a single run can fan out into many paid Sarvam calls.
   { cost: 25, body: bodySchema },
-  async ({ userId, params, body, req }) => {
+  async ({ userId, apiKeyId, params, body, req }) => {
     const pipelineId = params.id;
 
     // Ownership is checked before any credit is held.
@@ -99,6 +99,8 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
       throw paymentRequired('Insufficient credits. Please top up your wallet.');
     }
 
+    let reservationHandled = false;
+
     try {
       const pipelineData = await resolvePipelineData(pipelineId, userId, body);
 
@@ -112,20 +114,47 @@ export const POST = route<z.infer<typeof bodySchema>, undefined, Params>(
         action: 'pipeline.run',
         targetType: 'pipeline',
         targetId: pipelineId,
-        // Node count and types only. The inputs themselves are customer content
-        // and have no business being copied into an audit table.
         metadata: {
           nodeCount: pipelineData.nodes.length,
           nodeTypes: [...new Set(pipelineData.nodes.map((n) => n.type))],
           unsavedGraph: Boolean(body.nodes?.length),
+          source: apiKeyId ? 'api' : 'ui',
         },
         req,
       });
 
-      return streamRun({ pipelineId, userId, reserved, pipelineData, inputs: body.inputs || {} });
+      // Check if client wants synchronous JSON response (e.g. from cURL / Python / external API)
+      const url = new URL(req.url);
+      const isSync = url.searchParams.get('stream') === 'false' || req.headers.get('accept') === 'application/json';
+
+      if (isSync) {
+        reservationHandled = true;
+        const syncResult = await executeRunSync({
+          pipelineId,
+          userId,
+          apiKeyId,
+          reserved,
+          pipelineData,
+          inputs: body.inputs || {},
+        });
+        return syncResult;
+      }
+
+      reservationHandled = true;
+      return streamRun({
+        pipelineId,
+        userId,
+        apiKeyId,
+        reserved,
+        pipelineData,
+        inputs: body.inputs || {},
+      });
     } catch (error) {
-      // Any failure before the stream starts must return the held credit.
-      await releaseReservation(userId, reserved);
+      // Any failure before execution starts must return the held credit.
+      // Once handed off to sync/stream runner, the runner's finally block settles credits.
+      if (!reservationHandled) {
+        await releaseReservation(userId, reserved);
+      }
       throw error;
     }
   }
@@ -201,15 +230,219 @@ async function resolvePipelineData(
   };
 }
 
-function streamRun({
+async function executeRunSync({
   pipelineId,
   userId,
+  apiKeyId,
   reserved,
   pipelineData,
   inputs,
 }: {
   pipelineId: string;
   userId: string;
+  apiKeyId?: string | null;
+  reserved: number;
+  pipelineData: { nodes: SerializedNode[]; edges: SerializedEdge[] };
+  inputs: Record<string, any>;
+}): Promise<{
+  runId: string;
+  status: string;
+  outputs: Record<string, any>;
+  costBreakdown: Record<string, number>;
+  totalCost: number;
+  durationMs: number;
+}> {
+  const startTime = Date.now();
+  const { nodes, edges } = pipelineData;
+  const initialText = typeof inputs?.text === 'string' ? inputs.text : INITIAL_INPUT_TEXT;
+
+  const dbRun = await prisma.pipelineRun.create({
+    data: {
+      pipelineId,
+      status: 'running',
+      input: inputs || { text: initialText },
+      reservedCredits: reserved,
+      apiKeyId: apiKeyId || null,
+      source: apiKeyId ? 'api' : 'ui',
+      nodeRuns: {
+        create: nodes.map((n) => ({ nodeId: n.id, nodeType: n.type, status: 'pending' })),
+      },
+    },
+  });
+
+  const runId = dbRun.id;
+  let totalCost = 0;
+  const sortedNodes = sortNodesTopologically(nodes, edges);
+  const nodeOutputs: Record<string, any> = {};
+  const unavailable = new Set<string>();
+  const deadEdges = new Set<string>();
+  let anyFailed = false;
+  let budgetExhausted = false;
+  const costBreakdown: Record<string, number> = {};
+
+  try {
+    for (const node of sortedNodes) {
+      if (budgetExhausted) {
+        unavailable.add(node.id);
+        await prisma.nodeRun
+          .updateMany({
+            where: { runId, nodeId: node.id },
+            data: { status: 'skipped', error: 'Run budget exhausted', finishedAt: new Date() },
+          })
+          .catch(() => {});
+        continue;
+      }
+
+      const incoming = edges.filter((e) => e.target === node.id);
+      const liveIncoming = incoming.filter(
+        (e) => !deadEdges.has(e.id) && !unavailable.has(e.source)
+      );
+
+      if (incoming.length > 0 && liveIncoming.length === 0) {
+        unavailable.add(node.id);
+        await prisma.nodeRun
+          .updateMany({
+            where: { runId, nodeId: node.id },
+            data: {
+              status: 'skipped',
+              error: incoming.some((e) => deadEdges.has(e.id))
+                ? 'Skipped by conditional router'
+                : 'No upstream node produced an input for this node',
+              finishedAt: new Date(),
+            },
+          })
+          .catch(() => {});
+        continue;
+      }
+
+      const projectedInput = resolveNodeInput(
+        node,
+        liveIncoming,
+        nodeOutputs,
+        initialText,
+        inputs
+      );
+      const projectedCost = nodeCost(
+        node.type,
+        projectedInput.dynamicInputPayload
+          ? { payload: projectedInput.dynamicInputPayload }
+          : { text: projectedInput.upstreamInputText },
+        { config: node.config }
+      );
+
+      if (totalCost + projectedCost > reserved) {
+        budgetExhausted = true;
+        unavailable.add(node.id);
+        continue;
+      }
+
+      await prisma.nodeRun
+        .updateMany({
+          where: { runId, nodeId: node.id },
+          data: { status: 'running', startedAt: new Date() },
+        })
+        .catch(() => {});
+
+      const result = await executeSingleNode(
+        node,
+        liveIncoming,
+        nodeOutputs,
+        initialText,
+        inputs
+      );
+
+      if (result.status === 'completed') {
+        nodeOutputs[node.id] = result.output;
+
+        if (node.type === 'router' && result.output?.activeHandle) {
+          edges
+            .filter((e) => e.source === node.id)
+            .forEach((e) => {
+              if (e.sourceHandle !== result.output.activeHandle) deadEdges.add(e.id);
+            });
+        }
+
+        const spent = nodeCost(node.type, result.input, {
+          usage: result.usage,
+          config: node.config,
+        });
+        totalCost += spent;
+        costBreakdown[node.type] = (costBreakdown[node.type] ?? 0) + spent;
+
+        await prisma.nodeRun
+          .updateMany({
+            where: { runId, nodeId: node.id },
+            data: {
+              status: 'completed',
+              input: result.input,
+              output: result.output,
+              durationMs: result.durationMs,
+              retryCount: result.retryCount ?? 0,
+              cost: spent,
+              tokenUsage: (result.tokenUsage as any) ?? undefined,
+              finishedAt: new Date(),
+            },
+          })
+          .catch(() => {});
+      } else {
+        anyFailed = true;
+        unavailable.add(node.id);
+        await prisma.nodeRun
+          .updateMany({
+            where: { runId, nodeId: node.id },
+            data: {
+              status: 'failed',
+              input: result.input || {},
+              error: result.error,
+              durationMs: result.durationMs,
+              retryCount: result.retryCount ?? 0,
+              cost: 0,
+              tokenUsage: (result.tokenUsage as any) ?? undefined,
+              finishedAt: new Date(),
+            },
+          })
+          .catch(() => {});
+      }
+    }
+
+    const finalStatus = anyFailed || budgetExhausted ? 'failed' : 'completed';
+    const durationMs = Date.now() - startTime;
+
+    await prisma.pipelineRun
+      .update({
+        where: { id: runId },
+        data: { status: finalStatus, finishedAt: new Date(), costBreakdown },
+      })
+      .catch((e) => console.warn('Run status update failed:', e));
+
+    return {
+      runId,
+      status: finalStatus,
+      outputs: nodeOutputs,
+      costBreakdown,
+      totalCost,
+      durationMs,
+    };
+  } finally {
+    try {
+      await settleCredits({ userId, reserved, actualCost: totalCost, runId });
+    } catch (e) {
+      console.error('[run] Credit settlement failed:', e);
+    }
+  }
+}
+
+function streamRun({
+  pipelineId,
+  userId,
+  apiKeyId,
+  reserved,
+  pipelineData,
+  inputs,
+}: {
+  pipelineId: string;
+  userId: string;
+  apiKeyId?: string | null;
   reserved: number;
   pipelineData: { nodes: SerializedNode[]; edges: SerializedEdge[] };
   inputs: Record<string, any>;
@@ -232,9 +465,9 @@ function streamRun({
             pipelineId,
             status: 'running',
             input: { text: INITIAL_INPUT_TEXT },
-            // Recorded so the reaper can return this exact hold if the process
-            // is killed before it settles.
             reservedCredits: reserved,
+            apiKeyId: apiKeyId || null,
+            source: apiKeyId ? 'api' : 'ui',
             nodeRuns: {
               create: nodes.map((n) => ({ nodeId: n.id, nodeType: n.type, status: 'pending' })),
             },

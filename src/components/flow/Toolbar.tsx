@@ -6,12 +6,13 @@ import {
   FileText, Image, Video, Link as LinkIcon, 
   Brain, AlignLeft, Smile, Key, Tags, 
   Monitor, PlayCircle, Download, Mail, FileAudio, Keyboard,
-  Undo2, Redo2, Search, Sparkles, LayoutGrid, Upload, Trash2, HelpCircle
+  Undo2, Redo2, Search, Sparkles, LayoutGrid, Upload, Trash2, HelpCircle, Terminal, Zap
 } from 'lucide-react';
 import { NodeType } from '@/types/pipeline';
 import { usePipelineStore } from '@/store/pipelineStore';
 import { TemplatesModal } from './TemplatesModal';
 import { ShortcutsModal } from './ShortcutsModal';
+import { DeployApiModal } from './DeployApiModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ToolbarItem {
@@ -92,10 +93,12 @@ export const Toolbar: React.FC = () => {
   const nodes = usePipelineStore((s) => s.nodes);
   const edges = usePipelineStore((s) => s.edges);
   const pipelineName = usePipelineStore((s) => s.pipelineName);
+  const pipelineId = usePipelineStore((s) => s.pipelineId);
 
   const [tooltip, setTooltip] = useState<HoveredTooltip | null>(null);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isDeployApiModalOpen, setIsDeployApiModalOpen] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -278,8 +281,17 @@ export const Toolbar: React.FC = () => {
         {renderNodeGroup('Connectors', connectorNodes)}
         {renderNodeGroup('Outputs', outputNodes)}
 
-        {/* Workflow Tools (Export, Import, Clear, Shortcuts) */}
-        <div className="flex items-center gap-1 px-2 py-1 border-l border-gray-200 shrink-0 ml-auto">
+        {/* Workflow Tools (Deploy API, Export, Import, Clear, Shortcuts) */}
+        <div className="flex items-center gap-1.5 px-2 py-1 border-l border-gray-200 shrink-0 ml-auto">
+          <button
+            onClick={() => setIsDeployApiModalOpen(true)}
+            title="Deploy Pipeline as REST API (cURL, Python, Node.js)"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer mr-0.5"
+          >
+            <Terminal className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Deploy API</span>
+          </button>
+
           <button
             onClick={handleExportJSON}
             disabled={nodes.length === 0}
@@ -347,6 +359,12 @@ export const Toolbar: React.FC = () => {
         )}
       </div>
 
+      <DeployApiModal
+        isOpen={isDeployApiModalOpen}
+        onClose={() => setIsDeployApiModalOpen(false)}
+        pipelineId={pipelineId || ''}
+      />
+
       <TemplatesModal
         isOpen={isTemplatesModalOpen}
         onClose={() => setIsTemplatesModalOpen(false)}
@@ -371,3 +389,4 @@ export const Toolbar: React.FC = () => {
     </>
   );
 };
+

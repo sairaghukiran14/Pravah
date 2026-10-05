@@ -24,6 +24,8 @@ model User {
   // against rather than a record that gets removed.
   sessionsRevokedAt   DateTime?
   accounts            Account[]
+  apiKeys             ApiKey[]
+  apiLogs             ApiRequestLog[]
   auditLogs           AuditLog[]
   transactions        CreditTransaction[]
   orders              PaymentOrder[]
@@ -69,14 +71,15 @@ model VerificationToken {
 }
 
 model Project {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  userId      String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  pipelines   Pipeline[]
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  pipelines      Pipeline[]
+  documentChunks DocumentChunk[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -99,6 +102,7 @@ model Pipeline {
   runs        PipelineRun[]
   versions    PipelineVersion[]
   evalRuns    EvalRun[]
+  documentChunks DocumentChunk[]
 
   @@index([projectId])
 }
@@ -147,10 +151,14 @@ model PipelineRun {
   // makes consumption attributable to a tenant — the credit ledger records that
   // a run cost something, not which capacity it consumed.
   costBreakdown   Json?
-  nodeRuns   NodeRun[]
-  pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  apiKeyId        String?
+  source          String        @default("ui") // "ui" | "api"
+  nodeRuns        NodeRun[]
+  apiKey          ApiKey?       @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  pipeline        Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
   @@index([pipelineId])
+  @@index([apiKeyId])
   @@index([status, startedAt])
 }
 
@@ -327,4 +335,61 @@ model RegressionComparison {
 
   @@index([userId])
 }
+
+model ApiKey {
+  id           String          @id @default(cuid())
+  name         String
+  keyHash      String          @unique
+  keyPrefix    String          // e.g. "pf_live_abc12"
+  userId       String
+  expiresAt    DateTime?       // Null = Never expires
+  lastUsedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pipelineRuns PipelineRun[]
+  apiLogs      ApiRequestLog[]
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+model ApiRequestLog {
+  id          String    @id @default(cuid())
+  userId      String
+  apiKeyId    String?
+  pipelineId  String?
+  endpoint    String
+  method      String    @default("POST")
+  statusCode  Int
+  durationMs  Int?
+  cost        Float     @default(0)
+  ip          String?
+  userAgent   String?
+  error       String?
+  createdAt   DateTime  @default(now())
+  apiKey      ApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([apiKeyId])
+}
+
+model DocumentChunk {
+  id          String    @id @default(cuid())
+  projectId   String
+  pipelineId  String?
+  runId       String?
+  chunkIndex  Int
+  content     String    @db.Text
+  metadata    Json?     @default("{}")
+  createdAt   DateTime  @default(now())
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pipeline    Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([pipelineId])
+  @@index([runId])
+}
+
 

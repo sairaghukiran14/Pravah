@@ -129,11 +129,15 @@ const NODE_CONFIG_SCHEMAS: Record<string, z.ZodType> = {
   pdf_splitter: z.looseObject({
     chunk_size: chunkSize.optional(),
     chunk_overlap: chunkOverlap.optional(),
+    gemini_api_key: z.string().max(256).optional(),
   }),
 
   vector_search: z.looseObject({
     query: z.string().max(4_000).optional(),
     fallback_context: z.string().max(200_000).optional(),
+    top_k: z.coerce.number().int().min(1).max(20).optional(),
+    similarity_threshold: z.coerce.number().min(0).max(1).optional(),
+    gemini_api_key: z.string().max(256).optional(),
   }),
 
   router: z.looseObject({

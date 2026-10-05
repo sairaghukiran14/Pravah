@@ -9,10 +9,30 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
+  try {
+    if (process.env.NODE_ENV !== 'production' && typeof require !== 'undefined' && require.cache) {
+      Object.keys(require.cache).forEach((key) => {
+        if (key.includes('@prisma/client') || key.includes('.prisma/client')) {
+          delete require.cache[key];
+        }
+      });
+    }
+  } catch {}
+
+  let ClientClass = PrismaClient;
+  try {
+    if (typeof require !== 'undefined') {
+      const fresh = require('@prisma/client');
+      if (fresh.PrismaClient) {
+        ClientClass = fresh.PrismaClient;
+      }
+    }
+  } catch {}
+
   const connectionString = process.env.DATABASE_URL;
 
   if (connectionString) {
-    return new PrismaClient({
+    return new ClientClass({
       datasources: {
         db: {
           url: connectionString,
@@ -21,13 +41,29 @@ function createPrismaClient(): PrismaClient {
     });
   }
 
-  return new PrismaClient();
+  return new ClientClass();
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+function getPrismaClient(): PrismaClient {
+  if (globalForPrisma.prisma && 'apiKey' in globalForPrisma.prisma && 'apiRequestLog' in globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
+  }
+  const client = createPrismaClient();
+  if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prisma = client;
+  }
+  return client;
 }
+
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrismaClient() as any;
+    const value = client[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
 
 export default prisma;

@@ -12,6 +12,15 @@ import {
 import { safeFetch } from './api/safeFetch';
 import { pageCountFromPayload } from './documents/pageCount';
 import type { NodeUsage } from './api/pricing';
+import { getGeminiEmbedding, getGeminiBatchEmbeddings } from './geminiEmbeddings';
+import {
+  saveDocumentChunksWithEmbeddings,
+  searchSimilarChunksInDB,
+  searchSimilarChunksInMemory,
+  calculateDocumentFingerprint,
+  getCachedPipelineChunks,
+  deletePipelineChunks
+} from './vectorStore';
 
 /**
  * Utility function to replace dynamic variables formatted as {{expression}}
@@ -849,53 +858,156 @@ Return ONLY a valid JSON object matching the following structure:
       };
     } else if (node.type === 'pdf_splitter') {
       const text = upstreamInputText || '';
-      const chunks = chunkDocument(
-        text,
-        Number(node.config?.chunk_size || 500),
-        Number(node.config?.chunk_overlap || 50)
-      );
+      const chunkSize = Number(node.config?.chunk_size || 500);
+      const chunkOverlap = Number(node.config?.chunk_overlap || 50);
+      const pipelineId = node.config?.pipelineId || initialInputs?.pipelineId;
+      const projectId = initialInputs?.projectId || node.config?.projectId;
+      const fingerprint = calculateDocumentFingerprint(text, chunkSize, chunkOverlap);
 
-      if (chunks.length === 0) {
-        throw new Error(
-          'Document Chunker received no text. Connect a Vision / Document AI node upstream to digitise the file before chunking.'
-        );
+      let chunks: string[] = [];
+      let embeddings: number[][] = [];
+      let isCached = false;
+
+      // 1. Check Smart Cache in PostgreSQL pgvector
+      if (pipelineId && text.trim()) {
+        const cached = await getCachedPipelineChunks(pipelineId, fingerprint);
+        if (cached && cached.chunks.length > 0) {
+          chunks = cached.chunks;
+          embeddings = cached.embeddings;
+          isCached = true;
+        }
+      }
+
+      // 2. Cache Miss: Chunk text and generate fresh embeddings with Gemini
+      if (!isCached) {
+        chunks = chunkDocument(text, chunkSize, chunkOverlap);
+
+        if (chunks.length === 0) {
+          throw new Error(
+            'Document Chunker received no text. Connect a Vision / Document AI node upstream to digitise the file before chunking.'
+          );
+        }
+
+        const geminiKey = node.config?.gemini_api_key || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (geminiKey) {
+          try {
+            embeddings = await getGeminiBatchEmbeddings(chunks, geminiKey);
+            if (projectId && pipelineId) {
+              // Clean up previous outdated chunks for this pipeline before saving new ones
+              await deletePipelineChunks(pipelineId);
+              await saveDocumentChunksWithEmbeddings({
+                projectId,
+                pipelineId,
+                runId: initialInputs?.runId,
+                chunks,
+                embeddings,
+                metadata: {
+                  fingerprint,
+                  chunk_size: chunkSize,
+                  chunk_overlap: chunkOverlap
+                }
+              });
+            }
+          } catch (embErr) {
+            console.warn('[pdf_splitter] Failed to generate vector embeddings with Gemini:', embErr);
+          }
+        }
       }
 
       output = {
         chunks,
-        response: `Text successfully divided into ${chunks.length} chunks.`,
-        text: chunks[0] || ''
+        embeddings: embeddings.length === chunks.length ? embeddings : undefined,
+        response: `Text successfully divided into ${chunks.length} chunks${embeddings.length > 0 ? (isCached ? ' (⚡ loaded from pgvector smart cache)' : ' and embedded with Gemini') : ''}.`,
+        text: chunks[0] || '',
+        cached: isCached
       };
     } else if (node.type === 'vector_search') {
       const rawQuery = node.config?.query || '';
-      const query = replaceVariables(rawQuery, nodeOutputs, initialInputs).trim().toLowerCase();
-      
+      const query = replaceVariables(rawQuery, nodeOutputs, initialInputs).trim();
+      const topK = Number(node.config?.top_k || 3);
+      const threshold = Number(node.config?.similarity_threshold || 0.0);
+
       let searchPool: string[] = [];
+      let poolEmbeddings: number[][] | undefined;
+
       // An upstream chunker that produced nothing must fall through to the
       // configured context rather than searching an empty pool and reporting
       // "no matching contexts" for every query.
       if (dynamicInputPayload && Array.isArray(dynamicInputPayload.chunks) && dynamicInputPayload.chunks.length > 0) {
         searchPool = dynamicInputPayload.chunks;
+        if (Array.isArray(dynamicInputPayload.embeddings) && dynamicInputPayload.embeddings.length === searchPool.length) {
+          poolEmbeddings = dynamicInputPayload.embeddings;
+        }
       } else {
         const rawFallback = node.config?.fallback_context || '';
         const fallbackText = replaceVariables(rawFallback, nodeOutputs, initialInputs);
         searchPool = fallbackText.split('\n\n').filter(Boolean);
       }
 
-      const queryWords = query.split(/\s+/).filter(Boolean);
-      const matches = searchPool.map(chunk => {
-        let score = 0;
-        const chunkLower = chunk.toLowerCase();
-        queryWords.forEach(word => {
-          if (chunkLower.includes(word)) score += 1;
-        });
-        return { chunk, score };
-      });
+      const geminiKey = node.config?.gemini_api_key || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+      let sortedMatches: Array<{ chunk: string; score: number }> = [];
 
-      const sortedMatches = matches
-        .filter(m => m.score > 0 || queryWords.length === 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
+      if (geminiKey && query) {
+        try {
+          const queryVector = await getGeminiEmbedding(query, geminiKey);
+
+          if (poolEmbeddings && poolEmbeddings.length > 0) {
+            // High-speed semantic cosine similarity search over in-memory pipeline chunks
+            const inMemResults = searchSimilarChunksInMemory({
+              chunks: searchPool,
+              chunkEmbeddings: poolEmbeddings,
+              queryVector,
+              topK,
+              threshold
+            });
+            sortedMatches = inMemResults.map(r => ({ chunk: r.chunk, score: r.score }));
+          } else if (searchPool.length > 0) {
+            // Generate embeddings for dynamic search pool on-demand
+            const poolVectors = await getGeminiBatchEmbeddings(searchPool, geminiKey);
+            const inMemResults = searchSimilarChunksInMemory({
+              chunks: searchPool,
+              chunkEmbeddings: poolVectors,
+              queryVector,
+              topK,
+              threshold
+            });
+            sortedMatches = inMemResults.map(r => ({ chunk: r.chunk, score: r.score }));
+          } else {
+            // Search persistent pgvector database
+            const projectId = initialInputs?.projectId || node.config?.projectId;
+            if (projectId) {
+              const dbResults = await searchSimilarChunksInDB({
+                projectId,
+                pipelineId: node.config?.pipelineId,
+                queryVector,
+                topK,
+                threshold
+              });
+              sortedMatches = dbResults.map(r => ({ chunk: r.content, score: r.similarity ?? 0 }));
+            }
+          }
+        } catch (semanticErr) {
+          console.warn('[vector_search] Semantic search encountered error, falling back to lexical search:', semanticErr);
+        }
+      }
+
+      // Graceful fallback to lexical word overlap if no matches or Gemini is not configured
+      if (sortedMatches.length === 0 && searchPool.length > 0) {
+        const queryWords = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const matches = searchPool.map(chunk => {
+          let score = 0;
+          const chunkLower = chunk.toLowerCase();
+          queryWords.forEach(word => {
+            if (chunkLower.includes(word)) score += 1;
+          });
+          return { chunk, score };
+        });
+
+        sortedMatches = matches
+          .filter(m => m.score > 0 || queryWords.length === 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, topK);
+      }
 
       const topResult = sortedMatches.map(m => m.chunk).join('\n\n');
       output = {

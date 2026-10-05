@@ -37,6 +37,8 @@ import {
   Zap,
   ShieldCheck,
   Plus,
+  Key,
+  Terminal,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -764,6 +766,41 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Developer & API Keys Card */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-7 sm:p-9 space-y-6 shadow-2xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                      <Key className="h-4 w-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-900">API Keys & External Access</h3>
+                  </div>
+                  <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full uppercase">
+                    REST API
+                  </span>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold flex items-center gap-1.5 text-white">
+                      <Terminal className="h-4 w-4 text-blue-400" />
+                      <span>Developer & API Dashboard</span>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1 max-w-md">
+                      Generate secret API keys with custom expiry, inspect real-time request logs, and trigger your Indic AI pipelines from Python, cURL, or external servers.
+                    </p>
+                  </div>
+
+                  <a
+                    href="/dashboard/api"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all whitespace-nowrap cursor-pointer shrink-0"
+                  >
+                    <span>Manage API Keys</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
                 </div>
               </div>
 

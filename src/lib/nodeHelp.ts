@@ -95,12 +95,12 @@ export const NODE_DESCRIPTIONS: Record<NodeType, NodeHelpInfo> = {
     desc: 'Delays pipeline execution path by a configured amount of seconds.',
   },
   pdf_splitter: {
-    title: 'Document Chunker',
-    desc: 'Splits document text into overlapping chunks on sentence boundaries, ready for retrieval.',
+    title: 'Document Chunker & Embedder',
+    desc: 'Splits document text into sentence-bounded overlapping chunks and generates dense semantic embeddings with Google Gemini.',
   },
   vector_search: {
-    title: 'Passage Retrieval',
-    desc: 'Ranks chunks by how many of your query words they contain and returns the top three. Keyword matching, not embeddings — a query using different words to the document will not match.',
+    title: 'Semantic Vector Retrieval',
+    desc: 'Computes cosine similarity against query embeddings using Google Gemini text-embedding-004 and pgvector to return the most relevant passage chunks.',
   },
   language_detect: {
     title: 'Language Detection',

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pravah - Upstash Redis Rate Limiting Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --code-bg: #0b0f19;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: radial-gradient(circle at center, rgba(99,102,241,0.15) 0%, transparent 70%);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 40%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 750px;
+      margin: 0 auto;
+    }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 35px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #818cf8;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: #fff;
+    }
+
+    .diagram-container {
+      background: var(--code-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 15px;
+    }
+
+    .sub-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .sub-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: #818cf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cost-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+    .cost-25 { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .cost-10 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .cost-5  { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); }
+    .cost-1  { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .highlight-box {
+      background: rgba(99, 102, 241, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 15px 0;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Architecture & Design Specification</div>
+      <h1>Upstash Redis Rate Limiting System</h1>
+      <p class="subtitle">Distributed sliding-window token bucket architecture protecting serverless APIs against denial-of-wallet & abuse.</p>
+    </header>
+
+    <!-- Diagram 1 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="icon-box">1</div>
+        <h2>Distributed Serverless Infrastructure Topology</h2>
+      </div>
+      <p>Why Upstash Redis over HTTP REST replaces local in-memory limits across multi-instance Vercel Lambdas:</p>
+      
+      <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TB
+    subgraph Clients["1. Clients / Users"]
+        U1["User Request 1\n(Browser / App)"]
+        U2["User Request 2\n(Browser / App)"]
+        U3["User Request 3\n(Browser / App)"]
+    end
+
+    subgraph Edge["2. Cloud Edge & Proxy Layer"]
+        PROXY["Edge Gateway (Vercel / Cloudflare)\n- Injects x-real-ip\n- Injects x-forwarded-for"]
+    end
+
+    subgraph ServerlessCluster["3. Stateless Next.js Serverless Workers (Multi-Instance)"]
+        L1["Worker Instance #1\n(Memory Isolation)"]
+        L2["Worker Instance #2\n(Memory Isolation)"]
+        L3["Worker Instance #3\n(Memory Isolation)"]
+    end
+
+    subgraph Gateway["4. Pravah Security Layer (src/lib/api/route.ts)"]
+        AUTH["NextAuth v5\nResolve userId / safe clientIp"]
+        WRAPPER["Rate Limit Interceptor\n`consumeRateLimit(key, cost)`"]
+    end
+
+    subgraph Storage["5. Distributed Token State (Upstash Redis)"]
+        REDIS[("Upstash Global Redis\n- Stateless HTTP REST\n- Key: pravah:rl:user:123\n- Sliding-Window State")]
+        LOCAL["Local Memory Fallback\n(Auto Failover on Outage)"]
+    end
+
+    subgraph Downstream["6. Protected Expensive Downstream Services"]
+        SARVAM["Sarvam AI API (STT / TTS / LLM)"]
+        DB[("Neon PostgreSQL DB")]
+        R2[("Cloudflare R2 Object Storage")]
+    end
+
+    U1 --> PROXY
+    U2 --> PROXY
+    U3 --> PROXY
+
+    PROXY --> L1
+    PROXY --> L2
+    PROXY --> L3
+
+    L1 & L2 & L3 --> AUTH
+    AUTH --> WRAPPER
+    
+    WRAPPER -->|"HTTP REST Call"| REDIS
+    WRAPPER -.->|"If Redis down"| LOCAL
+
+    WRAPPER -->|"Tokens Available"| Downstream
+    WRAPPER -->|"Exceeded Budget"| DENY["HTTP 429 Too Many Requests\n+ Retry-After Header"]
+        </pre>
+      </div>
+    </div>
+
+    <!-- Diagram 2 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="icon-box">2</div>
+        <h2>End-to-End Request Execution & Evaluation Flow</h2>
+      </div>
+      <p>Sequence diagram showing token evaluation, deduction, and automatic retry timing:</p>
+
+      <div class="diagram-container">
+        <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Client as User / Frontend
+    participant Route as route.ts (API Gateway)
+    participant Limiter as rateLimit.ts
+    participant Redis as Upstash Redis (REST)
+    participant Core as API Core Logic (AI / DB)
+
+    Client->>Route: POST /api/pipelines/run (Payload: 25 Tokens)
+    Route->>Route: Validate NextAuth Session -> userId = 'usr_789'
+    
+    Route->>Limiter: consumeRateLimit("user:usr_789", cost: 25)
+
+    alt Redis Cloud is Reachable
+        Limiter->>Redis: POST /limit { id: "pravah:rl:user:usr_789", rate: 25 }
+        Redis-->>Limiter: { success: true, remaining: 95, reset: 1726075900 }
+    else Redis Cloud Unreachable
+        Limiter->>Limiter: localConsume(id, cost: 25) via globalThis Map
+    end
+
+    alt Check Passed (Tokens >= 25)
+        Limiter-->>Route: { success: true, remaining: 95 }
+        Route->>Core: Execute Pipeline Workflow (Sarvam AI STT/TTS)
+        Core-->>Route: Return Audio & Translation Output
+        Route-->>Client: HTTP 200 OK + Payload
+    else Rate Limit Exceeded (Tokens < 25)
+        Limiter-->>Route: { success: false, remaining: 8, reset: 1726075920 }
+        Route-->>Client: HTTP 429 Too Many Requests<br/>(Retry-After: 20 seconds)
+    end
+        </pre>
+      </div>
+    </div>
+
+    <!-- Diagram 3 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="icon-box">3</div>
+        <h2>Cost-Weighted Token Budget Distribution</h2>
+      </div>
+      <p>Total User Budget: <strong>120 Tokens per 60-Second Sliding Window</strong></p>
+
+      <div class="diagram-container">
+        <pre class="mermaid">
+flowchart LR
+    subgraph Budget["120 Token Window Budget"]
+        direction TB
+        B1["Pipeline Run (Cost: 25)\nMax 4.8 runs/min"]
+        B2["Single AI STT/TTS (Cost: 10)\nMax 12 calls/min"]
+        B3["Audio Upload (Cost: 5)\nMax 24 uploads/min"]
+        B4["Payment Order (Cost: 3)\nMax 40 calls/min"]
+        B5["Health / Metadata (Cost: 1–2)\nMax 60–120 calls/min"]
+    end
+
+    subgraph Protection["System Protection Impact"]
+        P1["Prevents 3rd-Party Bill Shocks (Sarvam AI)"]
+        P2["Throttles DB Connection Surges (Neon DB)"]
+        P3["Maintains Fast UI Interaction for Legitimate Users"]
+    end
+
+    Budget ==> Protection
+        </pre>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Endpoint</th>
+            <th>Cost</th>
+            <th>Max Rate / Min</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>POST /api/pipelines/[id]/run</code></td>
+            <td><span class="cost-pill cost-25">25 Tokens</span></td>
+            <td>4.8 req/min</td>
+            <td>Orchestrates multiple external AI models (STT + LLM + TTS) with high compute & token costs.</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/sarvam/stt</code> & <code>/tts</code> & <code>/llm</code></td>
+            <td><span class="cost-pill cost-10">10 Tokens</span></td>
+            <td>12 req/min</td>
+            <td>Direct call to paid external Sarvam AI inference endpoints.</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/audio/upload</code></td>
+            <td><span class="cost-pill cost-5">5 Tokens</span></td>
+            <td>24 req/min</td>
+            <td>Binary parsing and Cloudflare R2 object creation.</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/payment/order</code></td>
+            <td><span class="cost-pill cost-3">3 Tokens</span></td>
+            <td>40 req/min</td>
+            <td>Razorpay order creation with database writes.</td>
+          </tr>
+          <tr>
+            <td><code>GET /api/r2/health</code> & Profile Reads</td>
+            <td><span class="cost-pill cost-1">1–2 Tokens</span></td>
+            <td>60–120 req/min</td>
+            <td>Lightweight metadata reads and session health checks.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Diagram 4 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="icon-box">4</div>
+        <h2>Identifier Resolution & Anti-Spoofing Flow</h2>
+      </div>
+      <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    REQ[Incoming Request Headers] --> AUTH{Is Session Authenticated?}
+    
+    AUTH -- Yes --> USER["Key: `user:${session.user.id}`\n(Cryptographically Verified, Unspoofable)"]
+    
+    AUTH -- No --> IPCHECK["Inspect Proxy Headers in Order:\n1. `x-real-ip` (Edge Injected)\n2. `x-forwarded-for` (Right-to-Left Walk)"]
+    
+    IPCHECK --> FILTER{"Is IP Private/Loopback?\n(10.x, 192.168.x, 127.x, ::1)"}
+    FILTER -- Yes --> SKIP[Skip Spoofed Client IP]
+    FILTER -- No --> SAFEIP["Key: `ip:${safeClientIp}`"]
+    
+    USER --> LIMITER[Upstash Redis Sliding Window]
+    SAFEIP --> LIMITER
+        </pre>
+      </div>
+
+      <div class="highlight-box">
+        <strong>Security Benefit:</strong> Authenticated users cannot bypass rate limiting by changing IP addresses or rotating headers, because their token bucket is bound directly to their verified <code>userId</code>.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0b0f19',
+        primaryColor: '#6366f1',
+        primaryTextColor: '#f3f4f6',
+        primaryBorderColor: '#818cf8',
+        lineColor: '#9ca3af',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#111827'
+      }
+    });
+  </script>
+</body>
+</html>

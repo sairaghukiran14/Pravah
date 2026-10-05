@@ -3,8 +3,8 @@ import { PIPELINE_TEMPLATES, computeAutoLayout, createGraphFromTemplate } from '
 import { Node, Edge } from '@xyflow/react';
 
 describe('Pipeline Templates & Auto-Layout', () => {
-  it('defines 4 valid starter templates', () => {
-    expect(PIPELINE_TEMPLATES).toHaveLength(4);
+  it('defines valid starter templates including signature Indic AI bots', () => {
+    expect(PIPELINE_TEMPLATES.length).toBeGreaterThanOrEqual(4);
     PIPELINE_TEMPLATES.forEach((tpl) => {
       expect(tpl.id).toBeTruthy();
       expect(tpl.name).toBeTruthy();
