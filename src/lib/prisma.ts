@@ -22,6 +22,7 @@ function createPrismaClient(): PrismaClient {
   let ClientClass = PrismaClient;
   try {
     if (typeof require !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('@prisma/client');
       if (fresh.PrismaClient) {
         ClientClass = fresh.PrismaClient;
