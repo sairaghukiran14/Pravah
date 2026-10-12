@@ -234,12 +234,15 @@ graph TB
 
 ## 📚 Documentation & Handbooks
 
-Deep-dive technical guides and architectural specifications are available in the repository:
+All in-depth technical guides, API contracts, architectural blueprints, and interactive visual tools are organized in the [`docs/`](docs/) directory:
 
-* 🏛️ **[Master System Architecture & Interview Compendium](file:///Users/sairaghukiranavula/Projects/test_project_flow/PRAVAH_MASTER_SYSTEM_ARCHITECTURE_AND_INTERVIEW_COMPENDIUM.md)**: End-to-end architecture, DAG engine design, state management, and technical reference.
-* 💳 **[Payment Integration & Wallet Ledger Deep Dive](file:///Users/sairaghukiranavula/Projects/test_project_flow/PAYMENT_INTEGRATION_AND_CREDIT_SYSTEM_DEEP_DIVE.md)**: Razorpay webhooks, signature verification, balance reservation lifecycle, and credit metering.
-* 🎙️ **[Sarvam AI Integrations & Methods Deep Dive](file:///Users/sairaghukiranavula/Projects/test_project_flow/SARVAM_AI_INTEGRATIONS_DEEP_DIVE.md)**: Detailed API contracts, audio chunking, STT/TTS limits, and translation integrations.
-* 🎯 **[Senior Frontend Interview Master Guide](file:///Users/sairaghukiranavula/Projects/test_project_flow/INTERVIEW_MASTER_GUIDE.md)**: React 19 performance patterns, canvas rendering optimization, and architectural decisions.
+* 🏛️ **[Master System Architecture & Interview Compendium](docs/PRAVAH_MASTER_SYSTEM_ARCHITECTURE_AND_INTERVIEW_COMPENDIUM.md)**: End-to-end architecture, DAG engine design, state management, and technical reference.
+* 🛡️ **[API Routes & Architectural Decisions](docs/API_ROUTES_AND_DECISIONS.md)**: Route handler design, rate limiting policies, database queries, and security envelope.
+* 💳 **[Payment Integration & Wallet Ledger Deep Dive](docs/PAYMENT_INTEGRATION_AND_CREDIT_SYSTEM_DEEP_DIVE.md)**: Razorpay webhooks, signature verification, balance reservation lifecycle, and credit metering.
+* 🎙️ **[Sarvam AI Integrations & Methods Deep Dive](docs/SARVAM_AI_INTEGRATIONS_DEEP_DIVE.md)**: Detailed API contracts, audio chunking, STT/TTS limits, and translation integrations.
+* 📊 **[Eval & Regression Suite Roadmap](docs/EVAL_AND_REGRESSION_SUITE_ROADMAP.md)**: Word Error Rate (WER), BLEU scoring, LLM Judge harness, and regression testing suite.
+* 🎯 **[Senior Frontend Interview Master Guide](docs/INTERVIEW_MASTER_GUIDE.md)**: React 19 performance patterns, canvas rendering optimization, and architectural decisions.
+* 🎨 **[Interactive Architecture Diagram (HTML)](docs/pravah-architecture-diagram.html)**: Standalone zoomable and pan-able interactive Mermaid architecture viewer.
 
 ---
 
