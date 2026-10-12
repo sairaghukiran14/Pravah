@@ -104,25 +104,131 @@ Built on top of React Flow (`@xyflow/react`), Zustand, Next.js 16 (App Router), 
 
 ## 🏗️ System Architecture
 
+Pravah follows an enterprise-grade, multi-tiered architecture designed for high-concurrency visual workflow design, resilient DAG execution, deterministic financial auditing, and sub-millisecond semantic retrieval across Indic languages.
+
 ```mermaid
-graph TD
-    A[User / Client] -->|Visual Flow Editor / Cmd+K / Templates| B[Zustand Pipeline Store]
-    A -->|Natural Language / Voice Prompt| C[AI Pipeline Builder]
-    C -->|Sarvam-105b LLM| B
-    
-    B -->|Pipeline Payload| D[Next.js API Routes]
-    D -->|Rate Limiter| E[Upstash Redis]
-    D -->|Auth Session| F[NextAuth.js v5]
-    
-    D -->|Run Execution| G[Topological DAG Engine]
-    G -->|Reserve Balance| H[(Neon Postgres - Wallet Ledger)]
-    G -->|Indic AI Tasks| I[Sarvam AI APIs]
-    G -->|Store Media / Artifacts| J[Cloudflare R2 Storage]
-    
-    I -->|Audio / Text / Vision Results| G
-    G -->|Deduct Actual Usage / Refund| H
-    G -->|Execution Logs & Status (SSE)| A
+graph TB
+    %% Master Subgraphs
+    subgraph CLIENT["🖥️ 1. Presentation & Flow Studio (Next.js 16 + React 19)"]
+        UI["Visual Canvas Studio (/pipeline/[id])<br/>@xyflow/react & Viewport Culling"]
+        ZS["Zustand 5 Store<br/>30-State Undo/Redo Ring Buffer (⌘Z/⌘⇧Z)"]
+        CP["Command Palette (⌘K) &<br/>Topological Layered BFS Auto-Layout"]
+        WA["In-Browser 16kHz PCM WAV Audio Encoder<br/>& Wavesurfer.js Reactive Visualizer"]
+        NL["Conversational Pipeline Builder<br/>(Voice/Text Prompts via Sarvam-105B)"]
+        UI <--> ZS
+        ZS <--> CP & WA & NL
+    end
+
+    subgraph GATEWAY["🛡️ 2. Edge Gateway & Defensive Security Layer"]
+        MW["Edge Middleware<br/>Session Cookie & Route Matcher"]
+        NA["Auth.js / NextAuth v5<br/>Google OAuth + JWT + Instant Revocation"]
+        RW["Typed route() Wrapper<br/>Opt-out Auth, Zod Validation, Error Sanitizer"]
+        RL["Distributed Token-Bucket Rate Limiter<br/>Upstash Redis (Per-User & Per-IP Budgets)"]
+        MW --> NA & RW
+        RW --> RL
+    end
+
+    subgraph ENGINE["⚙️ 3. Topological DAG Execution Engine & Streaming"]
+        DAG["Kahn's Topological Sorting Engine<br/>Dependency Graph & Cycle Detection"]
+        VAR["Dynamic Variable Resolver<br/>{{nodeId.property}} State Interpolation"]
+        PRN["Router & Branch Pruner<br/>Dead-Edge Pruning & Skip Propagation"]
+        SSE["Server-Sent Events (SSE) Streamer<br/>POST /api/pipelines/[id]/run"]
+        DAG --> VAR --> PRN --> SSE
+    end
+
+    subgraph RAG_SYS["🧠 4. Semantic RAG & Vector Engine (pgvector)"]
+        SPLIT["Sentence & Grapheme-Safe Chunker<br/>(pdf_splitter with Indic Matra Preservation)"]
+        GEMINI["Google Gemini Embedding Engine<br/>models/gemini-embedding-2 (768-dim Vectors)"]
+        VEC["PostgreSQL pgvector Store<br/>HNSW Index (vector_cosine_ops)"]
+        CACHE["Smart Content-Hash Cache<br/>SHA-256 Fingerprint Deduplication"]
+        SPLIT --> CACHE
+        CACHE -->|Cache Miss| GEMINI --> VEC
+        CACHE -->|Cache Hit (100% Credit Saved)| VEC
+    end
+
+    subgraph SARVAM["🌐 5. Indic AI Foundation Layer (Sarvam AI)"]
+        SDK["Sarvam API Client<br/>Exponential Backoff, Jitter & 25s Timeout"]
+        STT["Saaras:v3 STT<br/>(Auto 30s Audio Slicing)"]
+        TTS["Bulbul:v3 TTS<br/>(Sentence Slicing & WAV Concatenation)"]
+        TR["Mayura:v1 Translate<br/>(23 Indic Languages & Dialects)"]
+        LLM["Sarvam-105B LLM<br/>(Structured JSON Extraction & Reasoning)"]
+        OCR["Document AI OCR<br/>(Multipage PDF & Scanned Images)"]
+        LID["Transliteration & LID<br/>(Romanised to Native Script Conversion)"]
+        SDK --> STT & TTS & TR & LLM & OCR & LID
+    end
+
+    subgraph FINANCES["💳 6. Financial Ledger & Wallet Engine"]
+        RZ["Razorpay Payment Gateway<br/>Timing-Safe HMAC-SHA256 Verification"]
+        HOLD["2-Phase Reservation Engine<br/>(RUN_RESERVATION Upfront Hold)"]
+        METER["Dynamic Cost Metering<br/>(Per-Second, Per-Char, Per-Page, Per-Token)"]
+        REAP["Stale Run Auto-Reaper Daemon<br/>(Auto-Refund Aborted & Lingering Runs)"]
+        RZ --> HOLD
+        HOLD <--> METER
+        REAP -.-> HOLD
+    end
+
+    subgraph DATA["🗄️ 7. Storage & Multi-Tenant Persistence"]
+        PG[("Neon Serverless PostgreSQL<br/>Prisma 6 ORM + pgvector")]
+        R2[("Cloudflare R2 Object Storage<br/>Multi-Tenant Audio & File Isolation")]
+        REDIS[("Upstash Redis Cluster<br/>Rate Limiting & Token Buckets")]
+    end
+
+    %% Cross-Tier Connections
+    CLIENT -->|Save / Run Requests| MW
+    RW -->|Dispatch Execution| DAG
+    RL <--> REDIS
+    DAG -->|Reserve Upfront Credits| HOLD
+    HOLD <--> PG
+    PRN -->|Execute Node Task| SDK
+    PRN -->|Document & Query Retrieval| RAG_SYS
+    RAG_SYS <--> PG
+    SDK -->|Persist Media Outputs| R2
+    SDK -->|Node Payloads| DAG
+    DAG -->|Deduct Actual Cost / Refund Hold| HOLD
+    DAG -->|Stream Node Spans via SSE| UI
+    RZ <--> PG
+    DAG -->|Persist PipelineRun & NodeRun Spans| PG
 ```
+
+### 🏛️ Subsystem Architecture Breakdown
+
+#### 1. Frontend & Visual Canvas State Engine (`src/store`, `src/components/flow`)
+* **Decoupled Zustand 5 Architecture**: Canvas nodes and edges live in an external Zustand store, isolated from root layout renders. UI subcomponents subscribe through fine-grained atomic selectors (`usePipelineStore(s => s.nodes)`), preventing whole-canvas recalculations during node dragging.
+* **30-State Deep-Cloned Ring Buffer**: Full undo/redo (`⌘Z` / `⌘⇧Z`) time-travel history. Structural mutations (`addNode`, `removeNode`, `duplicateNode`, `pasteNode`) push immutable structured clone snapshots onto the history stack.
+* **Smart Change Filter (`isPersistedChange`)**: Filters out internal `@xyflow/react` dimension measurements and click selection events—ensuring the canvas is marked dirty **only** when graph topology or node configurations change.
+* **Client-Side 16kHz PCM WAV Encoder**: Bypasses browser `MediaRecorder` WebM chunking limitations by capturing raw `Float32Array` audio via Web Audio API, prepending a 44-byte RIFF header, and writing signed 16-bit PCM samples in-memory for seamless downstream speech processing.
+
+#### 2. Defensive Edge Gateway & Security Envelope (`src/lib/api/route.ts`, `src/middleware.ts`)
+* **Secure-by-Default Wrapper**: All backend endpoints are wrapped with `route()`, enforcing authentication by default (`auth: true`), Zod input schema validation, and structured error masking (preventing internal stack trace leakage).
+* **NextAuth v5 with Instant Revocation**: Authentication checks cross-reference session JWT timestamps against `User.sessionsRevokedAt` in Neon PostgreSQL on every request, ensuring instant revocation upon sign-out without waiting for JWT expiration.
+* **Distributed Token-Bucket Rate Limiter**: Backed by Upstash Redis, enforcing tiered token budgets (e.g., cheap reads cost 1 token, Sarvam AI invocations cost 5–10 tokens, and full pipeline runs cost 25 tokens) with per-user and IP fallback limits.
+
+#### 3. Topological DAG Execution Engine (`src/lib/execution.ts`)
+* **Kahn's Topological Sorting**: Analyzes the directed acyclic graph, computes in-degrees, verifies acyclicity, and derives optimal execution sequences with parallelizable branch dispatch.
+* **Dynamic Variable Interpolation**: Resolves template variables (`{{nodeId.property}}` or `{{nodeId}}`) across upstream outputs before passing input arguments downstream.
+* **Router Nodes & Dead-Edge Pruning**: Evaluates conditional expressions (`equals`, `contains`, `sentiment`, `gt`, `lt`). Unmatched branches are tagged as `deadEdges`, propagating `skipped` status downstream without consuming API credits or halting execution.
+* **Real-time Server-Sent Events (SSE)**: Streams execution events (`run_started`, `node_started`, `node_completed`, `node_failed`, `run_completed`) directly over an HTTP/2 `ReadableStream`. Client disconnection triggers `AbortController.abort()`, invoking cleanup handlers that immediately refund unspent held credits.
+
+#### 4. Semantic RAG & Vector Engine (`src/lib/geminiEmbeddings.ts`, `src/lib/vectorStore.ts`)
+* **Sentence & Grapheme-Safe Splitter**: Splits multi-lingual text along sentence boundaries (`.`, `!`, `?`, `।`) while preserving Indic Unicode conjuncts (matras), preventing fragmented character corruption.
+* **Google Gemini Dense Embeddings**: Generates 768-dimensional semantic vector embeddings using `models/gemini-embedding-2` for passages, queries, and document chunks.
+* **Neon PostgreSQL `pgvector` with HNSW Indexing**: Approximate Nearest Neighbor (ANN) vector indexing (`vector_cosine_ops`) enabling sub-millisecond vector similarity search with strict project- and tenant-level isolation.
+* **Smart Content-Hash Caching**: SHA-256 fingerprinting recognizes identical documents, skipping external embedding calls completely and reusing existing vector rows (delivering 100% cost savings and ~100x retrieval speedups on unchanged documents).
+
+#### 5. Indic AI Foundation Layer (`src/lib/sarvam.ts`)
+* **Unified Sarvam AI Client**: Resilient wrapper supporting Saaras STT (with automatic 30s chunking), Bulbul TTS (with parallel sentence slicing and binary WAV header concatenation), Mayura Translation across 23 Indic languages, Sarvam-105B Sovereign LLM, and Document AI OCR.
+* **Fault-Tolerant Exponential Backoff**: Automatic retry policies for transient network failures (`408`, `425`, `429`, `5xx`) with jitter, `Retry-After` adherence, and strict 25-second timeouts.
+
+#### 6. Double-Entry Credit Ledger & Financial Integrity (`src/lib/api/credits.ts`, `src/lib/api/pricing.ts`)
+* **Two-Phase Reservation System**: Reserves `RUN_RESERVATION` credits upfront prior to invoking third-party APIs. On pipeline completion or failure, the actual cost is metered and the difference is refunded back to the user's wallet.
+* **Timing-Safe Payment Verification**: Razorpay order signatures are validated using `crypto.timingSafeEqual` against server-calculated HMAC-SHA256 digests. Payment credit amounts are strictly retrieved from server database records, ignoring client-submitted payloads.
+* **Concurrency Lock**: Prevents duplicate credit race conditions through status guards (`where: { status: { not: 'paid' } }`) within an atomic Prisma transaction.
+* **Stale Run Auto-Reaper**: Background daemon scans for runs lingering beyond threshold timeouts (due to node crashes or server restarts), safely marking them failed and restoring reserved balances.
+
+#### 7. Multi-Tenant Storage & Persistence (`prisma/schema.prisma`, `src/lib/r2.ts`)
+* **Neon Serverless PostgreSQL**: Relational persistence managed via Prisma ORM 6 with connection pooling for serverless elasticity.
+* **Cloudflare R2 Object Storage**: Private S3-compatible bucket storing user-uploaded audio and synthesized artifacts, protected by provenance checks (`assertObjectAccess`) to prevent Insecure Direct Object References (IDOR).
+* **Distributed Redis**: Upstash Redis powering global sliding-window rate limit counters and transient caches.
 
 ---
 

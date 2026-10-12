@@ -9,6 +9,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.AUTH_GOOGLE_ID || 'mock_id',
       clientSecret: process.env.AUTH_GOOGLE_SECRET || 'mock_secret',
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   session: {
